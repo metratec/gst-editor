@@ -1,7 +1,8 @@
 #ifndef __GST_EDITOR_STOCK_ICONS_H__
 #define __GST_EDITOR_STOCK_ICONS_H__
 
-#include <glib/gmacros.h>
+#include <glib.h>
+
 #include <gtk/gtkiconfactory.h>
 
 G_BEGIN_DECLS
