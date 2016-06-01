@@ -1,9 +1,12 @@
-AC_PREREQ(2.59)
+AC_PREREQ(2.65)
 
 dnl This is the configure.ac file for the gst-editor module
 dnl when going to/from release please set the nano (fourth number) right !
 dnl releases only do Wall, cvs and prerelease does Werror too
 AC_INIT([GstEditor],[0.10.3.2],[http://gstreamer.freedesktop.org],[gsteditor])
+
+AC_CONFIG_MACRO_DIR([common/m4])
+AC_CONFIG_AUX_DIR([config])
 
 dnl initialize automake
 AM_INIT_AUTOMAKE
@@ -96,7 +99,6 @@ if test "x$GST_WALL" = "xyes"; then
 	AS_COMPILER_FLAG(-Werror,GST_ERROR="$GST_ERROR",GST_ERROR="$GST_ERROR")
    fi
 fi
-***TODO add GST_ERROR -Werror if
 dnl check for appropriate GStreamer libs.
 GSTREAMER_REQ="0.10.6"
 AC_SUBST(GSTREAMER_REQ)

@@ -1,0 +1,51 @@
+# Autotools
+/configure
+/config.h
+/config.h.in
+/config.log
+/config.status
+/config
+/aclocal.m4
+/autom4te.cache
+/libtool
+.deps/
+.libs/
+*.la
+*.lo
+*.a
+*.o
+*.exe
+Makefile
+Makefile.in
+stamp-*
+
+/gst-editor-libs-uninstalled.pc
+/gst-editor-libs.pc
+
+/src/gst-editor
+/src/gst-inspect-gui
+/src/gst-launch-gui
+
+# Installed by autoreconf
+/INSTALL
+
+# Autoreconf/intltoolize
+/po/Makefile.in.in
+/po/Rules-quot
+/po/boldquot.sed
+/po/en@boldquot.header
+/po/en@quot.header
+/po/insert-header.sin
+/po/quot.sed
+/po/remove-potcdate.sin
+/po/POTFILES
+# Generated at build time
+/po/nl.gmo
+/po/no.gmo
+
+/help/C/gst-editor-manual-C.omf.out
+/help/C/omf_timestamp
+/libs/gst/common/gste-marshal.c
+/libs/gst/common/gste-marshal.h
+/pixmaps/gdk-pixbuf-csource
+/pixmaps/pixmaps.h
