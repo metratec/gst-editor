@@ -1,0 +1,7 @@
+Name: GStreamer Editor Libraries, Uninstalled
+Description: Helper libraries for GStreamer's glade-like editor, uninstalled
+Version: @VERSION@
+Requires: gstreamer = @VERSION@
+Libs: ${pcfiledir}/libs/gst/element-ui/libgstelementui.la ${pcfiledir}/libs/gst/element-browser/libgstelementbrowser.la
+Cflags: -I${pcfiledir}/libs
+

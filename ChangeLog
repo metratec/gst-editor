@@ -1,0 +1,501 @@
+2008-01-16  Stefan Kost  <ensonic@users.sf.net>
+
+	* src/editor.c:
+	  Fix initialisations as pointed out on IRC. Clean up option parsing
+	  part.
+
+2008-01-15  Stefan Kost  <ensonic@users.sf.net>
+
+	* libs/gst/common/gste-debug.c:
+	* libs/gst/editor/gst-helper.c:
+	* libs/gst/editor/gsteditor.c:
+	* libs/gst/editor/gsteditorbin.c:
+	* libs/gst/editor/gsteditorelement.c:
+	* libs/gst/editor/gsteditorstatusbar.c:
+	* libs/gst/element-browser/caps-tree.c:
+	* libs/gst/element-ui/gst-element-ui.c:
+	* src/editor.c:
+	  First round of compiler warning fixes.
+
+2008-01-14  Stefan Kost  <ensonic@users.sf.net>
+
+	* autogen.sh:
+	* gst-editor.spec.in:
+	  Add two missing files.
+
+2008-01-14  Stefan Kost  <ensonic@users.sf.net>
+
+	patch by: Samuel Vinson <samuelv@users.sourceforge.net>
+
+	* AUTHORS:
+	* ChangeLog:
+	* Makefile.am:
+	* NEWS:
+	* README:
+	* RELEASE:
+	* TODO:
+	* configure.ac:
+	* help/C/gst-editor-manual.xml:
+	* help/omf.make:
+	* help/xmldocs.make:
+	* libs/gst/Makefile.am:
+	* libs/gst/common/Makefile.am:
+	* libs/gst/common/gste-common.c:
+	* libs/gst/common/gste-common.h:
+	* libs/gst/common/gste-debug.c:
+	* libs/gst/common/gste-debug.h:
+	* libs/gst/debug-ui/Makefile.am:
+	* libs/gst/debug-ui/debug-ui.c:
+	* libs/gst/debug-ui/debug-ui.h:
+	* libs/gst/editor/Makefile.am:
+	* libs/gst/editor/editor.h:
+	* libs/gst/editor/gst-helper.c:
+	* libs/gst/editor/gst-helper.h:
+	* libs/gst/editor/gsteditor.c:
+	* libs/gst/editor/gsteditor.h:
+	* libs/gst/editor/gsteditorbin.c:
+	* libs/gst/editor/gsteditorbin.h:
+	* libs/gst/editor/gsteditorcanvas.c:
+	* libs/gst/editor/gsteditorcanvas.h:
+	* libs/gst/editor/gsteditorelement.c:
+	* libs/gst/editor/gsteditorelement.h:
+	* libs/gst/editor/gsteditorimage.c:
+	* libs/gst/editor/gsteditorimage.h:
+	* libs/gst/editor/gsteditoritem.c:
+	* libs/gst/editor/gsteditoritem.h:
+	* libs/gst/editor/gsteditorlink.c:
+	* libs/gst/editor/gsteditorlink.h:
+	* libs/gst/editor/gsteditorpad.c:
+	* libs/gst/editor/gsteditorpad.h:
+	* libs/gst/editor/gsteditorpalette.c:
+	* libs/gst/editor/gsteditorpalette.h:
+	* libs/gst/editor/gsteditorpopup.c:
+	* libs/gst/editor/gsteditorpopup.h:
+	* libs/gst/editor/gsteditorproperty.c:
+	* libs/gst/editor/gsteditorproperty.h:
+	* libs/gst/editor/gsteditorstatusbar.c:
+	* libs/gst/editor/gsteditorstatusbar.h:
+	* libs/gst/editor/stockicons.c:
+	* libs/gst/editor/stockicons.h:
+	* libs/gst/element-browser/Makefile.am:
+	* libs/gst/element-browser/browser.c:
+	* libs/gst/element-browser/browser.h:
+	* libs/gst/element-browser/caps-tree.c:
+	* libs/gst/element-browser/caps-tree.h:
+	* libs/gst/element-browser/element-tree.c:
+	* libs/gst/element-browser/element-tree.h:
+	* libs/gst/element-ui/Makefile.am:
+	* libs/gst/element-ui/gst-element-ui-prop-view.c:
+	* libs/gst/element-ui/gst-element-ui-prop-view.h:
+	* libs/gst/element-ui/gst-element-ui.c:
+	* libs/gst/element-ui/gst-element-ui.h:
+	* pixmaps/Makefile.am:
+	* pixmaps/gdk-pixbuf-csource.c:
+	* pixmaps/gdk-pixdata.c:
+	* pixmaps/gdk-pixdata.h:
+	* pixmaps/off.png:
+	* pixmaps/on.png:
+	* src/Makefile.am:
+	* src/editor.c:
+	* src/editor.glade2:
+	* src/gst-inspect-gui.c:
+	* src/gst-launch-gui.1:
+	* src/gst-launch-gui.c:
+	* win32/common/config.h:
+	* win32/common/libdebug-ui.def:
+	* win32/common/libgstecommon.def:
+	* win32/common/libgsteditor.def:
+	* win32/common/libgstelementbrowser.def:
+	* win32/common/libgstelementui.def:
+	* win32/common/unistd.h:
+	* win32/vs6/gst_editor.dsp:
+	* win32/vs6/gst_editor.dsw:
+	* win32/vs6/gst_inspect_gui.dsp:
+	* win32/vs6/gst_launch_gui.dsp:
+	* win32/vs6/libgstdebugui.dsp:
+	* win32/vs6/libgstecommon.dsp:
+	* win32/vs6/libgsteditor.dsp:
+	* win32/vs6/libgstelementbrowser.dsp:
+	* win32/vs6/libgstelementui.dsp:
+	* win32/vs8/gst_editor.vcproj:
+	* win32/vs8/gst_inspect_gui.vcproj:
+	* win32/vs8/gst_launch_gui.vcproj:
+	* win32/vs8/libgstdebugui.vcproj:
+	* win32/vs8/libgstecommon.vcproj:
+	* win32/vs8/libgsteditor.vcproj:
+	* win32/vs8/libgstelementbrowser.vcproj:
+	* win32/vs8/libgstelementui.vcproj:
+	  Port to 0.10 API. Uses goo-canvas instead of gnome-canvas. Porting to
+	  windows.
+	
+=== release 0.8.X ===
+
+2005-09-23  Tim-Philipp Müller  <tim at centricular dot net>
+
+	* libs/gst/editor/gsteditor.c: (gst_editor_load), (on_xml_loaded):
+	* libs/gst/editor/gsteditorbin.c: (gst_editor_bin_paste):
+	* libs/gst/editor/gsteditorelement.c: (gst_editor_element_copy):
+	* libs/gst/editor/gsteditoritem.c: (on_object_saved):
+	* libs/gst/element-ui/gst-element-ui.c:
+	(gst_element_ui_set_property):
+	  Fix gcc4 signedness issues.
+
+2005-03-10  Denis Jacquerye  <moyogo@gmail.com>
+
+	Reviewed by:  Ronald S. Bultje  <rbultje@ronald.bitfreak.net>
+
+	* src/editor.glade2:
+	  Fix typo (#169265).
+
+2005-02-02  Christian Schaller <uraeus@gnome.org>
+
+	* Changed COPYING file to say LGPL and changed the one file in
+	  the package with a GPL header to LGPL. Steve Baker and Andy Wingo
+	  was the authors of that file and I got their permissions. Also got
+	  permissions of Erik Walthinsen and Jan Schmidt as original and current	  package maintainers.
+
+2004-11-09  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* configure.ac:
+	Bump the revision nano back to 1 after release
+
+2004-11-09  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* RELEASE:
+	* TODO:
+	* configure.ac:
+	Release 0.8.0
+
+2004-11-08  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* libs/gst/editor/gsteditorelement.c:
+	(gst_editor_element_state_event), (gst_editor_element_set_state):
+	Oops, make setting the state to NULL work again.
+
+2004-11-06  Jan Schmidt  <thaytan@mad.scientist.com>
+	* libs/gst/editor/gsteditorbin.c: (gst_editor_bin_element_added):
+	* libs/gst/editor/gsteditorelement.c:
+	(gst_editor_element_class_init), (gst_editor_element_init),
+	(gst_editor_element_dispose), (gst_editor_element_realize),
+	(gst_editor_element_resizebox_event),
+	(gst_editor_element_state_event), (on_new_pad), (on_pad_removed),
+	(on_state_change), (on_parent_unset),
+	(gst_editor_element_set_state), (gst_editor_element_set_state_cb),
+	(gst_editor_element_sync_state):
+	* libs/gst/editor/gsteditorelement.h:
+	* libs/gst/editor/gsteditoritem.c: (gst_editor_item_class_init),
+	(gst_editor_item_finalize), (gst_editor_item_dispose),
+	(gst_editor_item_set_property):
+	Some refcounting changes that make things more stable, although still
+	not perfect. It actually frees up gst-editor canvas items now though,
+	instead of leaking them.
+	Also, implement a small hack to release the mouse grab before
+	processing a state change, and do the state change in an idle handler.
+	This reduces but doesn't completely solve the problem of the editor 
+	locking up while holding a global mouse pointer grab.
+	
+	* libs/gst/element-browser/element-tree.c:
+	(gst_element_browser_element_tree_init), (populate_store),
+	(set_select_by_factory_subtree), (set_tree_selection_by_factory),
+	(set_tree_model), (filter_subtree), (build_filter_by_tree),
+	(build_filter_by_existing), (filter_elements),
+	(filter_text_changed):
+	* libs/gst/element-browser/element-tree.h:
+	Reimplement the find text box as a filter.
+
+	* src/editor.glade2:
+        Change the label on the 'find' edit box to 'filter'
+
+	* po/nl.po:
+	* po/no.po:
+
+2004-10-13  Stefan Kost  <ensonic@users.sf.net>
+
+	* libs/gst/element-browser/element-tree.c: (get_class_tree):
+	  fixed memleak caused by not freeing list
+
+2004-09-30  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* libs/gst/common/gste-common.c: (gste_init):
+	* libs/gst/common/gste-common.h:
+	* libs/gst/editor/editor.h:
+	* src/editor.c: (main):
+	* src/gst-inspect-gui.c: (main):
+	* src/gst-launch-gui.c: (main):
+	  Rename gste_common_init to gste_init and export it 
+	  via gst/editor/editor.h
+	  It should be possible to embed the gst-editor elements
+	  in external applications again now.
+
+2004-09-30  Jan Schmidt  <thaytan@mad.scientist.com>
+	* libs/gst/editor/editor.h:
+	* libs/gst/editor/gsteditor.c:
+	* libs/gst/editor/gsteditor.h:
+	* libs/gst/editor/gsteditorbin.c:
+	* libs/gst/editor/gsteditorcanvas.c:
+	* libs/gst/editor/gsteditorelement.c:
+	* libs/gst/editor/gsteditoritem.c:
+	* libs/gst/editor/gsteditorlink.c:
+	* libs/gst/editor/gsteditorpad.c:
+	* src/editor.c:
+	Make libs/gst/common headers only internal and not visible in 
+	installed files, since they're not installed any more themselves.
+
+2004-07-04  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* libs/gst/common/gste-debug.c: (gste_debug_init):
+	* libs/gst/editor/gsteditor.c: (gst_editor_init),
+	(gst_editor_on_save_as), (gst_editor_load), (gst_editor_on_about),
+	(on_xml_loaded):
+	* libs/gst/editor/gsteditorbin.c: (gst_editor_bin_class_init),
+	(gst_editor_bin_set_property), (gst_editor_bin_element_added):
+	* libs/gst/editor/gsteditorbin.h:
+	* libs/gst/editor/gsteditorelement.c:
+	(gst_editor_element_object_changed):
+	* libs/gst/editor/gsteditoritem.c: (gst_editor_item_update_title),
+	(gst_editor_notify_name_cb), (gst_editor_item_get_type),
+	(gst_editor_item_class_init), (gst_editor_item_set_property),
+	(gst_editor_item_realize), (gst_editor_item_resize_real),
+	(gst_editor_item_object_changed), (gst_editor_item_event),
+	(on_object_saved):
+	* po/nl.po:
+	* po/no.po:
+          this should really fix saving and loading of pipelines with
+          positions; tested on a big pipeline xml file.
+
+2004-07-04  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* libs/gst/common/Makefile.am:
+          don't install these headers and libs, they should only be used
+          internally
+	* libs/gst/common/gste-debug.c:
+	* libs/gst/debug-ui/debug-ui.c:
+	* src/editor.c:
+          fix compile warnings
+
+2004-07-04  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* TODO:
+          some extra notes
+	* libs/gst/editor/gsteditor.c: (gst_editor_init):
+	* libs/gst/editor/gsteditoritem.c: (gst_editor_item_update_title),
+	(gst_editor_notify_cb), (gst_editor_item_class_init),
+	(gst_editor_item_set_property):
+          make canvas update title of objects when they change
+	* libs/gst/editor/gsteditoritem.h:
+	* libs/gst/editor/gsteditorpalette.c: (gst_editor_palette_init):
+	* libs/gst/editor/gsteditorproperty.c:
+	(gst_editor_property_get_type), (gst_editor_property_class_init),
+	(gst_editor_property_init), (gst_editor_property_connect_func),
+	(gst_editor_property_set_property):
+	* libs/gst/element-ui/gst-element-ui-prop-view.c:
+	(gst_element_ui_prop_view_class_init),
+	(gst_element_ui_prop_view_dispose),
+	(gst_element_ui_prop_view_update_async),
+	(gst_element_ui_prop_view_update), (pview_param_changed),
+	(pview_value_changed), (on_adjustment_value_changed):
+	* libs/gst/element-ui/gst-element-ui-prop-view.h:
+	  adding debug categories, removing old debug stuff
+
+2004-07-03  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* configure.ac:
+	* libs/gst/common/gste-common.c: (gste_get_ui_file):
+	* libs/gst/common/gste-common.h:
+	* libs/gst/debug-ui/debug-ui.c: (gste_debugui_get_xml):
+	* libs/gst/editor/gsteditor.c: (gst_editor_init):
+	* libs/gst/editor/gsteditorpalette.c: (gst_editor_palette_init):
+	* libs/gst/editor/gsteditorproperty.c: (gst_editor_property_init):
+	* libs/gst/element-browser/element-tree.c:
+	(gst_element_browser_element_tree_init):
+          have ui file lookups be consistent; make it work uninstalled
+
+2004-04-29  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* libs/gst/editor/gsteditor.c: (gst_editor_on_sort_toggled):
+	* src/editor.glade2:
+	Turns out that glade silently upgraded the toolbar widgets, so now
+	it only works with GTK+ 2.4. Revert that bit - I don't want to require
+	2.4 so soon.
+
+2004-04-28  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* libs/gst/debug-ui/debug-ui.c: (gste_debugui_init),
+	(show_add_window):
+	* libs/gst/element-browser/element-tree.c:
+	(gst_element_browser_element_tree_get_type),
+	(gst_element_browser_element_tree_init):
+	Make treeview columns resizable.
+	* libs/gst/editor/gsteditor.c: (gst_editor_on_sort_toggled):
+	Read the state of the toggle button correctly.
+	* src/editor.glade2:
+	A few changes to the editor palettes
+	* src/Makefile.am:
+	* src/editorelement.glade2:
+	* src/gst-debug-ui.glade2:
+	Remove these glade files, everything lives in editor.glade2 now.
+
+2004-04-26  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* libs/gst/common/Makefile.am:
+        Fix marshal generation
+
+2004-04-23  Jan Schmidt  <thaytan@mad.scientist.com>
+	* libs/gst/common/.cvsignore:
+	* libs/gst/editor/.cvsignore:
+        Fix a couple of cvsignore's
+
+2004-04-23  Jan Schmidt  <thaytan@mad.scientist.com>
+	* TODO:
+	* configure.ac:
+	* libs/gst/Makefile.am:
+	* libs/gst/common/Makefile.am:
+	* libs/gst/common/gste-common-priv.h:
+	* libs/gst/common/gste-common.c: (gste_common_init):
+	* libs/gst/common/gste-common.h:
+	* libs/gst/common/gste-debug.c: (gste_debug_init):
+	* libs/gst/common/gste-debug.h:
+	* libs/gst/common/gste-dnd.h:
+	* libs/gst/common/gste-dock.h:
+	* libs/gst/common/gste-dockbook.c:
+	* libs/gst/common/gste-dockbook.h:
+	* libs/gst/common/gste-marshal.list:
+	* libs/gst/debug-ui/Makefile.am:
+	* libs/gst/debug-ui/debug-ui-0_6.c:
+	* libs/gst/debug-ui/debug-ui.c: (gste_debugui_get_type),
+	(refresh_categories), (set_default_level), (set_custom_level),
+	(init_custom_levels), (gst_debug_ui_new),
+	(gste_debugui_class_init), (gste_debugui_get_xml),
+	(gste_debugui_init), (gste_debugui_dispose),
+	(gste_debugui_size_request), (gste_debugui_size_allocate),
+	(tree_select), (collect_selected), (remove_custom_cats),
+	(close_add_window), (handle_add_cats), (find_cat_in_customlist),
+	(populate_add_categories), (show_add_window):
+	* libs/gst/debug-ui/debug-ui.h:
+	* libs/gst/editor/Makefile.am:
+	* libs/gst/editor/editor.h:
+	* libs/gst/editor/gsteditor-marshal.list:
+	* libs/gst/editor/gsteditor.c: (gst_editor_init):
+	* libs/gst/editor/gsteditor.h:
+	* libs/gst/editor/gsteditorcanvas.c:
+	(gst_editor_canvas_set_property):
+	* libs/gst/editor/gsteditorelement.c:
+	(gst_editor_element_add_pads):
+	* libs/gst/editor/gsteditorpalette.c: (gst_editor_palette_init),
+	(gst_editor_palette_connect_func), (on_element_tree_select):
+	* libs/gst/element-browser/Makefile.am:
+	* libs/gst/element-browser/browser.c: (gst_element_browser_init),
+	(on_tree_activated), (on_tree_selection_changed):
+	* libs/gst/element-browser/element-tree.c:
+	(gst_element_browser_element_tree_get_type),
+	(gst_element_browser_element_tree_class_init),
+	(gst_element_browser_element_tree_init),
+	(gst_element_browser_size_request),
+	(gst_element_browser_size_allocate), (tree_select),
+	(tree_activate), (search_subtree), (search_for_element):
+	* libs/gst/element-browser/element-tree.h:
+	* src/Makefile.am:
+	* src/editor.c: (main):
+	* src/editor.glade2:
+	* src/gst-inspect-gui.c: (main):
+	* src/gst-launch-gui.c: (main):
+	Rewrite bits of the GUI to use libglade more.
+	Some preparation for drag-dockable palettes.
+	Add support for dynamically adjusting individual debug categories
+	Add a find box to the element tree to search for elements by name
+
+2004-04-02  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* configure.ac:
+	* gst-editor.desktop.in:
+	* gst-launch.desktop.in:
+	Patch from Stephane Loeuillet to fix i18n in desktop files.
+
+2004-03-15  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* *.c, *.h: gst-indent
+
+2004-03-11  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* Makefile.am:
+	Add intltool-*.in to EXTRA_DIST
+	Add 'release' target copied from the gstreamer module.
+
+2004-03-11  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* AUTHORS:
+	* README:
+	* RELEASE:
+	* NEWS:
+	Prepare for 0.7.0 release
+	* TODO
+	Added a bunch of TODO items from several sources
+	* configure.ac:
+	Bump GStreamer dependency to 0.8 or 0.7
+	* libs/gst/editor/gsteditor.c: (gst_editor_on_about):
+	Add me as an author.
+	* libs/gst/editor/gsteditorpad.c: (on_remove_ghost_pad):
+	Fix a crash on removing a ghost pad.
+	* IDEAS
+	Rolled the ideas into the TODO file
+
+2004-03-02  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* acconfig.h: removed
+
+2004-02-11  David Schleef  <ds@schleef.org>
+
+	* src/editor.c: (main): gst_parse_launch() returns a non-bin
+	element if only given one element.  Fix assumption that it's a bin.
+	* src/gst-launch-gui.c: (load_history): If the history file
+	doesn't exist, create it. (bug #130607)
+
+2004-02-11  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* m4/gst-feature.m4:
+	* m4/libglade.m4:
+	  fix underquotedness (#133800)
+
+2004-02-05  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* configure.ac: add back AM_PROG_LIBTOOL
+
+2004-01-27  David I. Lehn  <dlehn@users.sourceforge.net>
+
+	* help/C/gst-editor-manual.xml: s/artheader/articleinfo/, move end tag
+	past <authorgroup/>
+
+2004-01-05  Thomas Vander Stichele  <thomas at apestaart dot org>
+
+	* Makefile.am: fix dist
+
+2004-01-04  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* libs/gst/editor/gsteditorlink.c: (on_pad_unlink),
+	(gst_editor_link_link):
+	* libs/gst/editor/gsteditorpad.c: (gst_editor_pad_event),
+	(on_frobate), (on_ghost):
+	Fix crashes when linking and unlinking.
+	Remove unnecessary debug output.
+
+2004-01-03  Jan Schmidt  <thaytan@mad.scientist.com>
+
+	* ChangeLog:
+	Revive the long dormant ChangeLog
+
+	* libs/gst/editor/gsteditor.c: (gst_editor_connect_func):
+	Fix type-punning compiler warning
+
+	* libs/gst/editor/gsteditorelement.c:
+	(gst_editor_element_add_pads):
+	Don't crash when handling the error of an ALWAYS pad template which
+	doesn't have an associated pad.
+
+	* libs/gst/element-browser/caps-tree.c: (update_caps_tree),
+	(add_caps_to_tree), (add_field_to_tree), (print_value):
+	Support the new caps rewrite - this breaks 0.6 compatibility. Use
+	the END_0_6_COMPATIBILITY tag if you need the old gst-editor.
+
+2001-12-24 Thomas Vander Stichele  <thomas@apestaart.org>
+
+	* opened gst-editor module

@@ -1,0 +1,45 @@
+# Dutch translation of gst-editor.
+# Copyright © 2002 Free Software Foundation, Inc.
+# Thomas Vander Stichele <thomas@apestaart.org>, 2003
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: gst-editor\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2004-10-01 07:39+1000\n"
+"PO-Revision-Date: 2003-06-22 08:55+0200\n"
+"Last-Translator: Thomas Vander Stichele <thomas@apestaart.org>\n"
+"Language-Team: Dutch <vertaling@nl.linux.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: gst-editor.desktop.in.h:1 libs/gst/editor/gsteditor.c:222
+msgid "GStreamer Pipeline Editor"
+msgstr "GStreamer Pijplijn Editor"
+
+#: gst-editor.desktop.in.h:2
+msgid "Lets you edit GStreamer pipelines"
+msgstr "GStreamer pijplijnen wijzigen"
+
+#: gst-inspect.desktop.in.h:1
+#, fuzzy
+msgid "GStreamer Plugin Inspector"
+msgstr "GStreamer Pijplijn Editor"
+
+#: gst-inspect.desktop.in.h:2
+#, fuzzy
+msgid "Lets you view the details of GStreamer plugins"
+msgstr "GStreamer pijplijnen wijzigen"
+
+#: gst-launch.desktop.in.h:1
+msgid "GStreamer Pipeline Runner"
+msgstr "GStreamer Pijplijn Uitvoerder"
+
+#: gst-launch.desktop.in.h:2
+msgid "Lets you run simple GStreamer pipelines"
+msgstr "GStreamer pijplijnen uitvoeren"
+
+#: libs/gst/element-browser/browser.c:85
+msgid "Select element..."
+msgstr "Kies element..."

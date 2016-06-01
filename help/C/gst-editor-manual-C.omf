@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE omf PUBLIC "-//OMF//DTD Scrollkeeper OMF Variant V1.0//EN" "http://scrollkeeper.sourceforge.net/dtds/scrollkeeper-omf-1.0/scrollkeeper-omf.dtd">
+<omf>
+  <resource>
+    <creator>
+      wingo@pobox.com (Andy Wingo)
+    </creator>
+<!--
+    <maintainer>
+      kenny@gnome.org (Kenny Graunke)
+    </maintainer>
+    <contributor>
+      jrb@redhat.com (Jonathan Blandford)
+    </contributor>
+    <contributor>
+      hobbit@aloss.ukuu.org.uk (Telsa Gwynne)
+    </contributor>
+-->
+    <title>
+      Gstreamer Pipeline Editor Manual
+    </title>
+    <date>
+      2002-8-6
+    </date>
+    <version identifier="0.2.0" date="2002-8-6" description="Initial version"/>
+    <subject category="GNOME|Multimedia"/>
+    <description>
+      User manual for the GStreamer graphical pipeline editor.
+    </description>
+    <type>
+      user's guide
+    </type>
+    <format mime="text/xml" dtd="-//OASIS//DTD DocBook XML V4.1.2//EN"/>
+    <identifier url="file://@prefix@/share/doc/gst-editor/gst-editor-manual/C/gst-editor-manual.xml"/>
+    <language code="C"/>
+    <relation seriesid="ed21b630-a992-11d6-9412-f93cc0e4c443"/>
+    <rights type="GNU FDL" license.version="1.1" holder="Andy Wingo"/>
+  </resource>
+</omf>

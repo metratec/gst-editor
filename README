@@ -1,0 +1,24 @@
+This is the editor for GStreamer, a framework for streaming media.  The
+fundamental design comes from the video pipeline at Oregon Graduate
+Institute, as well as some ideas from DirectMedia.  It's based on plug-ins
+that will provide the various codec and other functionality.  The
+interface hopefully is generic enough for various companies (ahem, Apple)
+to release binary codecs for Linux, until such time as they get a clue and
+release the source.
+
+
+Developer note:  When building from CVS sources, you will need to run
+autogen.sh to generate the build system files.
+
+GStreamer is cutting-edge stuff.  To be a CVS developer, you need 
+cutting-edge tools.
+
+ATM, the maintainer has these versions :
+
+* autoconf	2.59
+* automake	1.8
+* libtool	1.5.2
+* pkg-config    0.15.0
+
+autogen.sh will check minimum versions of these and complain if you don't have 
+them.

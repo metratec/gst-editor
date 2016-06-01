@@ -1,0 +1,72 @@
+Bugs:
+videotestsrc->tee will nicht connecten, geiert nach 4 versuchen mit segfault ab;
+"trying to destroy this half linkno warnings until nowSpeicherzugriffsfehler"
+occured only once after another gstreamer instance with different libs ran..
+reproduzierpar nachdem autovideosink erzeugt und gelöscht wurde
+videotestsrc erzeugen, tee erzeuegen, autovideosink erzeugen, autovideosink löschen, tee verschieben, mit ursprünglicher tee-position verbinden, segfault
+fakesrc aud autovideosink erzeugen, letztere löschen, und fakesrc mit der pad-position oben links verbinden ->segfault  
+rückwärtsverbindung klappt
+
+
+file Position change should be done while growing
+
+
+
+
+
+
+-*- text -*-
+
++) Make connections MVC - 1 hr
+   * Connections should be dashed when they are first constructed -- DONE
+   * They turn solid when the pad_connected signal is fired -- not necessary
+   right now -- pad_connect returns TRUE or FALSE
+
++) Make it possible to de-request pads - 1 hr
+
++) Make editor threadsafe - unknown, possibly 10 hrs -- DONE (except state
+   changes of child elements in threads)
+
++) Better status bar info - 4 hrs -- Partially complete
+
++) 'Tip of the day' - 2 hrs
+
++) Integration with plugin docs - 3 hrs, depends on plugin docs being made
+
++) Make GStreamer DTD - who knows...
+
++) Integration with some scripting language, have a list of predefined scripts,
+   press one of the scripts to execute it. (puase the pipeline, reconfigure something,
+   etc..)
+
++) Add current clock time in the statusbar of the editor or elsewhere, add a clock icon to the
+   element that currently drives the clock.
+
++) Hover over pads (right click?) to get access to pad convertors and query functions
+
++) Hover over connections to get the caps in use, right click to set filters or fixation...
+
++) For seeking, one could drag a slider on the pipeline and connect some of the 
+   pads in the pipeline (percentage seeking?)
+
++) Insert a little flag on a pad to monitor the pad (caps, rate, query, convert etc..)
+   monitored pads appear in some dialog or so..
+
++) Visualize dataflow, animate buffer/events flow, capsnego etc.. 
+
++) The pad tab in the element property window contains only the pad
+   template caps, in a poor format.  It would be nice to have pad
+   template caps, getcaps(), and currently set caps.
+
++) Display links which have not yet fixated caps in a different colour
+
++) When "sort" is enabled, clicking and dragging elements should
+   tie their position to the cursor, not floating w.r.t. the cursor.
+
++) The ability to 'quick add' an element by name
+
++) Dump debugging information to a window instead of the terminal.
+
++) Make the "sort" smarter and converge faster.
+
++) Make dialog windows dockable on the main window.

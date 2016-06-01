@@ -1,0 +1,38 @@
+GStreamer Pipeline Editor "Si Senor!" 0.8.0 released
+
+   A new release of the GStreamer graphical pipeline editor, gst-editor,
+   containing various fixes and enhancements.
+
+   The GStreamer editor allows users to assemble pipelines using the
+   elements of GStreamer. It is useful for anyone interested in finding
+   out more about how [1]GStreamer works, and particularly those people
+   interested in prototyping a potential GStreamer pipeline. Find out
+   more information about the gst-editor from the project's [2]home
+   page.
+
+   Although the editor is generally stable for small pipelines and such,
+   it should be regarded as highly experimental code. Of course, bugs
+   that can be pinned on the editor should be reported to [3]Gnome
+   bugzilla.
+
+  For a complete list of changes, see the ChangeLog file in the release tarball.
+
+Download
+
+   The gst-editor requires a GStreamer core of version 0.7.1 or higher.
+
+   [4]Get the source here. 
+
+Contributors to this release
+
+  Stefan Kost  <ensonic@users.sf.net>
+  Jan Schmidt  <thaytan@mad.scientist.com>
+  Thomas Vander Stichele  <thomas at apestaart dot org>
+  Stephane Loeuillet
+  
+References
+
+  1. http://freedesktop.org/~gstreamer/
+  2. http://www.freedesktop.org/~gstreamer/modules/gst-editor.html
+  3. http://bugzilla.gnome.org/enter_bug.cgi?product=GStreamer&component=gst-editor
+  4. http://freedesktop.org/~gstreamer/src/gst-editor/

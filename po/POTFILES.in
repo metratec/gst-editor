@@ -1,0 +1,5 @@
+gst-editor.desktop.in
+gst-inspect.desktop.in
+gst-launch.desktop.in
+libs/gst/editor/gsteditor.c
+libs/gst/element-browser/browser.c

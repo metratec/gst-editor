@@ -1,0 +1,139 @@
+Hacking the GStreamer Graphical Pipeline Editor
+-----------------------------------------------
+
+I. Overview
+
+The goal of gst-editor is to provide View and Controller counterparts to
+GStreamer's Model. It mirrors the state of GStreamer pipelines, and can be used
+to modify pipeline topology, state, and properties. Furthermore, it provides an
+interface to GStreamer's XML pipeline (de)serialization code, and a few more
+goodies.
+
+
+II. Implementation
+
+The editor has been broken into a number of separate, reusable modules. The
+application itself is an object, GstEditor. It contains a GstEditorCanvas, which
+is the View/Controller of a bin (the GstEditorCanvas::bin property). The
+components of the canvas are described below.
+
+II.1 GstEditorCanvas
+
+The canvas widget implements a class tree of canvas items that (roughly)
+corresponds to GStreamer objects:
+
+-+- GstObject		<--->		-+- GstEditorItem
+   |					   |
+   +- GstElement	<--->		   +- GstEditorElement
+   | |					   | |
+   | +- GstBin		<--->		   | +- GstEditorBin
+   |					   |
+   +- GstPad		<~~~>		   +- GstEditorPad
+   |			<~~~>		     |
+   +- GstPadTemplate	<~~~>                +- GstEditorPadAlways (a GstPad)
+					     |
+					     +- GstEditorPadSometimes (a
+                                             |  SOMETIMES template, no pad of
+                                             |  the same name)
+					     |
+					     +- GstEditorPadRequest (a
+                                             |  REQUEST template, no pad of
+                                             |  the same name)
+					     |
+					     +- GstEditorPadGhost (a
+                                             |  GstGhostPad)
+					     |
+					     +- GstEditorPadRequested (a GstPad
+                                                that came from a REQUEST
+template)
+  
+There is also a GstEditorConnection object that does not have a corresponding
+GStreamer object.
+
+II.1.A GstEditorItem
+
+The canvas contains objects of type GstEditorItem, a base class for
+GstEditorElement and GstEditorPad. All items share a bit of common code:
+
+ * Resizing (documented in gsteditoritem.h)
+ * Relationship to a GstObject model (GstEditorItem::object)
+ * A convenience GstObject->GstEditorItem hash table
+ * A box with a border of dimensions GstEditorItem::height,width
+ * A title, GST_OBJECT_NAME (object)
+ * An inheritable right-click context menu system
+ * A system for right-click context-sensitive dynamic help
+ * All items are GnomeCanvasGroups, and thus GnomeCanvasItems
+
+II.1.B GstEditorElement
+
+GstEditorElement extends GstEditorItem with the following functionality:
+
+ * The ::object is assumed to be a GstElement
+ * GstEditorPads are shown on the right and left for src and sink pads,
+   respectively
+ * A View/Control for element state is shown at the bottom left of the element
+ * Support for resizing, although it is off by default
+ * Context menu actions: cut, copy, remove
+ * gst_editor_element_move(): move the element, but keep it within its parent
+ * Draggable element moving
+
+II.1.C GstEditorBin
+
+GstEditorBin extends GstEditorElement, and adds:
+
+ * The ::object is assumed to be a GstBin
+ * The content area of the item can be filled with GstEditorElements
+ * Context menu actions: paste, add to bin
+ * An iterative sorting algorithm
+
+II.1.D GstEditorPad
+
+GstEditorPad is an abstract base class for all pad-like objects. All pad
+subclasses (Always, Sometimes, Request, Ghost, and Requested) share code in
+gsteditorpad.c.
+
+To the user, all points of connection between elements share many common
+features. They appear the same, but in different colors. They have some
+different context menu items. One should always be able to drag one pad to
+another to connect different elements; if the connection is not immediately
+possible (as in the Sometimes case), the editor should handle new_pad and
+connect when possible.
+
+The common code is as follows:
+
+* Pads are just boxes with text in them, with small indicators to the src or
+  sink side indicating where connections might be possible.
+* Dragging creates a connection with one end on the pad and the other where the
+  pointer is. If the pointer is over a compatible pad, the connection warps to
+  the pad's connection box. If the pad was already connected to begin with, the
+  pad is disconnected instead.
+
+Always pads show up in a pink color and add context menu items to query aspects
+of the pad and to ghost the pad to a managing bin.
+
+Sometimes pads show up in green. The GstEditorConnection code takes care of the
+dynamic connection.
+
+Request pads show up in blue/purple. When they are connected, a new pad is
+created (requested) and the connection is made from the new pad.
+
+Ghost pads have connection boxes on both sides and show up in grey. They can
+only appear on bins. The side towards the inside of the bin has a grey
+connection to a pad on a child element. Ghost pads act like Always pads, with
+the addition of a context menu item to de-ghost the pad.
+
+Requested pads act like Always pads, with the addition of a context menu item to
+de-request the pad.
+
+II.1.D GstEditorConnection
+
+Connections have srcpads and sinkpads. If one of the two ends is disconnected,
+that end is placed at ::x, ::y. Connections are only visual until
+gst_editor_connection_connect() is called. If the connection succeeds, the line
+is changed from dotted to solid.
+
+
+III. Conclusion
+
+The editor has the possibility to do all that GStreamer can do; any deficit is
+the result of not enough time. Help us out and hack!

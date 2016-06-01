@@ -1,0 +1,16 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=GStreamer Pipeline Runner
+Name[nl]=GStreamer Pijplijn Uitvoerder
+Name[no]=GStreamer Kontruksjons Kjører
+Comment=Lets you run simple GStreamer pipelines
+Comment[nl]=GStreamer pijplijnen uitvoeren
+Comment[no]=Lar kjøre enkle GStreamer konstruksjoner
+Exec=gst-launch-gui
+Terminal=false
+Type=Application
+Icon=gst-launch.png
+Categories=Application;Development;
+X-GNOME-Bugzilla-Bugzilla=GNOME
+X-GNOME-Bugzilla-Product=GStreamer
+X-GNOME-Bugzilla-Component=gst-editor

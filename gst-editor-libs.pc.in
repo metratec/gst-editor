@@ -1,0 +1,11 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: GStreamer Editor Libraries
+Description: Helper libraries for GStreamer's glade-like editor
+Requires: gstreamer = @VERSION@
+Version: @VERSION@
+Libs: 
+Cflags: -I${includedir}

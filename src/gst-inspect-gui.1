@@ -1,0 +1,40 @@
+.TH "GStreamer" "1" "March 2001"
+.SH "NAME"
+gst\-inspect\-gui \- A graphical GStreamer element browser
+.SH "SYNOPSIS"
+\fBgst\-inspect\-gui\fR \fI[OPTION...]\fR PIPELINE\-DESCRIPTION
+.SH "DESCRIPTION"
+.LP 
+\fBgst\-inspect\-gui\fR is a tool that is used to graphically inspect the available \fIGStreamer\fP elements.
+.
+.SH "OPTIONS"
+.l
+\fIgst\-inspect\-gui\fP accepts the following options:
+.TP 8
+.B  \-\-help
+Print help synopsis and available FLAGS
+.TP 8
+.B  \-\-gst\-info\-mask=FLAGS
+\fIGStreamer\fP info flags to set (list with \-\-help)
+.TP 8
+.B  \-\-gst\-debug\-mask=FLAGS
+\fIGStreamer\fP debugging flags to set (list with \-\-help)
+.TP 8
+.B  \-\-gst\-mask=FLAGS
+\fIGStreamer\fP info and debugging flags to set (list with \-\-help)
+.TP 8
+.B  \-\-gst\-plugin\-spew
+\fIGStreamer\fP info flags to set
+Enable printout of errors while loading \fIGStreamer\fP plugins
+.TP 8
+.B  \-\-gst\-plugin\-path=PATH
+Add directories separated with ':' to the plugin search path
+.SH "SEE ALSO"
+.BR gst\-launch (1),
+.BR gst\-complete (1),
+.BR gst\-register (1),
+.BR gst\-inspect (1),
+.BR gst\-editor (1),
+.BR gst\-launch\-gui (1)
+.SH "AUTHOR"
+The GStreamer team at http://gstreamer.net/

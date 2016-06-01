@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+_Name=GStreamer Plugin Inspector
+_Comment=Lets you view the details of GStreamer plugins
+Exec=gst-inspect-gui
+Terminal=false
+Type=Application
+Icon=gst-inspect.png
+Categories=Application;Development;
+X-GNOME-Bugzilla-Bugzilla=GNOME
+X-GNOME-Bugzilla-Product=GStreamer
+X-GNOME-Bugzilla-Component=gst-editor

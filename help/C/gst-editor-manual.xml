@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<!DOCTYPE article PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
+"http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
+  <!ENTITY legal SYSTEM "legal.xml">
+  <!ENTITY appversion "0.2.0">
+  <!ENTITY manrevision "0.2.0">
+  <!ENTITY date "13 October, 2002">
+]>
+
+<article id="index" lang="en">
+
+  <articleinfo>
+    <title>Gstreamer Pipeline Editor Manual</title>
+    <copyright>
+      <year>2002</year>
+      <holder>Andy Wingo &amp;wingo@pobox.com&amp;</holder>
+    </copyright>
+
+  <!-- translators: uncomment this:
+
+  <copyright>
+   <year>2001-2002</year>
+   <holder>ME-THE-TRANSLATOR (Latin translation)</holder>
+  </copyright>
+
+  -->
+
+    &legal;
+
+    <authorgroup>
+      <author>
+        <firstname>Andy</firstname>
+        <surname>Wingo</surname>
+        <authorblurb>
+          <para>
+            <email>wingo@pobox.com</email>
+          </para>
+        </authorblurb>
+      </author>
+    </authorgroup>
+
+  </articleinfo>
+
+ <sect1 id="preface">
+  <title>Preface</title>
+
+  <para>
+    This is the user's guide to the GStreamer Pipeline Editor, also known as
+    <application>gst-editor</application>. The editor allows the user to view,
+    manipulate, and run GStreamer media pipelines. Pipelines can be saved to
+    GStreamer's standard XML file format, which can then be loaded up for use in
+    a custom application. It can also read in XML dumps of pipelines in custom
+    applications, allowing easy visualization of GStreamer internals.
+  </para>
+
+  <para>
+    Quick help and answers to frequently asked questions can be found in the
+    &quot;Quick Start&quot; section. A more in-depth reference can be found
+    later on in the manual.
+  </para>
+
+  <para>
+    This document is not intended to be a full reference on GStreamer. Users
+    wanting more information should take a look at the GStreamer Application
+    Developer's Manual.
+  </para>
+ </sect1>
+
+ <sect1 id="howto">
+  <title>Quick Start</title>
+
+  <qandaset>
+    <qandaentry>
+      <question>
+        <para>What can I do to help out with documentation?</para>
+      </question>
+
+      <answer>
+        <para>
+          Send us any errors that you may find. Also, any suggestions that you
+          might have are appreciated. Contact us by filing bugs on <ulink
+          url="http://bugzilla.gnome.org/report_bug.cgi?product=GStreamer&amp;component=gst-editor">Gnome
+          bugzilla</ulink>. If something isn't clear, do let us know about it.
+          Thanks.
+        </para>
+      </answer>
+    </qandaentry>
+  </qandaset>
+ </sect1>
+
+ <sect1 id="Reference">
+  <title>Reference</title>
+
+  <para>
+    Is a reference really needed?
+  </para>
+ </sect1>
+
+</article>
+
+
