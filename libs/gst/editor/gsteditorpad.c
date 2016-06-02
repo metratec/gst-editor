@@ -28,15 +28,15 @@
 /* interface methods */
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
 static gboolean gst_editor_pad_enter_notify_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventCrossing * event);
-static gboolean gst_editor_pad_leave_notify_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventCrossing * event);
-static gboolean gst_editor_pad_motion_notify_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventMotion * event);
-static gboolean gst_editor_pad_button_press_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventButton * event);
-static gboolean gst_editor_pad_button_release_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventButton * event);
+    GooCanvasItem * target, GdkEventCrossing * event);
+static gboolean gst_editor_pad_leave_notify_event (GooCanvasItem * citem,
+    GooCanvasItem * target, GdkEventCrossing * event);
+static gboolean gst_editor_pad_motion_notify_event (GooCanvasItem * citem,
+    GooCanvasItem * target, GdkEventMotion * event);
+static gboolean gst_editor_pad_button_press_event (GooCanvasItem * citem,
+    GooCanvasItem * target, GdkEventButton * event);
+static gboolean gst_editor_pad_button_release_event (GooCanvasItem * citem,
+    GooCanvasItem * target, GdkEventButton * event);
 
 /* class functions */
 static void gst_editor_pad_class_init (GstEditorPadClass * klass);
@@ -147,48 +147,71 @@ static GnomeUIInfo sometimes_pad_menu_items[] = {
   GNOMEUIINFO_END
 };
 #endif
-static const GtkActionEntry action_entries[] = { 
+
+static const GtkActionEntry action_entries[] = { 
       {"status", "gtk-properties", "Pad status...", NULL,
-        "Query pad caps, formats, etc", G_CALLBACK (on_pad_status)}, {"ghost",
-      "gtk-jump-to", "Ghost to parent bin...", NULL,
-      "Ghost this pad to the parent bin", G_CALLBACK (on_ghost)}, {"remove",
-      "gtk-cancel", "Remove ghost pad", NULL,
-      "De-request this previously-requested pad",
-      G_CALLBACK (on_remove_ghost_pad)}, {"release", "gtk-cancel",
-      "Release request pad", NULL, "Release this previously-requested pad",
-      G_CALLBACK (on_derequest_pad)}, {"request", "gtk-select-font",
-      "Request pad by name...", NULL,
-      "Request a pad from this template by name", G_CALLBACK (on_request_pad)},
-    {"frobate", "gtk-execute", "Frobate...", NULL,
-      "Frobate this pad into a cromulate mass of goo", G_CALLBACK (on_frobate)},
-    
+       "Query pad caps, formats, etc", G_CALLBACK (on_pad_status)},
+      {"ghost", "gtk-jump-to", "Ghost to parent bin...", NULL,
+       "Ghost this pad to the parent bin", G_CALLBACK (on_ghost)},
+      {"remove", "gtk-cancel", "Remove ghost pad", NULL,
+       "De-request this previously-requested pad",
+       G_CALLBACK (on_remove_ghost_pad)},
+      {"release", "gtk-cancel", "Release request pad", NULL,
+       "Release this previously-requested pad",
+       G_CALLBACK (on_derequest_pad)},
+      {"request", "gtk-select-font",
+       "Request pad by name...", NULL,
+       "Request a pad from this template by name", G_CALLBACK (on_request_pad)},
+      {"frobate", "gtk-execute", "Frobate...", NULL,
+       "Frobate this pad into a cromulate mass of goo", G_CALLBACK (on_frobate)},
 };
-static const char *always_pad_ui_description = "<ui>" 
+
+static const char *always_pad_ui_description =
+  "<ui>"
     "  <popup name='alwaysMenu'>" 
     "    <menuitem name='status' action='status' />" 
     "    <menuitem name='ghost' action='ghost'/>" 
-    "    <separator/>"  "  </popup>"  "</ui>";
-static const char *ghost_pad_ui_description = "<ui>" 
+    "    <separator/>"
+    "  </popup>"
+  "</ui>";
+
+static const char *ghost_pad_ui_description =
+  "<ui>" 
     "  <popup name='itemMenu'>" 
     "    <menuitem name='status' action='status'/>" 
     "    <menuitem name='remove' action='remove'/>" 
     "    <menuitem name='ghost' action='ghost'/>" 
-    "    <separator/>"  "  </popup>"  "</ui>";
-static const char *requested_pad_ui_description = "<ui>" 
+    "    <separator/>"
+    "  </popup>"
+  "</ui>";
+
+static const char *requested_pad_ui_description = 
+  "<ui>" 
     "  <popup name='itemMenu'>" 
     "    <menuitem name='status' action='status'/>" 
     "    <menuitem name='release' action='release'/>" 
     "    <menuitem name='ghost' action='ghost'/>" 
-    "    <separator/>"  "  </popup>"  "</ui>";
-static const char *request_pad_ui_description = "<ui>" 
+    "    <separator/>" 
+    "  </popup>" 
+ "</ui>";
+
+static const char *request_pad_ui_description =
+  "<ui>" 
     "  <popup name='itemMenu'>" 
     "    <menuitem name='request' action='request'/>" 
-    "    <separator/>"  "  </popup>"  "</ui>";
-static const char *sometimes_pad_ui_description = "<ui>" 
+    "    <separator/>"
+    "  </popup>"
+  "</ui>";
+
+static const char *sometimes_pad_ui_description =
+  "<ui>" 
     "  <popup name='itemMenu'>" 
     "    <menuitem name='frobate' action='frobate'/>" 
-    "    <separator/>"  "  </popup>"  "</ui>";
-GType
+    "    <separator/>"
+    "  </popup>"
+  "</ui>";
+
+GType
 gst_editor_pad_get_type (void)
 {
   static GType pad_type = 0;
@@ -349,7 +372,7 @@ gst_editor_pad_ghost_get_type (void)
 static void
 gst_editor_pad_class_init (GstEditorPadClass * klass)
 {
-  GError * error = NULL;
+  GError * error = NULL;
   GObjectClass *object_class;
   GstEditorItemClass *item_class;
 
@@ -366,8 +389,8 @@ gst_editor_pad_class_init (GstEditorPadClass * klass)
       item_class->resize = gst_editor_pad_resize;
   item_class->repack = gst_editor_pad_repack;
   item_class->object_changed = gst_editor_pad_object_changed;
-  GST_EDITOR_ITEM_CLASS_PREPEND_ACTION_ENTRIES (item_class, action_entries, 6);
-  
+  GST_EDITOR_ITEM_CLASS_PREPEND_ACTION_ENTRIES (item_class, action_entries, 6);
+  
 #ifdef POPUP_MENU
       if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_ALWAYS) {
     GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class, always_pad_menu_items,
@@ -391,47 +414,30 @@ gst_editor_pad_class_init (GstEditorPadClass * klass)
 //    item_class->whats_this = gst_editor_pad_ghost_whats_this;
   }
   
-#endif  /*  */
-      if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_ALWAYS)
-     {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
+#endif
+  if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_ALWAYS) {
+    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
         always_pad_ui_description, -1, &error);
-    
 //    item_class->whats_this = gst_editor_pad_always_whats_this;
-    }
-  
-  else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_SOMETIMES)
-     {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_SOMETIMES) {
+    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
         sometimes_pad_ui_description, -1, &error);
-    
 //    item_class->whats_this = gst_editor_pad_sometimes_whats_this;
-    }
-  
-  else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUEST)
-     {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUEST) {
+    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
         request_pad_ui_description, -1, &error);
-    
 //    item_class->whats_this = gst_editor_pad_request_whats_this;
-    }
-  
-  else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUESTED)
-     {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUESTED) {
+    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
         requested_pad_ui_description, -1, &error);
-    
 //    item_class->whats_this = gst_editor_pad_requested_whats_this;
-    }
-  
-  else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_GHOST)
-     {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_GHOST) {
+    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
         ghost_pad_ui_description, -1, &error);
-    
 //    item_class->whats_this = gst_editor_pad_ghost_whats_this;
-    }
-  gtk_ui_manager_ensure_update (item_class->ui_manager);
+  }
+
+  gtk_ui_manager_ensure_update (item_class->ui_manager);
 }
 
 static void
@@ -495,12 +501,13 @@ gst_editor_pad_realize (GooCanvasItem * citem)
    * should work for both kinds of object. */
 
   g_return_if_fail (item->object != NULL);
-    if (!item->realized) gst_editor_item_realize (citem);
+  if (!item->realized)
+    gst_editor_item_realize (citem);
 #if 0
   if (GNOME_CANVAS_ITEM_CLASS (parent_class)->realize)
     GNOME_CANVAS_ITEM_CLASS (parent_class)->realize (citem);
-#endif  /*  */
-  else{//check if links are still valid
+#endif
+  else {//check if links are still valid
  	gboolean fail=FALSE;
 	if (pad->ghostlink){
 		GstPad* suggestedpeer;
@@ -555,15 +562,19 @@ gst_editor_pad_realize (GooCanvasItem * citem)
     pad->isghost = TRUE;
   if (!item->realized){
     if (pad->issrc || pad->isghost)
-          pad->srcbox =
-          goo_canvas_rect_new (GOO_CANVAS_ITEM (citem), 	0., 0., 0., 0.,
-        	"line-width", 1., 	"fill_color", "white", "stroke_color", "black",
-        "antialias", CAIRO_ANTIALIAS_NONE, NULL);
-  	if (!pad->issrc || pad->isghost)
-    	pad->sinkbox =
-        goo_canvas_rect_new (GOO_CANVAS_ITEM (citem), 	0., 0., 0., 0.,
-        	"line-width", 1., 	"fill_color", "white", "stroke_color", "black",
-        "antialias", CAIRO_ANTIALIAS_NONE, NULL);
+          pad->srcbox =
+          goo_canvas_rect_new (GOO_CANVAS_ITEM (citem),
+            0., 0., 0., 0.,
+        	"line-width", 1.,
+            "fill_color", "white", "stroke_color", "black",
+            "antialias", CAIRO_ANTIALIAS_NONE, NULL);
+  	if (!pad->issrc || pad->isghost)
+    	pad->sinkbox =
+        goo_canvas_rect_new (GOO_CANVAS_ITEM (citem),
+            0., 0., 0., 0.,
+        	"line-width", 1.,
+            "fill_color", "white", "stroke_color", "black",
+            "antialias", CAIRO_ANTIALIAS_NONE, NULL);
    }
   if (!pad->istemplate) {
     GstPad *_pad, *_peer;
@@ -577,13 +588,13 @@ gst_editor_pad_realize (GooCanvasItem * citem)
           (GstEditorPad *) gst_editor_item_get ((GstObject *) _peer);
 
       if (peer) {
-        if ((!pad->link)&&(!peer->link)){          GooCanvasItem * link;
+        if ((!pad->link)&&(!peer->link)){
+          GooCanvasItem * link;
 
           g_message ("linking GUI for %s:%s and %s:%s", GST_DEBUG_PAD_NAME (_pad),
             GST_DEBUG_PAD_NAME (_peer));
-        	  link =
-            goo_canvas_item_new (GOO_CANVAS_ITEM (citem),
-            	  gst_editor_link_get_type (), NULL);
+          link = goo_canvas_item_new (GOO_CANVAS_ITEM (citem),
+            gst_editor_link_get_type (), NULL);
           gst_editor_link_realize (link);
           if (pad->issrc)
             g_object_set (G_OBJECT (link), "src-pad", pad, "sink-pad", peer,
@@ -651,28 +662,26 @@ gst_editor_pad_realize (GooCanvasItem * citem)
        gnome_canvas_item_set (link, "sink-pad", pad, "src-pad", peer, NULL);
 
        gst_editor_link_link (GST_EDITOR_LINK (link)); */ 
-        GooCanvasItem * link;
-    GstPad * _pad, *_peer;
-    GstEditorPad * peer = NULL;
-    _pad = GST_PAD (item->object);
-    if (GST_IS_GHOST_PAD (_pad))
-       {
-      _peer = gst_ghost_pad_get_target (GST_GHOST_PAD (_pad));
-      peer = (GstEditorPad *) gst_editor_item_get ((GstObject *) _peer);
-      }
-    g_return_if_fail (peer != NULL);
-    g_message ("link ghost pad for %s:%s and %s:%s, pointers: pad:%p peer:%p",
-        GST_DEBUG_PAD_NAME (_pad), GST_DEBUG_PAD_NAME (_peer),_pad,_peer);
-    link =
+    GooCanvasItem * link;
+    GstPad * _pad, *_peer;
+    GstEditorPad * peer = NULL;
+    _pad = GST_PAD (item->object);
+    if (GST_IS_GHOST_PAD (_pad)) {
+      _peer = gst_ghost_pad_get_target (GST_GHOST_PAD (_pad));
+      peer = (GstEditorPad *) gst_editor_item_get ((GstObject *) _peer);
+    }
+    g_return_if_fail (peer != NULL);
+    g_message ("link ghost pad for %s:%s and %s:%s, pointers: pad:%p peer:%p",
+        GST_DEBUG_PAD_NAME (_pad), GST_DEBUG_PAD_NAME (_peer),_pad,_peer);
+    link =
         goo_canvas_item_new (GOO_CANVAS_ITEM (citem),
-        gst_editor_link_get_type (), NULL);
-    g_object_set (G_OBJECT (link), "ghost", TRUE, NULL);
-    if (!peer->issrc)
-      g_object_set (G_OBJECT (link), "src-pad", pad, "sink-pad", peer, NULL);
-    
+        gst_editor_link_get_type (), NULL);
+    g_object_set (G_OBJECT (link), "ghost", TRUE, NULL);
+    if (!peer->issrc)
+      g_object_set (G_OBJECT (link), "src-pad", pad, "sink-pad", peer, NULL);
     else
-      g_object_set (G_OBJECT (link), "sink-pad", pad, "src-pad", peer, NULL);
-    gst_editor_link_link (GST_EDITOR_LINK (link));
+      g_object_set (G_OBJECT (link), "sink-pad", pad, "src-pad", peer, NULL);
+    gst_editor_link_link (GST_EDITOR_LINK (link));
   }
 
   item->realized = TRUE;
@@ -727,7 +736,7 @@ gst_editor_pad_repack (GstEditorItem * item)
 //    gnome_canvas_item_set (pad->srcbox,
 //      "x1", item->width - 2.0,
 //      "y1", item->height - 2.0, "x2", item->width, "y2", 2.0, NULL);
-    g_object_set (pad->srcbox, "x", item->width - 2.0, "y", /*item->height - */
+    g_object_set (pad->srcbox, "x", item->width - 2.0, "y", /*item->height - */
         2.0, 
         "width", 2.0, "height", item->height - 4.0, NULL);
   }
@@ -735,9 +744,9 @@ gst_editor_pad_repack (GstEditorItem * item)
   if (pad->sinkbox) {
 //    gnome_canvas_item_set (pad->sinkbox,
 //      "x1", 0.0, "y1", item->height - 2.0, "x2", 2.0, "y2", 2.0, NULL);
-    g_object_set (pad->sinkbox, "x", 0.0, "y", /*item->height - */ 2.0, 
+    g_object_set (pad->sinkbox, "x", 0.0, "y", /*item->height - */ 2.0, 
         "width", 2.0, "height", item->height - 4.0, NULL);
-  }
+  }
 
   if (GST_EDITOR_ITEM_CLASS (parent_class)->repack)
     (GST_EDITOR_ITEM_CLASS (parent_class)->repack) (item);
@@ -848,57 +857,60 @@ gst_editor_pad_event (GnomeCanvasItem * citem, GdkEvent * event)
     return GNOME_CANVAS_ITEM_CLASS (parent_class)->event (citem, event);
   return FALSE;
 }
-#endif  /*  */
-static gboolean 
+#endif
+
+static gboolean 
 gst_editor_pad_enter_notify_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventCrossing * event) 
+    GooCanvasItem * target, GdkEventCrossing * event) 
 {
-  GstEditorItem * item = GST_EDITOR_ITEM (citem);
-  g_object_set (GOO_CANVAS_ITEM (item->border), "fill_color_rgba",
+  GstEditorItem * item = GST_EDITOR_ITEM (citem);
+  g_object_set (GOO_CANVAS_ITEM (item->border), "fill_color_rgba",
       0xBBDDBBFF /*0xBBDDBB00 */ , NULL);
-  
+  
 //   if (GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->enter_notify_event)
 //      return GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->enter_notify_event (citem, target, event);
-      return FALSE;
-}
-static gboolean 
+  return FALSE;
+}
+
+static gboolean 
 gst_editor_pad_leave_notify_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventCrossing * event) 
+    GooCanvasItem * target, GdkEventCrossing * event) 
 {
-  GstEditorPad * pad;
-  GstEditorItem * item;
-  item = GST_EDITOR_ITEM (citem);
-  pad = GST_EDITOR_PAD (citem);
-  g_object_set (GOO_CANVAS_ITEM (item->border), "fill_color_rgba",
+  GstEditorPad * pad;
+  GstEditorItem * item;
+  item = GST_EDITOR_ITEM (citem);
+  pad = GST_EDITOR_PAD (citem);
+  g_object_set (GOO_CANVAS_ITEM (item->border), "fill_color_rgba",
       item->fill_color, NULL);
-  if (pad->unlinking) {
-    GstEditorPad * otherpad;
-    otherpad = 
+  if (pad->unlinking) {
+    GstEditorPad * otherpad;
+    otherpad = 
         (GstEditorPad *) ((pad == 
             (GstEditorPad *) pad->link->srcpad) ? pad->link->sinkpad : pad->
-        link->srcpad);
-    gst_editor_link_unlink (pad->link);
-    gst_editor_pad_link_start (otherpad);
-  }
-  pad->unlinking = FALSE;
-  
+        link->srcpad);
+    gst_editor_link_unlink (pad->link);
+    gst_editor_pad_link_start (otherpad);
+  }
+  pad->unlinking = FALSE;
+  
 //   if (GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->leave_notify_event)
 //      return GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->leave_notify_event (citem, target, event);
-      return FALSE;
-}
-static gboolean 
+  return FALSE;
+}
+
+static gboolean 
 gst_editor_pad_motion_notify_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventMotion * event) 
+    GooCanvasItem * target, GdkEventMotion * event) 
 {
-  GstEditorPad * pad = GST_EDITOR_PAD (citem);
-  if (pad->linking) {
-    gdouble x, y;
-    x = event->x_root;
-    y = event->y_root;
-    gst_editor_pad_link_drag (pad, x, y);
-    return TRUE;
-  }
-  
+  GstEditorPad * pad = GST_EDITOR_PAD (citem);
+  if (pad->linking) {
+    gdouble x, y;
+    x = event->x_root;
+    y = event->y_root;
+    gst_editor_pad_link_drag (pad, x, y);
+    return TRUE;
+  }
+  
 /*
   if (GNOME_CANVAS_ITEM_CLASS (parent_class)->event)
     return GNOME_CANVAS_ITEM_CLASS (parent_class)->event (citem, event);
@@ -906,62 +918,64 @@ gst_editor_pad_motion_notify_event (GooCanvasItem * citem,
   if (GOO_CANVAS_ITEM_GET_IFACE (GST_EDITOR_ITEM(citem))->motion_notify_event)
     return GOO_CANVAS_ITEM_GET_IFACE (GST_EDITOR_ITEM(citem))->motion_notify_event (citem, target, event);
 */ 
-      return FALSE;
-}
-static gboolean 
+  return FALSE;
+}
+
+static gboolean 
 gst_editor_pad_button_press_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventButton * event) 
+    GooCanvasItem * target, GdkEventButton * event) 
 {
-  GooCanvasItemIface * iface;
-  GstEditorPad * pad = GST_EDITOR_PAD (citem);
-  if (event->type == GDK_BUTTON_PRESS && event->button == 1) {
-    if (!pad->link)
-      gst_editor_pad_link_start (pad);
-    
+  GooCanvasItemIface * iface;
+  GstEditorPad * pad = GST_EDITOR_PAD (citem);
+  if (event->type == GDK_BUTTON_PRESS && event->button == 1) {
+    if (!pad->link)
+      gst_editor_pad_link_start (pad);
     else
-      pad->unlinking = TRUE;
-    return TRUE;
-  }
-  
+      pad->unlinking = TRUE;
+    return TRUE;
+  }
+  
 //   if (GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_press_event)
 //      return GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_press_event (citem, target, event);
-      iface =
+  iface =
       (GooCanvasItemIface *) g_type_interface_peek (parent_class,
       GOO_TYPE_CANVAS_ITEM);
-  if (iface->button_press_event)
-    return iface->button_press_event (citem, target, event);
-  return FALSE;
-}
-static gboolean 
+  if (iface->button_press_event)
+    return iface->button_press_event (citem, target, event);
+
+  return FALSE;
+}
+
+static gboolean 
 gst_editor_pad_button_release_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventButton * event) 
+    GooCanvasItem * target, GdkEventButton * event) 
 {
-  GstEditorLink * link;
-  GstEditorPad * pad = GST_EDITOR_PAD (citem);
-  if (event->button == 1) {
-    pad->unlinking = FALSE;
-    if (pad->linking) {
-      g_assert (pad->link != NULL);
-      
+  GstEditorLink * link;
+  GstEditorPad * pad = GST_EDITOR_PAD (citem);
+  if (event->button == 1) {
+    pad->unlinking = FALSE;
+    if (pad->linking) {
+      g_assert (pad->link != NULL);
+      
           //       gnome_canvas_item_ungrab (citem, event->button.time);
-          goo_canvas_pointer_ungrab (goo_canvas_item_get_canvas (citem), citem,
+      goo_canvas_pointer_ungrab (goo_canvas_item_get_canvas (citem), citem,
           event->time);
-      link = pad->link;
-      if (!gst_editor_link_link (link)) {
+      link = pad->link;
+      if (!gst_editor_link_link (link)) {
         
             //newly added link-destroy function, kicks link from Pad-Canvas
 	    gst_editor_link_destroy(link);
 
-      }
-      pad->linking = FALSE;
-      return TRUE;
-    }
-  }
+      }
+      pad->linking = FALSE;
+      return TRUE;
+    }
+  }
   
 //   if (GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_release_event)
 //      return GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_release_event (citem, target, event);
-      return FALSE;
-}
+      return FALSE;
+}
 
 static void  on_pad_unlinked (GstPad  *pad,GstPad  *peer,GstEditorItem * item ){
 g_print("unlinking! Linkpointer %p, Ghostlinkpointer %p\n",GST_EDITOR_PAD(item)->link,GST_EDITOR_PAD(item)->ghostlink);
@@ -1044,7 +1058,7 @@ gst_editor_pad_realize (item);
 g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
 }
 
-static void
+static void
 on_pad_parent_unset (GstObject * object, GstObject * parent,
     GstEditorItem * item)
 {
@@ -1054,7 +1068,8 @@ on_pad_parent_unset (GstObject * object, GstObject * parent,
   if (GST_EDITOR_PAD (item)->link)
     gst_editor_link_unlink (GST_EDITOR_PAD (item)->link);
   g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
-  goo_canvas_item_remove(GOO_CANVAS_ITEM(item));//goo_canvas_item_simple_hide (GOO_CANVAS_ITEM_SIMPLE (item));
+  goo_canvas_item_remove(GOO_CANVAS_ITEM(item));
+  //goo_canvas_item_simple_hide (GOO_CANVAS_ITEM_SIMPLE (item));
 
   /* we are removed from the element's pad list with the pad_removed signal */
 
@@ -1070,15 +1085,15 @@ gst_editor_pad_link_start (GstEditorPad * pad)
   g_return_if_fail (pad->link == NULL);
 
   link = goo_canvas_item_new (GOO_CANVAS_ITEM (pad),
-      gst_editor_link_get_type (), pad->issrc ? "src-pad" : "sink-pad", pad,
+      gst_editor_link_get_type (), pad->issrc ? "src-pad" : "sink-pad", pad,
       NULL);
-  gst_editor_link_realize (link);
-  cursor = gdk_cursor_new (GDK_HAND2);
-  goo_canvas_pointer_grab (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (pad)),
-      GOO_CANVAS_ITEM (pad),
-      GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK, cursor,
+  gst_editor_link_realize (link);
+  cursor = gdk_cursor_new (GDK_HAND2);
+  goo_canvas_pointer_grab (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (pad)),
+      GOO_CANVAS_ITEM (pad),
+      GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK, cursor,
       GDK_CURRENT_TIME);
-  gdk_cursor_unref (cursor);
+  gdk_cursor_unref (cursor);
 
   pad->linking = TRUE;
 }
@@ -1088,7 +1103,7 @@ gst_editor_pad_link_drag (GstEditorPad * pad, gdouble wx, gdouble wy)
 {
   GstEditorItem *item;
 
-  GooCanvasItem * underitem, *under = NULL;
+  GooCanvasItem * underitem, *under = NULL;
   GstEditorPad *destpad = NULL;
 
   item = GST_EDITOR_ITEM (pad);
@@ -1096,7 +1111,7 @@ gst_editor_pad_link_drag (GstEditorPad * pad, gdouble wx, gdouble wy)
   /* if we're on top of an interesting pad */
 
   if ((underitem =
-          goo_canvas_get_item_at (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM
+          goo_canvas_get_item_at (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM
                   (item)), wx, wy, FALSE)))
     under = GST_EDITOR_GET_OBJECT (underitem);
 
@@ -1105,14 +1120,14 @@ gst_editor_pad_link_drag (GstEditorPad * pad, gdouble wx, gdouble wy)
 
   if (destpad && destpad != pad &&
       (!destpad->link || destpad->link == pad->link) &&
-      destpad->issrc != pad->issrc)
-    g_object_set (GOO_CANVAS_ITEM (pad->link),
-        pad->issrc ? "sink-pad" : "src-pad", destpad, NULL);
-  else {
+      destpad->issrc != pad->issrc) {
+    g_object_set (GOO_CANVAS_ITEM (pad->link),
+        pad->issrc ? "sink-pad" : "src-pad", destpad, NULL);
+  } else {
     if (pad->issrc ? pad->link->sinkpad : pad->link->srcpad)
-      g_object_set (GOO_CANVAS_ITEM (pad->link),
-          pad->issrc ? "sink-pad" : "src-pad", NULL, NULL);
-    g_object_set (GOO_CANVAS_ITEM (pad->link), "x", wx, "y", wy, NULL);
+      g_object_set (GOO_CANVAS_ITEM (pad->link),
+          pad->issrc ? "sink-pad" : "src-pad", NULL, NULL);
+      g_object_set (GOO_CANVAS_ITEM (pad->link), "x", wx, "y", wy, NULL);
   }
 }
 
@@ -1171,21 +1186,22 @@ on_frobate (GtkWidget * unused, GstEditorPadSometimes * pad)
 {
   g_return_if_fail (GST_IS_EDITOR_PAD_SOMETIMES (pad));
 }
-static void 
-_gst_element_add_ghost_pad (GstElement * element, GstPad * pad,
-    const gchar * name) 
-{
-  GstPad * ghostpad;
-  g_return_if_fail (GST_IS_ELEMENT (element));
-  g_return_if_fail (GST_IS_PAD (pad));
-  
-      /* then check to see if there's already a pad by that name here */ 
-      g_return_if_fail (gst_object_check_uniqueness (element->pads,
-          name) == TRUE);
-  ghostpad = gst_ghost_pad_new (name, pad);
-  gst_element_add_pad (element, ghostpad);
-} static void
 
+static void 
+_gst_element_add_ghost_pad (GstElement * element, GstPad * pad,
+    const gchar * name) 
+{
+  GstPad * ghostpad;
+  g_return_if_fail (GST_IS_ELEMENT (element));
+  g_return_if_fail (GST_IS_PAD (pad));
+  
+  /* then check to see if there's already a pad by that name here */ 
+  g_return_if_fail (gst_object_check_uniqueness (element->pads, name) == TRUE);
+  ghostpad = gst_ghost_pad_new (name, pad);
+  gst_element_add_pad (element, ghostpad);
+}
+
+static void
 on_ghost (GtkWidget * unused, GstEditorPadAlways * pad)
 {
   GstElement *bin;
@@ -1198,6 +1214,4 @@ on_ghost (GtkWidget * unused, GstEditorPadAlways * pad)
   bin = (GstElement *) GST_OBJECT_PARENT (GST_OBJECT_PARENT (p));
 
   _gst_element_add_ghost_pad (bin, p, (gchar *) GST_OBJECT_NAME (p));
-}
-
-
+}

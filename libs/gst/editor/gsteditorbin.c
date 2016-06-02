@@ -527,7 +527,7 @@ gdouble getx;
 gdouble gety;
 gdouble getscale;
 gdouble getrotation;
-goo_canvas_item_get_simple_transform(GOO_CANVAS_ITEM (childitem),
+goo_canvas_item_get_simple_transform(GOO_CANVAS_ITEM (childitem),
 &getx,
 &gety,
 &getscale,

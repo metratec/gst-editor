@@ -23,39 +23,45 @@
  */  
     
 #include <gst/gst.h>
-    GST_DEBUG_CATEGORY (gste_debug_cat);
-void 
-gste_debug_init (void) 
+
+GST_DEBUG_CATEGORY (gste_debug_cat);
+void
+gste_debug_init (void)
 {
-  GST_DEBUG_CATEGORY_INIT (gste_debug_cat, "GSTE_EDITOR", 0,
-      "GStreamer Editor messages");
-} 
+  GST_DEBUG_CATEGORY_INIT (
+      gste_debug_cat, "GSTE_EDITOR", 0, "GStreamer Editor messages");
+}
 
 #ifdef _MSC_VER
 #include <stdarg.h>
-    void
-EDITOR_ERROR (char *format, ...) 
+
+void
+EDITOR_ERROR (char * format, ...)
 {
-  va_list varargs;
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (gste_debug_cat, GST_LEVEL_ERROR, NULL, format,
-      varargs);
-  va_end (varargs);
-} void
-EDITOR_DEBUG (char *format, ...) 
+  va_list varargs;
+  va_start (varargs, format);
+  GST_CAT_LEVEL_LOG_valist (
+      gste_debug_cat, GST_LEVEL_ERROR, NULL, format, varargs);
+  va_end (varargs);
+}
+
+void
+EDITOR_DEBUG (char * format, ...)
 {
-  va_list varargs;
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (gste_debug_cat, GST_LEVEL_DEBUG, NULL, format,
-      varargs);
-  va_end (varargs);
-} void
-EDITOR_LOG (char *format, ...) 
+  va_list varargs;
+  va_start (varargs, format);
+  GST_CAT_LEVEL_LOG_valist (
+      gste_debug_cat, GST_LEVEL_DEBUG, NULL, format, varargs);
+  va_end (varargs);
+}
+
+void
+EDITOR_LOG (char * format, ...)
 {
-  va_list varargs;
-  va_start (varargs, format);
-  GST_CAT_LEVEL_LOG_valist (gste_debug_cat, GST_LEVEL_LOG, NULL, format,
-      varargs);
-  va_end (varargs);
-} 
-#endif  /*  */
+  va_list varargs;
+  va_start (varargs, format);
+  GST_CAT_LEVEL_LOG_valist (
+      gste_debug_cat, GST_LEVEL_LOG, NULL, format, varargs);
+  va_end (varargs);
+}
+#endif

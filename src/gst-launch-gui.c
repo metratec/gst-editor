@@ -176,35 +176,33 @@ build_tree (GtkTreeIter * parent, GstBin * bin)
   children = gst_bin_iterate_elements (bin);
 
   iter = g_new0 (GtkTreeIter, 1);
-  while (!done)
-     {
-    GstElement * child;
-    switch (gst_iterator_next (children, &child))
-       {
-      case GST_ITERATOR_OK:
-        gtk_tree_store_append (store, iter, parent);
-        gtk_tree_store_set (store, iter, 0,
-            gst_object_get_name (GST_OBJECT (&child)), 1, &child, -1);
-        if (GST_IS_BIN (&child))
-          build_tree (iter, GST_BIN (&child));
-        break;
-      case GST_ITERATOR_RESYNC:
-        
-            //...rollback changes to items...
-            gst_iterator_resync (children);
-        break;
-      case GST_ITERATOR_ERROR:
-        
-            //...wrong parameter were given...
+  while (!done) {
+    GstElement *child;
+    switch (gst_iterator_next (children, &child)) {
+      case GST_ITERATOR_OK:
+        gtk_tree_store_append (store, iter, parent);
+        gtk_tree_store_set (store, iter, 0,
+            gst_object_get_name (GST_OBJECT (&child)), 1, &child, -1);
+        if (GST_IS_BIN (&child))
+          build_tree (iter, GST_BIN (&child));
+        break;
+      case GST_ITERATOR_RESYNC:
+
+        //...rollback changes to items...
+        gst_iterator_resync (children);
+        break;
+      case GST_ITERATOR_ERROR:
+
+      //...wrong parameter were given...
       case GST_ITERATOR_DONE:
-      default:
-        done = TRUE;
-        break;
-      }
-    }
-  g_free (iter);
-  gst_iterator_free (children);
-  
+      default:
+        done = TRUE;
+        break;
+    }
+  }
+  g_free (iter);
+  gst_iterator_free (children);
+
 /*
   //while (children) {
   while (gst_iterator_next(children, &child) ==  GST_ITERATOR_OK) {

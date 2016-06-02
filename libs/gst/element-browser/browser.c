@@ -19,11 +19,12 @@
 
 #ifdef HAVE_CONFIG_H
 #  include "config.h"
-#endif  /*  */
+#endif
 
 #include <glib/gi18n-lib.h>
 #include "browser.h"
 #include "element-tree.h"
+
 static void gst_element_browser_init (GstElementBrowser * browser);
 static void gst_element_browser_class_init (GstElementBrowserClass * browser);
 

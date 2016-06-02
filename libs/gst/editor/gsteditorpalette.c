@@ -30,7 +30,8 @@
 #include <gst/common/gste-common.h>
 #include <gst/debug-ui/debug-ui.h>
 #include <gst/element-browser/element-tree.h>
-    typedef struct
+
+typedef struct
 {
   GstEditorPalette *palette;
   GModule *symbols;
@@ -209,8 +210,9 @@ gst_editor_palette_set_property (GObject * object, guint prop_id,
         window = palette->window->window;
 
         atoms[0] = gdk_atom_intern ("_NET_WM_WINDOW_TYPE_UTILITY", FALSE);
-        gdk_property_change (window, gdk_atom_intern ("_NET_WM_WINDOW_TYPE",
-                FALSE), gdk_atom_intern ("ATOM", FALSE), 32,
+        gdk_property_change (window,
+            gdk_atom_intern ("_NET_WM_WINDOW_TYPE", FALSE),
+            gdk_atom_intern ("ATOM", FALSE), 32,
             GDK_PROP_MODE_REPLACE, (guchar *) atoms, 1);
       }
 

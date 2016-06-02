@@ -371,11 +371,11 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
       break;
 #ifndef _MSC_VER
     case G_TYPE_UINT64:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
-          g_value_get_uint64 (pview->value));
-      break;
+      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+          g_value_get_uint64 (pview->value));
+      break;
       
-#else   /*  */
+#else
 #pragma message ("Check if cast from uint64 to double is supported with msvc 6.0")
 #endif
     case G_TYPE_FLOAT:
@@ -513,7 +513,7 @@ pview_param_changed (GstElementUIPropView * pview)
 #ifndef WIN32
           CASE_NUMERIC (UINT64, 0);
       
-#else   /*  */
+#else
 #pragma message ("Check if cast from uint64 to double is supported with msvc 6.0")
 #endif
           CASE_NUMERIC (INT64, 0);

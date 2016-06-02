@@ -63,9 +63,9 @@ static void on_property_destroyed (GstEditorCanvas * canvas,
 static void on_palette_destroyed (GstEditorCanvas * canvas,
     gpointer stale_pointer);
 
-static GooCanvasClass *parent_class = NULL;
+static GooCanvasClass *parent_class = NULL;
 
-GType
+GType
 gst_editor_canvas_get_type (void)
 {
   static GType editor_canvas_type = 0;
@@ -82,9 +82,9 @@ gst_editor_canvas_get_type (void)
       0,
       (GInstanceInitFunc) gst_editor_canvas_init,
     };
-    editor_canvas_type =
-        g_type_register_static (GOO_TYPE_CANVAS, "GstEditorCanvas",
-        &editor_canvas_info, 0);
+    editor_canvas_type =
+        g_type_register_static (GOO_TYPE_CANVAS, "GstEditorCanvas",
+        &editor_canvas_info, 0);
   }
   return editor_canvas_type;
 }
@@ -97,7 +97,7 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
 
   object_class = G_OBJECT_CLASS (klass);
   widget_class = (GtkWidgetClass *) klass;
-  parent_class = g_type_class_ref (goo_canvas_get_type ());
+  parent_class = g_type_class_ref (goo_canvas_get_type ());
 
   object_class->set_property = gst_editor_canvas_set_property;
   object_class->get_property = gst_editor_canvas_get_property;
@@ -138,30 +138,33 @@ gst_editor_canvas_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
 {
   gdouble x, y, width, height;
 
-  GooCanvasBounds bounds;
+  GooCanvasBounds bounds;
   GstEditorCanvas *canvas = GST_EDITOR_CANVAS (widget);
 
   if (canvas->bin) {
     width = allocation->width;
     height = allocation->height;
-    if(canvas->autosize){
-      g_object_set (canvas->bin, "width", width - 8, "height", height - 8, NULL);
-      //g_object_set (canvas->bin, "width", width + 50, "height", height - 8, NULL);
-      //g_print("gst_editor_canvas_size_allocate Allocation Size %f and %f\n",width,height);       goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (canvas->bin), &bounds);
-          x = bounds.x1;
-          y = bounds.y1;
-    
-//    gnome_canvas_set_scroll_region (GNOME_CANVAS (canvas), x - 4, y - 4,
-//        x + width - 4, y + height - 4);
- //       goo_canvas_set_bounds (GOO_CANVAS (canvas), x - 4, y - 4,
- //       x + width - 4, y + height - 4);
-        goo_canvas_set_bounds (GOO_CANVAS (canvas), x - 4, y - 4,
-        x + width -5, y + height - 5);
-      gst_editor_on_spinbutton((GtkSpinButton *) NULL, canvas->parent);
+    if (canvas->autosize) {
+      g_object_set (
+          canvas->bin, "width", width - 8, "height", height - 8, NULL);
+      // g_object_set (canvas->bin, "width", width + 50, "height", height - 8,
+      // NULL);
+      // g_print("gst_editor_canvas_size_allocate Allocation Size %f and
+      // %f\n",width,height);
+      goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (canvas->bin), &bounds);
+      x = bounds.x1;
+      y = bounds.y1;
 
-     }
-  //else{
-    //g_print("gst_editor_canvas_size_allocate none\n");	
+      //    gnome_canvas_set_scroll_region (GNOME_CANVAS (canvas), x - 4, y - 4,
+      //        x + width - 4, y + height - 4);
+      //       goo_canvas_set_bounds (GOO_CANVAS (canvas), x - 4, y - 4,
+      //       x + width - 4, y + height - 4);
+      goo_canvas_set_bounds (
+          GOO_CANVAS (canvas), x - 4, y - 4, x + width - 5, y + height - 5);
+      gst_editor_on_spinbutton ((GtkSpinButton *)NULL, canvas->parent);
+    }
+    // else{
+    // g_print("gst_editor_canvas_size_allocate none\n");
 
   //  }
   canvas->widthbackup=width - 8;
@@ -176,13 +179,13 @@ static void
 gst_editor_canvas_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
-  GooCanvasBounds bounds;
+  GooCanvasBounds bounds;
   gdouble width, height, x, y;
   gboolean b;
   const gchar *status;
   GstEditorCanvas *canvas = GST_EDITOR_CANVAS (object);
 
-  GooCanvasItem * bin;
+  GooCanvasItem * bin;
 
   switch (prop_id) {
     case PROP_ATTRIBUTES:
@@ -194,47 +197,45 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       height = GTK_WIDGET (object)->allocation.height;
 
       if (!canvas->bin) {
-        bin =
-            goo_canvas_item_new (GOO_CANVAS_ITEM (goo_canvas_get_root_item
-                (GOO_CANVAS (canvas))), gst_editor_bin_get_type (),
-"globallock", &canvas->globallock,            "attributes", canvas->attributes, "width", width, "height",
-            height, "object", g_value_get_object (value), "resizeable", FALSE,
+        bin = goo_canvas_item_new (
+            GOO_CANVAS_ITEM (goo_canvas_get_root_item (GOO_CANVAS (canvas))),
+            gst_editor_bin_get_type (), "globallock", &canvas->globallock,
+            "attributes", canvas->attributes, "width", width, "height", height,
+            "object", g_value_get_object (value), "resizeable", FALSE,
             "moveable", FALSE, NULL);
         EDITOR_DEBUG ("created a new bin canvas");
-        gst_editor_bin_realize (bin);
+        gst_editor_bin_realize (bin);
         canvas->bin = GST_EDITOR_BIN (bin);
       } else {
-        g_object_set (G_OBJECT (canvas->bin),
-		"attributes", canvas->attributes, 		"object",g_value_get_object (value), 
-		NULL);
-        EDITOR_DEBUG ("replaced object on existing bin canvas and updated attributes");
+        g_object_set (G_OBJECT (canvas->bin), "attributes", canvas->attributes,
+            "object", g_value_get_object (value), NULL);
+        EDITOR_DEBUG (
+            "replaced object on existing bin canvas and updated attributes");
       }
-      goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (canvas->bin), &bounds);
-      x = bounds.x1;
-      y = bounds.y1;
-     
-gdouble getx;
-gdouble gety;
-gdouble getscale;
-gdouble getrotation;
-goo_canvas_item_get_simple_transform(GOO_CANVAS_ITEM (canvas->bin),
-&getx,
-&gety,
-&getscale,
-&getrotation);
+      goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (canvas->bin), &bounds);
+      x = bounds.x1;
+      y = bounds.y1;
 
-g_print("Gotten Transformation x: %f y:%f Scale %f Rotation %f and X: %f Y:%f\n",getx,gety,getscale,getrotation,x,y);
-//goo_canvas_item_translate (GOO_CANVAS_ITEM (canvas->bin), -x, -y);
-/*goo_canvas_item_set_simple_transform (GOO_CANVAS_ITEM (canvas->bin),
--x,
--y,
-1.,
-0.);*/
-goo_canvas_item_set_simple_transform (GOO_CANVAS_ITEM (canvas->bin),
-0.5,
-0.5,
-1.,
-0.);
+      gdouble getx;
+      gdouble gety;
+      gdouble getscale;
+      gdouble getrotation;
+
+      goo_canvas_item_get_simple_transform (
+          GOO_CANVAS_ITEM (canvas->bin), &getx, &gety, &getscale, &getrotation);
+
+      g_print (
+          "Gotten Transformation x: %f y:%f Scale %f Rotation %f and X: %f "
+          "Y:%f\n",
+          getx, gety, getscale, getrotation, x, y);
+      // goo_canvas_item_translate (GOO_CANVAS_ITEM (canvas->bin), -x, -y);
+      /*goo_canvas_item_set_simple_transform (GOO_CANVAS_ITEM (canvas->bin),
+      -x,
+      -y,
+      1.,
+      0.);*/
+      goo_canvas_item_set_simple_transform (
+          GOO_CANVAS_ITEM (canvas->bin), 0.5, 0.5, 1., 0.);
       g_object_set (canvas, "selection", canvas->bin, NULL);
       break;
 
