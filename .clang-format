@@ -1,0 +1,11 @@
+# This project uses a custom coding style
+BasedOnStyle: Google
+IndentWidth: 2
+ContinuationIndentWidth: 4
+BreakBeforeBraces: Linux
+AllowShortIfStatementsOnASingleLine: false
+AlwaysBreakAfterDefinitionReturnType: true
+AlignAfterOpenBracket: false
+SpaceBeforeParens: Always
+PointerAlignment: Middle
+DerivePointerAlignment: false
