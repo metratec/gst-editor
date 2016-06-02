@@ -67,7 +67,6 @@ main (int argc, char * argv[])
 #endif
   if (!g_thread_supported ())
     g_thread_init (NULL);
-  g_type_init ();
   glade_init ();
   ctx = g_option_context_new (PACKAGE);
   g_option_context_add_main_entries (ctx, options, GETTEXT_PACKAGE);
