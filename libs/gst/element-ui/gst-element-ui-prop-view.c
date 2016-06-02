@@ -414,12 +414,11 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
       } 
       else if (!strcmp("GstCaps",g_type_name (pview->param->value_type))){
         //g_print("Try to show caps\n");
-	GstCaps * temp=gst_value_get_caps(pview->value);
-        if(temp){
-          char* capsstring=NULL;
-          capsstring=gst_caps_to_string(temp);
-          gtk_entry_set_text (GTK_ENTRY (pview->entry),capsstring);
-          g_free(capsstring);
+        const GstCaps *temp = gst_value_get_caps (pview->value);
+        if (temp) {
+          char* capsstring = gst_caps_to_string (temp);
+          gtk_entry_set_text (GTK_ENTRY (pview->entry), capsstring);
+          g_free (capsstring);
         }
 	else gtk_entry_set_text (GTK_ENTRY (pview->entry),"Caps are NULL");
       }
@@ -709,10 +708,13 @@ on_location_hit (GtkWidget * widget, GstElementUIPropView * pview)
 				      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
 				      GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
 				      NULL);
-  if (strstr(pview->param->name,"uri")) gtk_file_chooser_select_filename(dialog,gtk_entry_get_text(pview->filetext)+7); 
-  else gtk_file_chooser_select_filename(dialog,gtk_entry_get_text(pview->filetext));
-  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT)
-  {
+  if (strstr (pview->param->name, "uri"))
+    gtk_file_chooser_select_filename (GTK_FILE_CHOOSER (dialog),
+        gtk_entry_get_text (GTK_ENTRY (pview->filetext)) + 7);
+  else
+    gtk_file_chooser_select_filename (GTK_FILE_CHOOSER (dialog),
+        gtk_entry_get_text (GTK_ENTRY (pview->filetext)));
+  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
     char *filename;
 
     filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
@@ -721,7 +723,7 @@ on_location_hit (GtkWidget * widget, GstElementUIPropView * pview)
     else sprintf(filenamefull,"%s",filename);
     g_object_set (G_OBJECT (pview->element), pview->param->name,
           filenamefull, NULL);
-    gtk_entry_set_text(pview->filetext,filenamefull); 
+    gtk_entry_set_text (GTK_ENTRY (pview->filetext), filenamefull);
     g_free (filenamefull);
     g_free (filename);
   }
