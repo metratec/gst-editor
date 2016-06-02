@@ -56,7 +56,7 @@ struct _GstEditor
   GstEditorCanvas *canvas;
 
   GData *attributes;//one global attributes location all other point to
-  GMutex *outputmutex;//only used for time measurement outputs
+  GMutex outputmutex;//only used for time measurement outputs
 };
 
 struct _GstEditorClass

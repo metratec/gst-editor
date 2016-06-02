@@ -41,7 +41,7 @@ struct _GstElementUIPropView
   GParamSpec *param;
 
   GValue *value;
-  GMutex *value_mutex;
+  GMutex value_mutex;
   guint source_id;		/* event source id for the update timeout */
 
   gboolean on_pending;

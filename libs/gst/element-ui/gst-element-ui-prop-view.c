@@ -28,6 +28,7 @@ static void gst_element_ui_prop_view_class_init (GstElementUIPropViewClass *
     klass);
 static void gst_element_ui_prop_view_init (GstElementUIPropView * pview);
 static void gst_element_ui_prop_view_dispose (GObject * object);
+static void gst_element_ui_prop_view_finalize (GObject * object);
 
 static void gst_element_ui_prop_view_set_property (GObject * object,
     guint prop_id, const GValue * value, GParamSpec * pspec);
@@ -87,6 +88,7 @@ gst_element_ui_prop_view_class_init (GstElementUIPropViewClass * klass)
   GObjectClass *object_class = G_OBJECT_CLASS (klass);
 
   object_class->dispose = gst_element_ui_prop_view_dispose;
+  object_class->finalize = gst_element_ui_prop_view_finalize;
 
   parent_class = (GObjectClass *) g_type_class_ref (gtk_vbox_get_type ());
 
@@ -124,7 +126,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   GtkWidget *filetext;
 
   pview->value = g_new0 (GValue, 1);
-  pview->value_mutex = g_mutex_new ();
+  g_mutex_init (&pview->value_mutex);
 
   table_args = gtk_table_new (6, 6, FALSE);
   gtk_widget_show (table_args);
@@ -232,7 +234,7 @@ gst_element_ui_prop_view_set_property (GObject * object, guint prop_id,
 
       pview->param = G_PARAM_SPEC (g_value_get_pointer (value));
 
-      g_mutex_lock (pview->value_mutex);
+      g_mutex_lock (&pview->value_mutex);
 
       /* G_IS_VALUE (zeroed or unset value) == FALSE */
       if (G_IS_VALUE (pview->value))
@@ -241,7 +243,7 @@ gst_element_ui_prop_view_set_property (GObject * object, guint prop_id,
       g_value_init (pview->value, pview->param->value_type);
       g_object_get_property (G_OBJECT (pview->element), pview->param->name,
           pview->value);
-      g_mutex_unlock (pview->value_mutex);
+      g_mutex_unlock (&pview->value_mutex);
 
       if (!(pview->param->flags & G_PARAM_WRITABLE))
         g_object_set (pview, "sensitive", FALSE, NULL);
@@ -280,16 +282,24 @@ gst_element_ui_prop_view_get_property (GObject * object, guint prop_id,
 static void
 gst_element_ui_prop_view_dispose (GObject * object)
 {
-  GstElementUIPropView *pview;
-
-  pview = GST_ELEMENT_UI_PROP_VIEW (object);
+  GstElementUIPropView *pview = GST_ELEMENT_UI_PROP_VIEW (object);
 
   if (pview->source_id)
     g_source_remove (pview->source_id);
   pview->source_id = 0;
 
-  if (G_OBJECT_CLASS (parent_class)->dispose)
-    (*G_OBJECT_CLASS (parent_class)->dispose) (object);
+  G_OBJECT_CLASS (parent_class)->dispose (object);
+}
+
+static void
+gst_element_ui_prop_view_finalize (GObject * object)
+{
+  GstElementUIPropView *pview = GST_ELEMENT_UI_PROP_VIEW (object);
+
+  // FIXME: There seems to be more to clean up
+  g_mutex_clear (&pview->value_mutex);
+
+  G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
 /* It is assumed that this function is called from the element's thread, so we
@@ -299,7 +309,7 @@ gst_element_ui_prop_view_update_async (GstElementUIPropView * pview)
 {
   GST_DEBUG ("async property update: %s", pview->param->name);
 
-  g_mutex_lock (pview->value_mutex);
+  g_mutex_lock (&pview->value_mutex);
 
   g_object_get_property ((GObject *) pview->element, pview->param->name,
       pview->value);
@@ -316,7 +326,7 @@ gst_element_ui_prop_view_update_async (GstElementUIPropView * pview)
         pview->source_id);
   }
 
-  g_mutex_unlock (pview->value_mutex);
+  g_mutex_unlock (&pview->value_mutex);
 
   return FALSE;
 }
@@ -326,7 +336,7 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
 {
   block_signals (pview);
 
-  g_mutex_lock (pview->value_mutex);
+  g_mutex_lock (&pview->value_mutex);
   gchar *contents;
   
   GST_DEBUG ("Name of parameters to update view %s\n",G_PARAM_SPEC_TYPE_NAME(pview->param));
@@ -428,7 +438,7 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
       }
   }
 
-  g_mutex_unlock (pview->value_mutex);
+  g_mutex_unlock (&pview->value_mutex);
   unblock_signals (pview);
   GST_DEBUG ("property updated");
   return FALSE;

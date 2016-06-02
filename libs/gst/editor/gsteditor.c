@@ -52,6 +52,7 @@ static void gst_editor_get_property (GObject * object, guint prop_id,
 static void gst_editor_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_editor_dispose (GObject * object);
+static void gst_editor_finalize (GObject * object);
 static void gst_editor_connect_func (const gchar * handler_name,
     GObject * object,
     const gchar * signal_name,
@@ -145,6 +146,7 @@ gst_editor_class_init (GstEditorClass * klass)
   gobject_class->get_property = gst_editor_get_property;
   gobject_class->set_property = gst_editor_set_property;
   gobject_class->dispose = gst_editor_dispose;
+  gobject_class->finalize = gst_editor_finalize;
 
   g_object_class_install_property (gobject_class, PROP_FILENAME,
       g_param_spec_string ("filename", "Filename", "File name",
@@ -222,7 +224,7 @@ gst_editor_init (GstEditor * editor)
       G_CALLBACK (on_delete_event), editor);
   g_signal_connect (editor->canvas, "notify", G_CALLBACK (on_canvas_notify),
       editor);
-  editor->outputmutex=g_mutex_new();
+  g_mutex_init (&editor->outputmutex);
 }
 
 static void
@@ -290,6 +292,18 @@ gst_editor_dispose (GObject * object)
 
   if (_num_editor_windows == 0)
     gtk_main_quit ();
+
+  G_OBJECT_CLASS (parent_class)->dispose (object);
+}
+
+static void
+gst_editor_finalize (GObject * object)
+{
+  GstEditor *editor = GST_EDITOR (object);
+
+  g_mutex_clear (&editor->outputmutex);
+
+  G_OBJECT_CLASS (parent_class)->finalize (object);
 }
 
 /*
@@ -942,11 +956,11 @@ cb_output (GstPad    *pad,
   struct timeval now;
   gettimeofday(&now, NULL);
   time=((now.tv_sec*1000000000ULL)+(now.tv_usec*1000ULL));
-  g_mutex_lock(editor->outputmutex);
+  g_mutex_lock(&editor->outputmutex);
   if (GST_STATE(GST_OBJECT(pad)->parent)==GST_STATE_PLAYING){
     fprintf(stderr,"%s %llu %llu %u %llu %ld %d %lu %s \n",(GST_OBJECT(pad)->parent->name),buffer->timestamp,time, buffer->size, buffer->offset, clock(),getpid(),pthread_self(),(GST_OBJECT(pad->peer)->parent->name));//Element Name, timestamp, timenow, jiffies now,Prozessnr, threadnr,Peer Element Name
   }
-  g_mutex_unlock(editor->outputmutex);  
+  g_mutex_unlock(&editor->outputmutex);
   return TRUE;
 }
 
