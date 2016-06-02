@@ -191,8 +191,8 @@ gst_editor_init (GstEditor * editor)
 
   editor->window = glade_xml_get_widget (editor->xml, "main_project_window");
 
-  editor->sw=glade_xml_get_widget (editor->xml, "spinbutton1");
-  editor->sh=glade_xml_get_widget (editor->xml, "spinbutton2");
+  editor->sw = GTK_SPIN_BUTTON (glade_xml_get_widget (editor->xml, "spinbutton1"));
+  editor->sh = GTK_SPIN_BUTTON (glade_xml_get_widget (editor->xml, "spinbutton2"));
 
   gtk_widget_show (editor->window);
 //Code for element tree
@@ -331,7 +331,7 @@ gst_editor_dialog_gerror (GtkWindow * window, GstMessage* message)
   g_return_if_fail (err);
 
   error_dialog = gtk_message_dialog_new (window, GTK_DIALOG_MODAL,
-      GTK_MESSAGE_ERROR, GTK_BUTTONS_NONE, err->message);
+      GTK_MESSAGE_ERROR, GTK_BUTTONS_NONE, "%s", err->message);
   /* add a stop pipeline button */
 //  gtk_dialog_add_button (GTK_DIALOG (error_dialog), "STOP",
 //      GTK_RESPONSE_CANCEL);
@@ -352,19 +352,19 @@ gst_editor_dialog_gerror (GtkWindow * window, GstMessage* message)
   response = gtk_dialog_run (GTK_DIALOG (error_dialog));
 
   if (response == GTK_RESPONSE_CANCEL) {
-      GstObject *obj = GST_OBJECT (GST_MESSAGE_SRC (message));
-      if (GST_IS_ELEMENT (obj)){
-	GstElement* top=obj;
-	while (GST_ELEMENT_PARENT(top)) top=GST_ELEMENT_PARENT(top);
-	//g_print("GstEditor: stopping on demand\n");
-        gst_element_set_state(top,GST_STATE_NULL);
-        GstEditorItem *item = gst_editor_item_get (top);
-        gst_editor_element_stop_child(GST_EDITOR_ELEMENT(item));
-        //g_idle_add ((GSourceFunc) gst_editor_element_sync_state,
-        //    item /*editor_element */ );
-      }
-  }
-  else if (response == GST_EDITOR_RESPONSE_DEBUG) {
+    GstObject *obj = GST_OBJECT (GST_MESSAGE_SRC (message));
+    if (GST_IS_ELEMENT (obj)) {
+      GstElement * top = GST_ELEMENT (obj);
+      while (GST_ELEMENT_PARENT (top))
+        top = GST_ELEMENT_PARENT (top);
+      // g_print("GstEditor: stopping on demand\n");
+      gst_element_set_state (top, GST_STATE_NULL);
+      GstEditorItem *item = gst_editor_item_get (GST_OBJECT (top));
+      gst_editor_element_stop_child (GST_EDITOR_ELEMENT (item));
+      // g_idle_add ((GSourceFunc) gst_editor_element_sync_state,
+      //    item /*editor_element */ );
+    }
+  } else if (response == GST_EDITOR_RESPONSE_DEBUG) {
     gtk_widget_destroy (error_dialog);
     error_dialog = gtk_message_dialog_new (GTK_WINDOW (window),
         GTK_DIALOG_MODAL,
@@ -666,7 +666,7 @@ gst_editor_load (GstEditor * editor, const gchar * file_name)
   g_object_set (editor, "filename", file_name, NULL);
 
 
-  attr = g_datalist_get_data (editor->attributes, GST_ELEMENT_NAME(pipeline));
+  attr = g_datalist_get_data (&editor->attributes, GST_ELEMENT_NAME (pipeline));
   /* now decide */
   if (attr) {
     editor->canvas->widthbackup= attr->w;
@@ -936,6 +936,7 @@ gst_editor_on_about (GtkWidget * widget, GstEditor * editor)
   gtk_widget_show (about);
 }
 
+#if 0
 static gboolean
 sort (GstEditor * editor)
 {
@@ -943,6 +944,8 @@ sort (GstEditor * editor)
       gst_editor_bin_sort (editor->canvas->bin, 0.1));
   return TRUE;
 }
+#endif
+
 //callback that generates an output message to stderr
 static gboolean
 cb_output (GstPad    *pad,
@@ -958,7 +961,13 @@ cb_output (GstPad    *pad,
   time=((now.tv_sec*1000000000ULL)+(now.tv_usec*1000ULL));
   g_mutex_lock(&editor->outputmutex);
   if (GST_STATE(GST_OBJECT(pad)->parent)==GST_STATE_PLAYING){
-    fprintf(stderr,"%s %llu %llu %u %llu %ld %d %lu %s \n",(GST_OBJECT(pad)->parent->name),buffer->timestamp,time, buffer->size, buffer->offset, clock(),getpid(),pthread_self(),(GST_OBJECT(pad->peer)->parent->name));//Element Name, timestamp, timenow, jiffies now,Prozessnr, threadnr,Peer Element Name
+    fprintf (stderr,
+        "%s %" G_GUINT64_FORMAT " %" G_GUINT64_FORMAT " %u "
+        "%" G_GUINT64_FORMAT " %ld %d %lu %s \n",
+        GST_OBJECT(pad)->parent->name, buffer->timestamp, time,
+        buffer->size, buffer->offset, clock(), getpid(), pthread_self(),
+        GST_OBJECT(pad->peer)->parent->name);
+    //Element Name, timestamp, timenow, jiffies now,Prozessnr, threadnr,Peer Element Name
   }
   g_mutex_unlock(&editor->outputmutex);
   return TRUE;
@@ -1019,36 +1028,33 @@ gst_editor_on_autosize (GtkCheckButton * autosize, GstEditor * editor)
     //g_print("AutoSize toggled %d\n",(int)value);
 }
 
-
-
 void
-gst_editor_on_spinbutton(GtkSpinButton * spinheight, GstEditor * editor)
+gst_editor_on_spinbutton (GtkSpinButton * spinheight, GstEditor * editor)
 {
-    //g_print("Spinbutton!!!\n");     
-    gdouble x, y, width, height;
-    GooCanvasBounds bounds;
-    if (editor->canvas->autosize){//set value back
-        if (editor->canvas->bin) g_object_get (editor->canvas->bin, "width", &width, "height", &height, NULL);
-	gtk_spin_button_set_value(editor->sw,width);
-	gtk_spin_button_set_value(editor->sh,height);
-        //g_print("Gotten Object Size %d and %d size\n",(int)width,(int)height);    
+  // g_print("Spinbutton!!!\n");
+  gdouble x, y, width, height;
+  GooCanvasBounds bounds;
+  if (editor->canvas->autosize) {  // set value back
+    if (editor->canvas->bin) {
+      g_object_get (
+          editor->canvas->bin, "width", &width, "height", &height, NULL);
+      gtk_spin_button_set_value (editor->sw, width);
+      gtk_spin_button_set_value (editor->sh, height);
+      // g_print("Gotten Object Size %d and %d size\n",(int)width,(int)height);
     }
-    else{
-      int value;
-      height=gtk_spin_button_get_value_as_int(editor->sh);
-      width=gtk_spin_button_get_value_as_int(editor->sw);
-      //g_print("Setting editor Canvas Value!!!\n");   
-      g_object_set(editor->canvas->bin, "width",width,"height",height,NULL);
-      //g_print("FinishedSetting editor Canvas Value!!!\n");
-      goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (editor->canvas->bin), &bounds);
-       x = bounds.x1;
-       y = bounds.y1;
-       goo_canvas_set_bounds (GOO_CANVAS (editor->canvas), x - 4, y - 4,
-       x + width +3, y + height +3);
-
-    }
+  } else {
+    height = gtk_spin_button_get_value_as_int (editor->sh);
+    width = gtk_spin_button_get_value_as_int (editor->sw);
+    // g_print("Setting editor Canvas Value!!!\n");
+    g_object_set (editor->canvas->bin, "width", width, "height", height, NULL);
+    // g_print("FinishedSetting editor Canvas Value!!!\n");
+    goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (editor->canvas->bin), &bounds);
+    x = bounds.x1;
+    y = bounds.y1;
+    goo_canvas_set_bounds (GOO_CANVAS (editor->canvas),
+        x - 4, y - 4, x + width + 3, y + height + 3);
+  }
 }
-
 
 /*  gboolean active;
 
@@ -1140,6 +1146,7 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
   GstElement *element, *selected_bin;
   GstElementFactory *selected_factory;
   GstEditor *editor = GST_EDITOR (user_data);
+  GstState state;
 
   g_return_if_fail (editor->canvas != NULL);
   g_object_get (element_tree, "selected", &selected_factory, NULL);
@@ -1157,8 +1164,9 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
 
   /* Check if we're allowed to add to the bin, ie if it's paused.
    * if not, throw up a warning */
-  if (gst_element_get_state (selected_bin, NULL, NULL,
-          GST_CLOCK_TIME_NONE) == GST_STATE_PLAYING) {
+  if (gst_element_get_state (selected_bin, &state, NULL,
+          GST_CLOCK_TIME_NONE) != GST_STATE_CHANGE_SUCCESS ||
+      state == GST_STATE_PLAYING) {
     gchar *message =
         g_strdup_printf ("bin %s is in PLAYING state, you cannot add "
         "elements to it in this state !",
@@ -1173,12 +1181,12 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
   GtkWidget * check = glade_xml_get_widget(editor->xml,"defaultnamebutton");
   GtkWidget * entry = glade_xml_get_widget(editor->xml,"elementname");
   gboolean b_act;
-  char* elementname;
-  elementname=gtk_entry_get_text((GtkEntry*)entry);
-  g_object_get(GTK_BUTTON(check), "active", &b_act, NULL);
-  if (b_act) element = gst_element_factory_create(selected_factory,elementname);
-  else element = gst_element_factory_create (selected_factory, NULL);
-
+  const gchar *elementname = gtk_entry_get_text (GTK_ENTRY (entry));
+  g_object_get (GTK_BUTTON (check), "active", &b_act, NULL);
+  if (b_act)
+    element = gst_element_factory_create (selected_factory, elementname);
+  else
+    element = gst_element_factory_create (selected_factory, NULL);
 
   g_return_if_fail (element != NULL);
   gst_bin_add (GST_BIN (selected_bin), element);
