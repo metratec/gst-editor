@@ -53,7 +53,6 @@ static void gst_editor_element_set_property (GObject * object, guint prop_id,
 static void gst_editor_element_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-/*static*/ void gst_editor_element_realize (GooCanvasItem * citem);
 static void gst_editor_element_resize (GstEditorItem * item);
 static void gst_editor_element_repack (GstEditorItem * item);
 static void gst_editor_element_object_changed (GstEditorItem * bin,

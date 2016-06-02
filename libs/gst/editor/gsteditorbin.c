@@ -136,11 +136,9 @@ gst_editor_bin_class_init (GstEditorBinClass * klass)
 {
   GError *error = NULL;
   GObjectClass *object_class;
-  GstEditorElementClass *element_class;
   GstEditorItemClass *item_class;
 
   object_class = G_OBJECT_CLASS (klass);
-  element_class = GST_EDITOR_ELEMENT_CLASS (klass);
   item_class = GST_EDITOR_ITEM_CLASS (klass);
 
   parent_class = g_type_class_ref (gst_editor_element_get_type ());
@@ -174,10 +172,8 @@ gst_editor_bin_class_init (GstEditorBinClass * klass)
 static void
 gst_editor_bin_init (GstEditorBin * bin)
 {
-  GstEditorElement *element;
   GstEditorItem *item;
 
-  element = GST_EDITOR_ELEMENT (bin);
   item = GST_EDITOR_ITEM (bin);
 
   /* set these directly here, things will get repacked when the item is
@@ -231,12 +227,10 @@ gst_editor_bin_get_property (GObject * object, guint prop_id, GValue * value,
 gst_editor_bin_realize (GooCanvasItem * citem)
 {
   GstEditorItem *item;
-  GstEditorElement *element;
   GstEditorBin *bin;
   const GList *children;
 
   item = GST_EDITOR_ITEM (citem);
-  element = GST_EDITOR_ELEMENT (citem);
   bin = GST_EDITOR_BIN (citem);
 
   children = bin->elements;
@@ -345,9 +339,9 @@ gst_editor_bin_button_press_event (GooCanvasItem * citem,
 static void
 gst_editor_bin_object_changed (GstEditorItem * item, GstObject * object)
 {
-  GstEditorBin *bin = (GstEditorBin *) item;
+  GstEditorBin *bin = GST_EDITOR_BIN (item);
   GList *l = NULL;
-  GstBin *gstbin = (GstBin *) object, *oldbin = (GstBin *) item->object;
+  GstBin *gstbin = GST_BIN (object), *oldbin = GST_BIN (item->object);
   gdouble width, height, minwidth, minheight;
 
   if (oldbin&&gstbin) {
@@ -370,7 +364,8 @@ gst_editor_bin_object_changed (GstEditorItem * item, GstObject * object)
     G_CALLBACK (gst_editor_bin_element_added_cb), bin);
   }
   if (oldbin&&!gstbin) {//we are getting deleted
-    g_print("Disconnecting signals for old bin %s with pointer %p.\n",GST_EDITOR_ITEM(item)->title_text);
+    g_print ("Disconnecting signals for old bin %s with pointer %p.\n",
+        item->title_text, item);
     if (GST_IS_BIN(oldbin)) g_signal_handlers_disconnect_by_func (oldbin,
     G_CALLBACK (gst_editor_bin_element_added_cb), bin);
     else g_print("But GstBin seems to have disappeared\n");
@@ -601,7 +596,7 @@ calculate_link_forces (GList * links)
   GstEditorElement *src, *sink;
   GstEditorLink *c;
   element *srce, *sinke;
-  gdouble x1, x2, y1, y2, len, fx, fy;
+  gdouble x1, x2, y1, y2, fx, fy;
 
   for (l = links; l; l = l->next) {
     c = GST_EDITOR_LINK (l->data);
@@ -618,12 +613,11 @@ calculate_link_forces (GList * links)
 
     g_object_get (c, "x1", &x1, "y1", &y1, "x2", &x2, "y2", &y2, NULL);
 
-    len = sqrt ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-
     fx = (x2 - x1 - 20) * 0.5;
     fy = (y2 - y1) * 0.5;
 
 /*
+    len = sqrt ((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
     if (len-20.0 < 0) {
       fx *= 2.0;
       fy *= 2.0;
