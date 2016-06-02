@@ -269,6 +269,7 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
   GstElement *element, *selected_bin;
   GstElementFactory *selected_factory;
   GstEditorPalette *palette = GST_EDITOR_PALETTE (user_data);
+  GstState state;
 
   g_return_if_fail (palette->canvas != NULL);
   g_object_get (element_tree, "selected", &selected_factory, NULL);
@@ -286,8 +287,9 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
 
   /* Check if we're allowed to add to the bin, ie if it's paused.
    * if not, throw up a warning */
-  if (gst_element_get_state (selected_bin, NULL, NULL,
-          GST_CLOCK_TIME_NONE) == GST_STATE_PLAYING) {
+  if (gst_element_get_state (selected_bin, &state, NULL,
+          GST_CLOCK_TIME_NONE) != GST_STATE_CHANGE_SUCCESS ||
+      state == GST_STATE_PLAYING) {
     gchar *message =
         g_strdup_printf ("bin %s is in PLAYING state, you cannot add "
         "elements to it in this state !",
