@@ -432,7 +432,7 @@ gst_editor_link_resize (GstEditorLink * link)
 static void
 on_pad_unlink (GstPad * pad, GstPad * peer, GstEditorLink * link)
 {
-  GStaticRWLock *globallock;
+  GRWLock *globallock;
   if ((GST_IS_EDITOR_LINK (link)) && (GST_IS_EDITOR_PAD (link->srcpad))) {
     globallock = GST_EDITOR_ITEM (link->srcpad)->globallock;
   } else if ((GST_IS_EDITOR_LINK (link)) && (GST_IS_EDITOR_PAD (link->sinkpad))) {
@@ -441,7 +441,7 @@ on_pad_unlink (GstPad * pad, GstPad * peer, GstEditorLink * link)
     g_print ("Warning: On pad unlink without any valid Pads called!!!!");
     return;
   }
-  g_static_rw_lock_writer_lock (globallock);
+  g_rw_lock_writer_lock (globallock);
   g_print ("Unlink pad signal (%s:%s from %s:%s) with link %p",
       GST_DEBUG_PAD_NAME (pad), GST_DEBUG_PAD_NAME (peer), link);
   GstEditorBin *srcbin = NULL, *sinkbin = NULL;
@@ -500,7 +500,7 @@ on_pad_unlink (GstPad * pad, GstPad * peer, GstEditorLink * link)
     if (link->sinkpad)
       GST_EDITOR_PAD (link->sinkpad)->link = NULL;
   }
-  g_static_rw_lock_writer_unlock (globallock);
+  g_rw_lock_writer_unlock (globallock);
   link->srcpad = NULL;
   link->sinkpad = NULL;
   /* i have bad luck with actually killing the GCI's */

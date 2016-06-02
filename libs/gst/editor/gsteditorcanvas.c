@@ -130,7 +130,7 @@ gst_editor_canvas_init (GstEditorCanvas * editorcanvas)
 {
   g_signal_connect_after (editorcanvas, "realize", G_CALLBACK (on_realize),
       NULL);
-  g_static_rw_lock_init (&editorcanvas->globallock);
+  g_rw_lock_init (&editorcanvas->globallock);
 }
 
 static void
@@ -362,6 +362,8 @@ gst_editor_canvas_dispose (GObject * object)
     g_object_unref (G_OBJECT (canvas->property_window));
   if (canvas->palette)
     g_object_unref (G_OBJECT (canvas->palette));
+
+  g_rw_lock_clear (&canvas->globallock);
 }
 
 static void

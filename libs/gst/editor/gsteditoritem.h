@@ -102,7 +102,7 @@ struct _GstEditorItem
   guint32 fill_color;
   guint32 outline_color;
 
-  GStaticRWLock* globallock;
+  GRWLock *globallock;
 };
 
 struct _GstEditorItemClass

@@ -77,9 +77,7 @@ struct _GstEditorElement
   GstState next_state;
 
   guint bus_id;
-  GStaticRWLock rwlock; 
-
-
+  GRWLock rwlock; 
 };
 
 struct _GstEditorElementClass

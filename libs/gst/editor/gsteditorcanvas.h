@@ -45,7 +45,7 @@ struct _GstEditorCanvas
   GtkWidget *palette;
   gchar *status;
   GData **attributes;		/* list of name -> GstEditorItemAttr mappings */
-  GStaticRWLock globallock;
+  GRWLock globallock;
   gboolean autosize;
   gdouble widthbackup,heightbackup;
 };

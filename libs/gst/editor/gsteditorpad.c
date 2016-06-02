@@ -690,21 +690,22 @@ gst_editor_pad_realize (GooCanvasItem * citem)
   gst_editor_item_resize (item);
 }
 
-static gboolean gst_editor_pad_realize_source (GooCanvasItem * citem){
-if (!GOO_IS_CANVAS_ITEM(citem)){
-  g_print("Not a valid canvas item anymore, stopping\n");
+static gboolean
+gst_editor_pad_realize_source (GooCanvasItem * citem)
+{
+  if (!GOO_IS_CANVAS_ITEM (citem)) {
+    g_print ("Not a valid canvas item anymore, stopping\n");
+    return FALSE;
+  }
+  if (!GST_IS_EDITOR_PAD (citem)) {
+    g_print ("Not a valid EditorPad anymore, stopping\n");
+    return FALSE;
+  }
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM (citem)->globallock);
+  gst_editor_pad_realize (citem);
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM (citem)->globallock);
   return FALSE;
 }
-if (!GST_IS_EDITOR_PAD(citem)){
-  g_print("Not a valid EditorPad anymore, stopping\n");
-  return FALSE;
-}
-g_static_rw_lock_writer_lock (GST_EDITOR_ITEM(citem)->globallock);
-gst_editor_pad_realize(citem);
-g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(citem)->globallock);
-return FALSE;
-}
-
 
 static void
 gst_editor_pad_resize (GstEditorItem * item)
@@ -986,7 +987,7 @@ g_print("unlinking! Linkpointer %p, Ghostlinkpointer %p\n",GST_EDITOR_PAD(item)-
 }
 
 static void  on_pad_linked (GstPad  *pad,GstPad  *peer,GstEditorItem * item ){
-g_static_rw_lock_writer_lock (GST_EDITOR_ITEM(item)->globallock);
+g_rw_lock_writer_lock (GST_EDITOR_ITEM(item)->globallock);
 g_print("linking! Padpointer: %p, Peer %p Linkpointer %p, Ghostlinkpointer %p\n",pad,peer,GST_EDITOR_PAD(item)->link,GST_EDITOR_PAD(item)->ghostlink);
 if ((!GST_IS_PAD(pad))||(!GST_IS_PAD(peer))){
   g_print("Warning, pad or peer invalid");
@@ -1055,19 +1056,19 @@ if (!gst_pad_get_parent_element(peer)){
  }
 }
 gst_editor_pad_realize (item);
-g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
+g_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
 }
 
 static void
 on_pad_parent_unset (GstObject * object, GstObject * parent,
     GstEditorItem * item)
 {
-  g_static_rw_lock_writer_lock (GST_EDITOR_ITEM(item)->globallock);
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM(item)->globallock);
   g_object_set (item, "object", NULL, NULL);
 
   if (GST_EDITOR_PAD (item)->link)
     gst_editor_link_unlink (GST_EDITOR_PAD (item)->link);
-  g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
   goo_canvas_item_remove(GOO_CANVAS_ITEM(item));
   //goo_canvas_item_simple_hide (GOO_CANVAS_ITEM_SIMPLE (item));
 

@@ -408,9 +408,9 @@ static void
 gst_editor_bin_element_added_cb (GstObject * bin, GstObject * child,
     GstEditorBin * editorbin){
 g_print("gst_editor_bin_element_added_cb: %s with pointer %p Added to bin %s with pointer %p getting global mutex...\n",GST_OBJECT_NAME(child),(void*)child,GST_OBJECT_NAME(bin),bin);
-g_static_rw_lock_writer_lock(GST_EDITOR_ITEM(editorbin)->globallock);
+g_rw_lock_writer_lock(GST_EDITOR_ITEM(editorbin)->globallock);
 gst_editor_bin_element_added (bin,child,editorbin);
-g_static_rw_lock_writer_unlock(GST_EDITOR_ITEM(editorbin)->globallock);
+g_rw_lock_writer_unlock(GST_EDITOR_ITEM(editorbin)->globallock);
 }
 
 static void
@@ -418,7 +418,7 @@ gst_editor_bin_element_added (GstObject * bin, GstObject * child,
     GstEditorBin * editorbin)
 {
   g_print("Element %s with pointer %p Added to bin %s with pointer %p and editorbin pointer %p getting mutex...\n",GST_OBJECT_NAME(child),(void*)child,GST_OBJECT_NAME(bin),bin,editorbin);
-  g_static_rw_lock_writer_lock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
+  g_rw_lock_writer_lock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
   GooCanvasItem *childitem;
   GstEditorItemAttr *attr = NULL;
   gdouble x, y, width, height;
@@ -436,7 +436,7 @@ gst_editor_bin_element_added (GstObject * bin, GstObject * child,
        //if (!goo_canvas_item_get_parent(GOO_CANVAS_ITEM(realive))) goo_canvas_item_set_parent(GOO_CANVAS_ITEM(realive),GOO_CANVAS_ITEM (editorbin));
        //goo_canvas_item_raise(realive,GOO_CANVAS_ITEM (editorbin));
      }  
-    g_static_rw_lock_writer_unlock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
+    g_rw_lock_writer_unlock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
     return;
   }
 
@@ -539,7 +539,7 @@ g_print("In editorbin, gotten Transformation x: %f y:%f Scale %f Rotation %f and
   //gst_editor_element_move (GST_EDITOR_ELEMENT (childitem), 0.0, 0.0);
   g_idle_add ((GSourceFunc) gst_editor_element_sync_state, editorbin);
   g_print("Finished adding element %s with pointer %p Added to bin %s with pointer %p getting mutex...List of parent has now %d entries\n",GST_OBJECT_NAME(child),(void*)child,GST_OBJECT_NAME(bin),bin,g_list_length(editorbin->elements));
-  g_static_rw_lock_writer_unlock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
+  g_rw_lock_writer_unlock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
 }
 
 /**********************************************************************

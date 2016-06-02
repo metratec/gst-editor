@@ -281,7 +281,7 @@ gst_editor_element_init (GstEditorElement * element)
   element->next_state = GST_STATE_VOID_PENDING;
   element->set_state_idle_id = 0;
   
-  g_static_rw_lock_init (&element->rwlock);
+  g_rw_lock_init (&element->rwlock);
 
 }
 
@@ -289,6 +289,8 @@ static void
 gst_editor_element_dispose (GObject * object)
 {
   GstEditorElement *element = GST_EDITOR_ELEMENT (object);
+
+  g_rw_lock_clear (&element->rwlock);
 
   if (element->set_state_idle_id) {
     g_source_remove (element->set_state_idle_id);
@@ -372,7 +374,7 @@ gst_editor_element_realize (GooCanvasItem * citem)
   element = GST_EDITOR_ELEMENT (citem);
   item = GST_EDITOR_ITEM (citem);
 
-  g_static_rw_lock_reader_lock (&element->rwlock);
+  g_rw_lock_reader_lock (&element->rwlock);
   //g_print("realize called for GooCanvas Item Pointer %p, Item-Pointer %p gotten mutex\n",(void*)citem, item);
   g_return_if_fail (GST_IS_EDITOR_ELEMENT (element));//if it has been deleted we dont touch it...
 
@@ -445,7 +447,7 @@ gst_editor_element_realize (GooCanvasItem * citem)
 
   if (G_OBJECT_TYPE (item) == GST_TYPE_EDITOR_ELEMENT)
     gst_editor_item_resize (item);
-  g_static_rw_lock_reader_unlock (&element->rwlock);
+  g_rw_lock_reader_unlock (&element->rwlock);
 
 }
 
@@ -971,27 +973,27 @@ static void
 on_new_pad (GstElement * element, GstPad * pad,
     GstEditorElement * editor_element)
 {
-  g_static_rw_lock_writer_lock (GST_EDITOR_ITEM(editor_element)->globallock);
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM(editor_element)->globallock);
   GST_CAT_DEBUG (gste_debug_cat, "new_pad in element %s\n",
       GST_OBJECT_NAME (element));
 
   gst_editor_element_add_pad (editor_element, pad);
   gst_editor_item_resize (GST_EDITOR_ITEM (editor_element));
   gst_editor_element_move(editor_element,0.0,0.0);
-  g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);  
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);  
 }
 
 static void
 on_pad_removed (GstElement * element, GstPad * pad,
     GstEditorElement * editor_element)
 {
-  g_static_rw_lock_writer_lock (GST_EDITOR_ITEM(editor_element)->globallock);
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM(editor_element)->globallock);
   GST_CAT_DEBUG (gste_debug_cat, "pad_removed in element %s\n",
       GST_OBJECT_NAME (element));
 
   gst_editor_element_remove_pad (editor_element, pad);
   gst_editor_item_resize (GST_EDITOR_ITEM (editor_element));
-  g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);  
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);  
 }
 
 #if 0
@@ -1129,8 +1131,8 @@ on_parent_unset (GstElement * element, GstBin * parent,
     GstEditorElement * editor_element)
 {
   g_print("removing this item:%s Pointer:%p Getting global Mutex for write\n",GST_OBJECT_NAME(element),element);
-  g_static_rw_lock_writer_lock (GST_EDITOR_ITEM(editor_element)->globallock);
-  g_static_rw_lock_writer_lock (&editor_element->rwlock);
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM(editor_element)->globallock);
+  g_rw_lock_writer_lock (&editor_element->rwlock);
 
   GstEditorBin *editor_bin;
 
@@ -1163,8 +1165,8 @@ on_parent_unset (GstElement * element, GstBin * parent,
   }
   //
   goo_canvas_item_remove(GOO_CANVAS_ITEM(editor_element));
-  g_static_rw_lock_writer_unlock (&editor_element->rwlock); 
-  g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);
+  g_rw_lock_writer_unlock (&editor_element->rwlock); 
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);
   g_object_unref (G_OBJECT (editor_element));
   g_print("Survived removing this item:%s %p Pointer of GstEditorElement %p\n",GST_OBJECT_NAME(element),element,editor_element);
 }
@@ -1400,7 +1402,7 @@ gst_editor_element_sync_state (GstEditorElement * element)
     g_print("Fixme: gst_editor_element_sync_state called with element that is no element!\n");
     return FALSE;
     }
-  g_static_rw_lock_writer_lock (GST_EDITOR_ITEM(element)->globallock);
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM(element)->globallock);
   //g_print("Sync State!\n");
   gint id;
   GstEditorItem *item;
@@ -1411,7 +1413,7 @@ gst_editor_element_sync_state (GstEditorElement * element)
 
   if (item->object == NULL){
     g_print("Warning: Sync State Item Object Invalid!\n");
-    g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(element)->globallock);
+    g_rw_lock_writer_unlock (GST_EDITOR_ITEM(element)->globallock);
     return FALSE;
   }
   state = GST_STATE (GST_ELEMENT (item->object));
@@ -1434,7 +1436,7 @@ gst_editor_element_sync_state (GstEditorElement * element)
           "width", element->statewidth, "height", element->stateheight, NULL);
     }
   }
-  g_static_rw_lock_writer_unlock (GST_EDITOR_ITEM(element)->globallock);
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM(element)->globallock);
   return FALSE;
 }
 
