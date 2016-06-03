@@ -61,4 +61,10 @@ gdouble gst_editor_bin_sort (GstEditorBin * bin, gdouble step);
 void gst_editor_bin_paste (GstEditorBin * bin);
 void gst_editor_bin_debug_output (GstEditorBin * bin);
 
+/*
+ * FIXME: This is used by GstEditorCanvas which points to
+ * a flawed understanding of widget realization.
+ */
+void gst_editor_bin_realize (GooCanvasItem * citem);
+
 #endif /* __GST_EDITOR_BIN_H__ */
