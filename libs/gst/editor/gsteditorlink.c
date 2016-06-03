@@ -685,7 +685,6 @@ void
 gst_editor_link_destroy (GstEditorLink * link)
 {
   // g_print ("trying to destroy this half link");
-  GstPad * pad;
   GstEditorBin * padbin;
   if (link->srcpad)
     padbin = GST_EDITOR_BIN (goo_canvas_item_get_parent (
@@ -698,7 +697,7 @@ gst_editor_link_destroy (GstEditorLink * link)
     GST_EDITOR_PAD (link->srcpad)->link = NULL;
   if (link->sinkpad)
     GST_EDITOR_PAD (link->sinkpad)->link = NULL;
-  int killnumber;
+  // int killnumber;
   // killnumber=goo_canvas_item_find_child(goo_canvas_item_get_parent(GOO_CANVAS_ITEM(link)),GOO_CANVAS_ITEM(link));
   // g_print ("found child at %d",killnumber);
   // ARGH, what am I doing here
