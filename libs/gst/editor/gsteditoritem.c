@@ -33,8 +33,6 @@ GST_DEBUG_CATEGORY (gste_item_debug);
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
 static gboolean gst_editor_item_button_press_event (GooCanvasItem * citem,
     GooCanvasItem * target_item, GdkEventButton * event);
-static gboolean gst_editor_element_button_release_event (GooCanvasItem * citem,
-    GooCanvasItem * target, GdkEventButton * event);
 
 /* class methods */
 static void gst_editor_item_class_init (GstEditorItemClass * klass);
@@ -584,7 +582,7 @@ gst_editor_item_default_on_whats_this (GstEditorItem * item)
 static void
 on_object_saved (GstObject * object, xmlNodePtr parent, GstEditorItem * item)
 {
-  GooCanvasBounds bounds;
+  //GooCanvasBounds bounds;
   xmlNsPtr ns;
   xmlNodePtr child;
   gchar *value;
@@ -592,15 +590,17 @@ on_object_saved (GstObject * object, xmlNodePtr parent, GstEditorItem * item)
 
   /* first see if the namespace is already known */
   ns = xmlSearchNsByHref (parent->doc, parent,
-      "http://gstreamer.net/gst-editor/1.0/");
+      BAD_CAST "http://gstreamer.net/gst-editor/1.0/");
   if (ns == NULL) {
     xmlNodePtr root = xmlDocGetRootElement (parent->doc);
 
     /* add namespace to root node */
-    ns = xmlNewNs (root, "http://gstreamer.net/gst-editor/1.0/", "gst-editor");
+    ns = xmlNewNs (root,
+        BAD_CAST "http://gstreamer.net/gst-editor/1.0/",
+        BAD_CAST "gst-editor");
   }
 
-  child = xmlNewChild (parent, ns, "item", NULL);
+  child = xmlNewChild (parent, ns, BAD_CAST "item", NULL);
 //  g_object_get (G_OBJECT (item), "x", &x, "y", &y,
 //      "width", &width, "height", &height, NULL);
 /* goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (item), &bounds);
@@ -618,16 +618,16 @@ on_object_saved (GstObject * object, xmlNodePtr parent, GstEditorItem * item)
   GST_DEBUG_OBJECT (object, "saving with position x: %f, y: %f, %fx%f",
       GST_OBJECT_NAME (object), x, y, width, height);
   value = g_strdup_printf ("%f", x);
-  xmlNewChild (child, ns, "x", value);
+  xmlNewChild (child, ns, BAD_CAST "x", BAD_CAST value);
   g_free (value);
   value = g_strdup_printf ("%f", y);
-  xmlNewChild (child, ns, "y", value);
+  xmlNewChild (child, ns, BAD_CAST "y", BAD_CAST value);
   g_free (value);
   value = g_strdup_printf ("%f", width);
-  xmlNewChild (child, ns, "w", value);
+  xmlNewChild (child, ns, BAD_CAST "w", BAD_CAST value);
   g_free (value);
   value = g_strdup_printf ("%f", height);
-  xmlNewChild (child, ns, "h", value);
+  xmlNewChild (child, ns, BAD_CAST "h", BAD_CAST value);
   g_free (value);
 }
 
