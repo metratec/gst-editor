@@ -144,6 +144,13 @@ void gst_editor_item_repack (GstEditorItem * item);
 GstEditorItem *gst_editor_item_get (GstObject * object);
 void gst_editor_item_move (GstEditorItem * item, gdouble dx, gdouble dy);
 void gst_editor_item_disconnect (GstEditorItem * parent,GstEditorItem * child);
+void gst_editor_item_hash_remove (GstObject * object);
+
+/*
+ * FIXME: We should not have to export a realize callback
+ * (it's not even used in the GstEditorItem class).
+ */
+void gst_editor_item_realize (GooCanvasItem * citem);
 
 #ifdef POPUP_MENU
 #define GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS(item_class, menuitems, nitems)         \

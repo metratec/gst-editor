@@ -46,9 +46,6 @@ static void gst_editor_item_set_property (GObject * object, guint prop_id,
 static void gst_editor_item_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-
-/*static*/ void gst_editor_item_realize (GooCanvasItemSimple * citem);
-//void gst_editor_item_realize (GooCanvasItem * citem);
 static void gst_editor_item_object_changed (GstEditorItem * item,
     GstObject * object);
 static void gst_editor_item_resize_real (GstEditorItem * item);
@@ -353,10 +350,10 @@ gst_editor_item_get_property (GObject * object, guint prop_id, GValue * value,
 }
 
 /*static*/ void 
-gst_editor_item_realize (GooCanvasItemSimple * citem)
-//gst_editor_item_realize (GooCanvasItem * citem)
+gst_editor_item_realize (GooCanvasItem * citem)
 {
   GstEditorItem *item = GST_EDITOR_ITEM (citem);
+  GooCanvasItem *cparent;
 
   
 #if 0
@@ -365,7 +362,7 @@ gst_editor_item_realize (GooCanvasItemSimple * citem)
 #endif
 
   item->border =
-      goo_canvas_rect_new (GOO_CANVAS_ITEM (citem), 0., 0., 0., 0.,
+      goo_canvas_rect_new (citem, 0., 0., 0., 0.,
       "line-width", 1., "fill-color-rgba", item->fill_color,
       "stroke-color-rgba", item->outline_color, "antialias",
       CAIRO_ANTIALIAS_NONE, NULL);
@@ -380,7 +377,7 @@ gst_editor_item_realize (GooCanvasItemSimple * citem)
   g_return_if_fail (item->border != NULL);
   GST_EDITOR_SET_OBJECT (item->border, item);
   item->title =
-      goo_canvas_text_new (GOO_CANVAS_ITEM (citem), NULL, 0, 0, -1,
+      goo_canvas_text_new (citem, NULL, 0, 0, -1,
           GTK_ANCHOR_NW, "font", "Sans", "fill-color", "black", NULL);
   g_return_if_fail (item->title != NULL);
   g_object_set (G_OBJECT (item->title), "text", item->title_text, NULL);
@@ -390,8 +387,9 @@ gst_editor_item_realize (GooCanvasItemSimple * citem)
 
   /* emission of position-changed on a parent item will propogate to all
      children */
-  if (GST_IS_EDITOR_ITEM (citem->parent))
-    g_signal_connect (citem->parent, "position-changed",
+  cparent = goo_canvas_item_get_parent (citem);
+  if (GST_IS_EDITOR_ITEM (cparent))
+    g_signal_connect (cparent, "position-changed",
         G_CALLBACK (on_parent_item_position_changed), citem);
 
   if (G_OBJECT_TYPE (item) == GST_TYPE_EDITOR_ITEM)
