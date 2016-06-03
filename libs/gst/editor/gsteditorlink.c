@@ -10,7 +10,6 @@ static void gst_editor_link_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_editor_link_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
-/*static*/ void gst_editor_link_realize (GooCanvasItem * citem);
 static void gst_editor_link_resize (GstEditorLink * link);
 
 /* callbacks from gstreamer */

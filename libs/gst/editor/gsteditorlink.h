@@ -68,5 +68,10 @@ gboolean gst_editor_link_link (GstEditorLink * link);
 void gst_editor_link_destroy(GstEditorLink * link);
 void gst_editor_link_unlink (GstEditorLink * link);
 
+/*
+ * FIXME: Realize handler used in other compilation
+ * units.
+ */
+void gst_editor_link_realize (GooCanvasItem * citem);
 
 #endif /* __GST_EDITOR_LINK_H__ */
