@@ -51,12 +51,9 @@ static void gst_editor_pad_object_changed (GstEditorItem * item,
 
 /* callbacks on GstPad */
 
-static void  on_pad_linked (GstPad  *pad,GstPad  *peer,GstEditorItem * item ) ;
-static void  on_pad_unlinked (GstPad  *pad,GstPad  *peer,GstEditorItem * item ) ;
+static void on_pad_linked (GstPad  *pad,GstPad  *peer,GstEditorItem * item);
 static void on_pad_parent_unset (GstObject * object, GstObject * parent,
     GstEditorItem * item);
-
-
 
 /* utility functions */
 
@@ -372,10 +369,8 @@ static void
 gst_editor_pad_class_init (GstEditorPadClass * klass)
 {
   GError * error = NULL;
-  GObjectClass *object_class;
   GstEditorItemClass *item_class;
 
-  object_class = G_OBJECT_CLASS (klass);
   item_class = GST_EDITOR_ITEM_CLASS (klass);
 
   parent_class = g_type_class_ref (gst_editor_item_get_type ());
@@ -506,48 +501,66 @@ gst_editor_pad_realize (GooCanvasItem * citem)
   if (GNOME_CANVAS_ITEM_CLASS (parent_class)->realize)
     GNOME_CANVAS_ITEM_CLASS (parent_class)->realize (citem);
 #endif
-  else {//check if links are still valid
- 	gboolean fail=FALSE;
-	if (pad->ghostlink){
-		GstPad* suggestedpeer;
-		GstEditorPad * suggestedpeerpad;
-		if ((GST_IS_EDITOR_LINK(pad->ghostlink))&&((pad->ghostlink->srcpad==pad)||(pad->ghostlink->sinkpad==pad))){
-			suggestedpeerpad=((pad->ghostlink->srcpad==pad)? pad->ghostlink->sinkpad : pad->ghostlink->srcpad);
-			suggestedpeer=gst_ghost_pad_get_target(item->object);
-			if ((!suggestedpeer)||(!suggestedpeerpad)||(!GST_IS_EDITOR_ITEM(suggestedpeerpad))||((GST_EDITOR_ITEM(suggestedpeerpad)->object!=suggestedpeer))){
-			g_print("gst_editor_pad_realize failed because ghost target does not match, suggestedpeerpad is %p\n",suggestedpeerpad);
-			fail=TRUE;
-			if (GOO_IS_CANVAS_ITEM(pad->ghostlink)) goo_canvas_item_remove(GOO_CANVAS_ITEM(pad->ghostlink));
-			pad->ghostlink=NULL;
-			g_idle_add ((GSourceFunc)gst_editor_pad_realize_source,pad);
-			}
-		}
-		else {
-			g_print("gst_editor_pad_realize failed because ghostlink is not editorlink\n");
-			fail=TRUE;
-		}
-	}
-	if (pad->link){
-		GstPad* suggestedpeer;
-		GstEditorPad * suggestedpeerpad;
-		if ((GST_IS_EDITOR_LINK(pad->link))&&((pad->link->srcpad==pad)||(pad->link->sinkpad==pad))){
-			suggestedpeerpad=((pad->link->srcpad==pad)? pad->link->sinkpad : pad->link->srcpad);
-			suggestedpeer=gst_pad_get_peer(item->object);
-			if ((!suggestedpeer)||(!suggestedpeerpad)||(!GST_IS_EDITOR_ITEM(suggestedpeerpad))||((GST_EDITOR_ITEM(suggestedpeerpad)->object!=suggestedpeer))){
-			g_print("gst_editor_pad_realize failed because target does not match, suggestedpeerpad is %p\n",suggestedpeerpad);
-			fail=TRUE;
-			}
-		}
-		else {
-			g_print("gst_editor_pad_realize failed because link is not editorlink\n");
-			fail=TRUE;
-		}
-	}
-	if (fail){//wait until someone else cleaned it up...
-		//g_idle_add ((GSourceFunc)gst_editor_pad_realize_source,pad);
-		//sleep(5);
-		return;
-	}
+  else {  // check if links are still valid
+    gboolean fail = FALSE;
+    if (pad->ghostlink) {
+      GstPad *suggestedpeer;
+      GstEditorItem *suggestedpeerpad;
+      if (GST_IS_EDITOR_LINK (pad->ghostlink) &&
+          (pad->ghostlink->srcpad == item ||
+           pad->ghostlink->sinkpad == item)) {
+        suggestedpeerpad =
+            pad->ghostlink->srcpad == item ? pad->ghostlink->sinkpad
+                                           : pad->ghostlink->srcpad;
+        suggestedpeer = gst_ghost_pad_get_target (GST_GHOST_PAD (item->object));
+        if (!suggestedpeer || !suggestedpeerpad ||
+            !GST_IS_EDITOR_ITEM (suggestedpeerpad) ||
+            GST_PAD (suggestedpeerpad->object) != suggestedpeer) {
+          g_print (
+              "gst_editor_pad_realize failed because ghost target does not "
+              "match, suggestedpeerpad is %p\n",
+              suggestedpeerpad);
+          fail = TRUE;
+          if (GOO_IS_CANVAS_ITEM (pad->ghostlink))
+            goo_canvas_item_remove (GOO_CANVAS_ITEM (pad->ghostlink));
+          pad->ghostlink = NULL;
+          g_idle_add ((GSourceFunc)gst_editor_pad_realize_source, pad);
+        }
+      } else {
+        g_print (
+            "gst_editor_pad_realize failed because ghostlink is not "
+            "editorlink\n");
+        fail = TRUE;
+      }
+    }
+    if (pad->link) {
+      GstPad * suggestedpeer;
+      GstEditorItem * suggestedpeerpad;
+      if (GST_IS_EDITOR_LINK (pad->link) &&
+          (pad->link->srcpad == item || pad->link->sinkpad == item)) {
+        suggestedpeerpad = pad->link->srcpad == item ? pad->link->sinkpad
+                                                     : pad->link->srcpad;
+        suggestedpeer = gst_pad_get_peer (GST_PAD (item->object));
+        if (!suggestedpeer || !suggestedpeerpad ||
+            !GST_IS_EDITOR_ITEM (suggestedpeerpad) ||
+            GST_PAD (suggestedpeerpad->object) != suggestedpeer) {
+          g_print (
+              "gst_editor_pad_realize failed because target does not match, "
+              "suggestedpeerpad is %p\n",
+              suggestedpeerpad);
+          fail = TRUE;
+        }
+      } else {
+        g_print (
+            "gst_editor_pad_realize failed because link is not editorlink\n");
+        fail = TRUE;
+      }
+    }
+    if (fail) {  // wait until someone else cleaned it up...
+      // g_idle_add ((GSourceFunc)gst_editor_pad_realize_source,pad);
+      // sleep(5);
+      return;
+    }
   }
   if (pad->istemplate) {
     pad->issrc =
@@ -760,8 +773,6 @@ gst_editor_pad_object_changed (GstEditorItem * item, GstObject * object)
   if (old){
     g_signal_handlers_disconnect_by_func (old, G_CALLBACK (on_pad_parent_unset),
         item);
-    //g_signal_handlers_disconnect_by_func (old, G_CALLBACK (on_pad_unlinked),
-    //    item);
     g_signal_handlers_disconnect_by_func (old, G_CALLBACK (on_pad_linked),
         item);
   }
@@ -769,8 +780,6 @@ gst_editor_pad_object_changed (GstEditorItem * item, GstObject * object)
     g_print("GST_editor_Pad: Connecting signals!!");
     g_signal_connect (object, "parent-unset", G_CALLBACK (on_pad_parent_unset),
         item);
-    //g_signal_connect (object, "unlinked", G_CALLBACK (on_pad_unlinked),
-    //    item);
     g_signal_connect (object, "linked", G_CALLBACK (on_pad_linked),
         item);
   }
@@ -977,85 +986,109 @@ gst_editor_pad_button_release_event (GooCanvasItem * citem,
       return FALSE;
 }
 
-static void  on_pad_unlinked (GstPad  *pad,GstPad  *peer,GstEditorItem * item ){
-g_print("unlinking! Linkpointer %p, Ghostlinkpointer %p\n",GST_EDITOR_PAD(item)->link,GST_EDITOR_PAD(item)->ghostlink);
-/* if (GST_EDITOR_PAD (item)->ghostlink){
-    gst_editor_link_unlink (GST_EDITOR_PAD (item)->link);
-    goo_canvas_item_remove(GOO_CANVAS_ITEM(item));
-   } */
-}
+static void
+on_pad_linked (GstPad * pad, GstPad * peer, GstEditorItem * item)
+{
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM (item)->globallock);
+  g_print (
+      "linking! Padpointer: %p, Peer %p Linkpointer %p, Ghostlinkpointer %p\n",
+      pad, peer, GST_EDITOR_PAD (item)->link, GST_EDITOR_PAD (item)->ghostlink);
+  if ((!GST_IS_PAD (pad)) || (!GST_IS_PAD (peer))) {
+    g_print ("Warning, pad or peer invalid");
+    return;
+  }
+  if (!gst_pad_get_parent_element (pad))
+    g_print ("pad %s has no parent\n", gst_pad_get_name (pad));
 
-static void  on_pad_linked (GstPad  *pad,GstPad  *peer,GstEditorItem * item ){
-g_rw_lock_writer_lock (GST_EDITOR_ITEM(item)->globallock);
-g_print("linking! Padpointer: %p, Peer %p Linkpointer %p, Ghostlinkpointer %p\n",pad,peer,GST_EDITOR_PAD(item)->link,GST_EDITOR_PAD(item)->ghostlink);
-if ((!GST_IS_PAD(pad))||(!GST_IS_PAD(peer))){
-  g_print("Warning, pad or peer invalid");
-  return;
-}
-if (!gst_pad_get_parent_element(pad)) g_print("pad %s has no parent\n",gst_pad_get_name(pad));
+  else if (!gst_pad_get_parent_element (peer))
+    g_print ("peer %s has no parent, we are %s:%s\n", gst_pad_get_name (peer),
+        GST_ELEMENT_NAME (gst_pad_get_parent_element (pad)),
+        gst_pad_get_name (pad));
+  else
+    g_print ("Element %s, pad %s linked to Element %s, pad %s\n",
+        GST_ELEMENT_NAME (gst_pad_get_parent_element (pad)),
+        gst_pad_get_name (pad),
+        GST_ELEMENT_NAME (gst_pad_get_parent_element (peer)),
+        gst_pad_get_name (peer));
+  /* if (GST_EDITOR_PAD (item)->ghostlink){
+      gst_editor_link_unlink (GST_EDITOR_PAD (item)->link);
+      goo_canvas_item_remove(GOO_CANVAS_ITEM(item));
+     } */
+  if (GST_IS_GHOST_PAD (pad))
+    g_print ("Pad is ghost pad\n");
+  if (GST_IS_GHOST_PAD (peer))
+    g_print ("Peer is ghost pad\n");
+  if (GST_PAD_PEER (pad) != peer)
+    g_print ("Warning, linked signal received also peer is not peer of pad\n");
+  if (!gst_pad_get_parent_element (peer)) {
+    // find bin to update pads...because the callback did not give us sufficient
+    // information to do it on our own
+    GstObject * _bin;
+    GstEditorItem * bin = NULL;
+    _bin = gst_element_get_parent (gst_pad_get_parent_element (pad));
+    if (_bin)
+      bin = gst_editor_item_get (_bin);
+    if (bin) {
+      g_print ("Warning, trying to add pads with links!!\n");
+      // gst_editor_element_add_pads(bin);
+      // find the pad that is connected to us...
+      GstIterator * pads;
+      GstPad * _refreshpad;
+      gboolean done = FALSE;
+      pads = gst_element_iterate_pads (GST_ELEMENT (bin->object));
+      while (!done) {
+        gpointer item;
+        switch (gst_iterator_next (pads, &item)) {
+          case GST_ITERATOR_OK:
+            _refreshpad = GST_PAD (item);
+            if (GST_IS_GHOST_PAD (_refreshpad)) {
+              g_print ("Ghoastpad found that could be ours: %p\n", _refreshpad);
+              GstEditorItem *refreshpad = gst_editor_item_get (GST_OBJECT (_refreshpad));
+              if (!refreshpad)
+                g_print ("Ghoastpad found has no Object, critical!!!\n");
+              g_print (
+                  "Ghoastpad Object found Linkpointer %p, Ghostlinkpointer "
+                  "%p!!!\n",
+                  GST_EDITOR_PAD (refreshpad)->link,
+                  GST_EDITOR_PAD (refreshpad)->ghostlink);
+              // if (gst_pad_is_blocked(_refreshpad)) g_print("Oh, it is
+              // blocked!!\n");
+              // GstPad* target;
+              // target=(GstPad*)((*((void*)((GST_GHOST_PAD(_refreshpad))->priv)))+sizeof(void*));//Deadlock
+              // if done properly since already locked
+              // target=((GstPad*)(GST_GHOST_PAD(_refreshpad)->priv+sizeof(void*)));//Deadlock
+              // if done properly since already locked
+              // target=((struct
+              // help*)(GST_GHOST_PAD(_refreshpad)->priv))->target;
+              // target=(GstPad*)((void*)(GST_GHOST_PAD(_refreshpad)->priv)+sizeof(GstPad*));
 
-else if (!gst_pad_get_parent_element(peer)) g_print("peer %s has no parent, we are %s:%s\n",gst_pad_get_name(peer),GST_ELEMENT_NAME(gst_pad_get_parent_element(pad)),gst_pad_get_name(pad));
-else g_print("Element %s, pad %s linked to Element %s, pad %s\n",GST_ELEMENT_NAME(gst_pad_get_parent_element(pad)),gst_pad_get_name(pad),GST_ELEMENT_NAME(gst_pad_get_parent_element(peer)),gst_pad_get_name(peer));
-/* if (GST_EDITOR_PAD (item)->ghostlink){
-    gst_editor_link_unlink (GST_EDITOR_PAD (item)->link);
-    goo_canvas_item_remove(GOO_CANVAS_ITEM(item));
-   } */
-if (GST_IS_GHOST_PAD (pad)) g_print("Pad is ghost pad\n");
-if (GST_IS_GHOST_PAD (peer)) g_print("Peer is ghost pad\n");
-if (GST_PAD_PEER(pad)!=peer) g_print("Warning, linked signal received also peer is not peer of pad\n");
-if (!gst_pad_get_parent_element(peer)){
- //find bin to update pads...because the callback did not give us sufficient information to do it on our own
- GstBin * _bin;
- GstEditorBin *bin;
- _bin=gst_element_get_parent(gst_pad_get_parent_element(pad));
- if (_bin) bin=gst_editor_item_get(_bin);
- if (bin){
-   g_print("Warning, trying to add pads with links!!\n"); 
-   //gst_editor_element_add_pads(bin);
-   //find the pad that is connected to us...
-   GstIterator *pads;
-   GstPad* _refreshpad;
-   gboolean done = FALSE;
-   pads=gst_element_iterate_pads ((GstElement*)((GstEditorItem*)bin)->object);
-   while (!done) {
-     gpointer item;
-     switch (gst_iterator_next (pads, &item)) {
-       case GST_ITERATOR_OK:
-         _refreshpad = GST_PAD (item);
-         if (GST_IS_GHOST_PAD (_refreshpad)){
-		g_print("Ghoastpad found that could be ours: %p\n",_refreshpad);
-		GstEditorPad* refreshpad=gst_editor_item_get(_refreshpad);
-		if (!refreshpad) g_print("Ghoastpad found has no Object, critical!!!\n");
-		g_print("Ghoastpad Object found Linkpointer %p, Ghostlinkpointer %p!!!\n",refreshpad->link,refreshpad->ghostlink);
-                //if (gst_pad_is_blocked(_refreshpad)) g_print("Oh, it is blocked!!\n");
-		//GstPad* target;
-		//target=(GstPad*)((*((void*)((GST_GHOST_PAD(_refreshpad))->priv)))+sizeof(void*));//Deadlock if done properly since already locked
-                //target=((GstPad*)(GST_GHOST_PAD(_refreshpad)->priv+sizeof(void*)));//Deadlock if done properly since already locked
-                //target=((struct help*)(GST_GHOST_PAD(_refreshpad)->priv))->target;
-                //target=(GstPad*)((void*)(GST_GHOST_PAD(_refreshpad)->priv)+sizeof(GstPad*));
-
-		//g_idle_add()...update link information
-		g_idle_add ((GSourceFunc)gst_editor_pad_realize_source,refreshpad);
-		//if (target==pad) g_print("Oh, that am I!!\n");
-		//else g_print("Oh, that am I not: %p!!\n",target);
-		//gst_editor_pad_realize ((GooCanvasItem*)refreshpad);
-	 }	
-       break;
-       case GST_ITERATOR_RESYNC:
-	g_print("GST_ITERATOR_RESYNC on Pad linked signal, handling of this not implemented\n");
-        break;
-      case GST_ITERATOR_ERROR:
-	g_print("GST_ITERATOR_ERROR on Pad linked signal, handling of this not implemented\n"); 
-      case GST_ITERATOR_DONE:
-      default:
-        done = TRUE;
-        break;
-     }
-   }
- }
-}
-gst_editor_pad_realize (GOO_CANVAS_ITEM (item));
-g_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
+              // g_idle_add()...update link information
+              g_idle_add (
+                  (GSourceFunc)gst_editor_pad_realize_source, refreshpad);
+              // if (target==pad) g_print("Oh, that am I!!\n");
+              // else g_print("Oh, that am I not: %p!!\n",target);
+              // gst_editor_pad_realize ((GooCanvasItem*)refreshpad);
+            }
+            break;
+          case GST_ITERATOR_RESYNC:
+            g_print (
+                "GST_ITERATOR_RESYNC on Pad linked signal, handling of this "
+                "not implemented\n");
+            break;
+          case GST_ITERATOR_ERROR:
+            g_print (
+                "GST_ITERATOR_ERROR on Pad linked signal, handling of this not "
+                "implemented\n");
+          case GST_ITERATOR_DONE:
+          default:
+            done = TRUE;
+            break;
+        }
+      }
+    }
+  }
+  gst_editor_pad_realize (GOO_CANVAS_ITEM (item));
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM (item)->globallock);
 }
 
 static void
