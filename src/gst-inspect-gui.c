@@ -14,9 +14,6 @@ main (int argc, char * argv[])
   // const struct poptOption *gst_table;
   GOptionContext * ctx;
 
-  if (!g_thread_supported ())
-    g_thread_init (NULL);
-
   //  glade_init ();
 
   // gst_table = gst_init_get_popt_table ();
