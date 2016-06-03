@@ -18,7 +18,7 @@
  */
 #include "config.h"
 
-#include <gtk/gtkversion.h>	/* versioning */
+#include <gtk/gtk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 #include <gdk-pixbuf/gdk-pixdata.h>
 #include <stdio.h>

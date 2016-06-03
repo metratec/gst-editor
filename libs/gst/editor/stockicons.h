@@ -3,7 +3,7 @@
 
 #include <glib.h>
 
-#include <gtk/gtkiconfactory.h>
+#include <gtk/gtk.h>
 
 G_BEGIN_DECLS
 #define GST_EDITOR_STOCK_LOGO		"gst-editor-stock-logo"
