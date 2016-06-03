@@ -1204,7 +1204,7 @@ gst_editor_element_add_pad (GstEditorElement * element, GstPad * pad)
 //          pad_type, "object", G_OBJECT (pad), NULL));
       GST_EDITOR_ITEM (goo_canvas_item_new (GOO_CANVAS_ITEM (element),
           pad_type, "object", G_OBJECT (pad),"globallock",(GST_EDITOR_ITEM(element))->globallock, NULL));
-  gst_editor_pad_realize (editor_pad);
+  gst_editor_pad_realize (GOO_CANVAS_ITEM (editor_pad));
 //  goo_canvas_item_get_bounds(GOO_CANVAS_ITEM (element), &bounds);
 //  goo_canvas_item_translate(editor_pad, bounds.x1, bounds.y1);
 
@@ -1346,7 +1346,7 @@ gst_editor_element_add_pads (GstEditorElement * element)
         //            type, "object", G_OBJECT (pad_template), NULL));
         GST_EDITOR_ITEM (goo_canvas_item_new (GOO_CANVAS_ITEM (element),
             type, "object", G_OBJECT (pad_template), NULL));
-    gst_editor_pad_realize (editor_pad);
+    gst_editor_pad_realize (GOO_CANVAS_ITEM (editor_pad));
 
 
     if (GST_PAD_TEMPLATE_DIRECTION (pad_template) == GST_PAD_SINK) {

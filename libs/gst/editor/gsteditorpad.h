@@ -102,5 +102,10 @@ GType gst_editor_pad_request_get_type (void);
 GType gst_editor_pad_requested_get_type (void);
 GType gst_editor_pad_ghost_get_type (void);
 
+/*
+ * FIXME: It shouldn't be necessary to export realize
+ * handlers.
+ */
+void gst_editor_pad_realize (GooCanvasItem * citem);
 
 #endif /* __GST_EDITOR_PAD_H__ */

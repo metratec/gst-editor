@@ -41,7 +41,6 @@ static gboolean gst_editor_pad_button_release_event (GooCanvasItem * citem,
 /* class functions */
 static void gst_editor_pad_class_init (GstEditorPadClass * klass);
 static void gst_editor_pad_init (GstEditorPad * pad);
-/*static*/ void gst_editor_pad_realize (GooCanvasItem * citem);
 static gboolean gst_editor_pad_realize_source (GooCanvasItem * citem);
 static void gst_editor_pad_resize (GstEditorItem * item);
 static void gst_editor_pad_repack (GstEditorItem * item);
@@ -1055,7 +1054,7 @@ if (!gst_pad_get_parent_element(peer)){
    }
  }
 }
-gst_editor_pad_realize (item);
+gst_editor_pad_realize (GOO_CANVAS_ITEM (item));
 g_rw_lock_writer_unlock (GST_EDITOR_ITEM(item)->globallock);
 }
 
