@@ -101,9 +101,6 @@ static void on_pad_removed (GstElement * element, GstPad * pad,
 static void on_parent_unset (GstElement * element, GstBin * parent,
     GstEditorElement * editor_element);
 
-static gboolean on_state_change (GstBus * bus, GstMessage * message,
-    gpointer data);
-
 /* utility functions */
 static void gst_editor_element_add_pad (GstEditorElement * element,
     GstPad * pad);
@@ -511,7 +508,7 @@ gst_editor_element_repack (GstEditorItem * item)
   GstEditorItem *subitem;
   gint sinks;
   gint srcs;
-  gdouble x1, y1, x2, y2;
+  gdouble x1, x2, y2;
   gint i;
 
   if (!item->realized)
@@ -528,7 +525,7 @@ gst_editor_element_repack (GstEditorItem * item)
 
   /* make sure args to gnome_canvas_item_set are doubles */
   x1 = 0.0;
-  y1 = 0.0;
+  //y1 = 0.0;
   x2 = item->width;
   y2 = item->height;
 
@@ -997,6 +994,7 @@ on_pad_removed (GstElement * element, GstPad * pad,
 }
 
 #if 0
+#if 0
 static void
 on_state_change (GstElement * element, GstState old,
     GstState state, GstEditorElement * editor_element)
@@ -1042,6 +1040,8 @@ on_state_change (GstBus * bus, GstMessage * message, gpointer data)
   return TRUE;
 }
 #endif
+#endif
+
 //method to kick out all children and their children but not the element itself,
 //hack out of hashtable
 void unset_deepdelete(GooCanvasItem * citem){
@@ -1101,29 +1101,34 @@ void unset_deepdelete_editor(GstEditorBin * bin){
   g_print("removing %d children\n",numc);
   GList *l;
   l=bin->elements;
-  while (l){
-  if (GST_IS_EDITOR_BIN(l->data))unset_deepdelete_editor(l->data);
-  if (GST_IS_EDITOR_ELEMENT(l->data)) unset_deepdelete_editor_pads(GST_EDITOR_ELEMENT(l->data));
-  if (GST_IS_EDITOR_ITEM(l->data)){
-	gst_editor_item_hash_remove (GST_EDITOR_ITEM(l->data)->object);
-        gst_editor_item_disconnect(bin, l->data);
-        g_object_set(GST_EDITOR_ITEM(l->data),"object",NULL,NULL);//should free all the callbacks
+  while (l) {
+    if (GST_IS_EDITOR_BIN (l->data))
+      unset_deepdelete_editor (l->data);
+    if (GST_IS_EDITOR_ELEMENT (l->data))
+      unset_deepdelete_editor_pads (GST_EDITOR_ELEMENT (l->data));
+    if (GST_IS_EDITOR_ITEM (l->data)) {
+      gst_editor_item_hash_remove (GST_EDITOR_ITEM (l->data)->object);
+      gst_editor_item_disconnect (GST_EDITOR_ITEM (bin), l->data);
+      // should free all the callbacks
+      g_object_set (GST_EDITOR_ITEM (l->data), "object", NULL, NULL);
+    }
+    if (GOO_IS_CANVAS_ITEM (l->data))
+      goo_canvas_item_remove (GOO_CANVAS_ITEM (l->data));
+    l = g_list_next (l);
   }
-  if (GOO_IS_CANVAS_ITEM(l->data))goo_canvas_item_remove(l->data);
-  l=g_list_next(l);
+  l = bin->links;
+  while (l) {
+    if ((l->data) && (GST_IS_EDITOR_LINK (l->data))) {
+      if (GOO_IS_CANVAS_ITEM (GST_EDITOR_LINK (l->data)->canvas))
+        goo_canvas_item_remove (GOO_CANVAS_ITEM (GST_EDITOR_LINK (l->data)->canvas));
+      else
+        g_print ("GstEditorlink %p has no canvas\n", l->data);
+      g_object_unref (l->data);
+    } else
+      g_print ("failed to remove GstEditorlink %p\n", l->data);
+    l = g_list_next (l);
   }
-  l=bin->links;
-  while (l){ 
-  if ((l->data)&&(GST_IS_EDITOR_LINK(l->data))){
-    if (GOO_IS_CANVAS_ITEM(GST_EDITOR_LINK(l->data)->canvas))	
-	goo_canvas_item_remove(GST_EDITOR_LINK(l->data)->canvas);
-    else g_print("GstEditorlink %p has no canvas\n",l->data);
-    g_object_unref(l->data);
-  }
-  else g_print("failed to remove GstEditorlink %p\n",l->data);
-  l=g_list_next(l);
-  }
-  g_print("unset_deepdelete finished\n");
+  g_print ("unset_deepdelete finished\n");
 }
 
 static void
@@ -1141,18 +1146,21 @@ on_parent_unset (GstElement * element, GstBin * parent,
   /* unreffing groups does nothing to the children right now. grrrrr. just hide
    * the damn thing and hack out the editorbin internals */
   //goo_canvas_item_simple_hide (GOO_CANVAS_ITEM_SIMPLE (editor_element));
-  
-  if (editor_bin){
-    gst_editor_item_disconnect(editor_bin, editor_element);
+
+  if (editor_bin) {
+    gst_editor_item_disconnect (GST_EDITOR_ITEM (editor_bin),
+        GST_EDITOR_ITEM (editor_element));
     editor_bin->elements = g_list_remove (editor_bin->elements, editor_element);
+  } else {
+    g_print ("fixme: on_parent_unset called on element %s. Parent unknown!\n",
+        GST_OBJECT_NAME (element));
   }
-  else g_print("fixme: on_parent_unset called on element %s. Parent unknown!\n",GST_OBJECT_NAME(element));
 
   if (editor_element->active)
     g_object_set (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (editor_element)),
         "selection", NULL, NULL);
 
-  gst_editor_item_hash_remove(element);//for the save side twice
+  gst_editor_item_hash_remove (GST_OBJECT (element));//for the save side twice
   if (GST_EDITOR_ITEM (editor_element)->object) {
   //  gst_editor_item_hash_remove(GST_EDITOR_ITEM (editor_element)->object);
     //g_object_unref(GST_EDITOR_ITEM (editor_element)->object);
@@ -1407,7 +1415,7 @@ gst_editor_element_sync_state (GstEditorElement * element)
   gint id;
   GstEditorItem *item;
   GstState state;
-  gdouble x1, x2, y1, y2;
+  gdouble x1, y2;
 
   item = GST_EDITOR_ITEM (element);
 
@@ -1420,8 +1428,8 @@ gst_editor_element_sync_state (GstEditorElement * element)
 
   /* make sure args to gnome_canvas_item_set are doubles */
   x1 = 0.0;
-  y1 = 0.0;
-  x2 = item->width;
+  //y1 = 0.0;
+  //x2 = item->width;
   y2 = item->height;
 
   for (id = 0; id < 4; id++) {
