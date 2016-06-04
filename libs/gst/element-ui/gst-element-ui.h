@@ -26,11 +26,11 @@
 #ifndef __GST_ELEMENT_UI_H__
 #define __GST_ELEMENT_UI_H__
 
-#define GST_TYPE_ELEMENT_UI           (gst_element_ui_get_type())
-#define GST_ELEMENT_UI(obj)           (GTK_CHECK_CAST ((obj), GST_TYPE_ELEMENT_UI, GstElementUI))
-#define GST_ELEMENT_UI_CLASS(klass)   (GTK_CHECK_CLASS_CAST ((klass), GST_TYPE_ELEMENT_UI, GstElementUIClass))
-#define GST_IS_ELEMENT_UI(obj)        (GTK_CHECK_TYPE ((obj), GST_TYPE_ELEMENT_UI))
-#define GST_IS_ELEMENT_UI_CLASS(obj)  (GTK_CHECK_CLASS_TYPE ((klass), GST_TYPE_ELEMENT_UI))
+#define GST_TYPE_ELEMENT_UI            (gst_element_ui_get_type ())
+#define GST_ELEMENT_UI(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_ELEMENT_UI, GstElementUI))
+#define GST_ELEMENT_UI_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_ELEMENT_UI, GstElementUIClass))
+#define GST_IS_ELEMENT_UI(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_ELEMENT_UI))
+#define GST_IS_ELEMENT_UI_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_ELEMENT_UI))
 
 typedef enum
 {
@@ -61,7 +61,7 @@ struct _GstElementUI
   gboolean active;
 
   GtkWidget *name;
-  GtkWidget *optionmenu;
+  GtkWidget *combobox;
   GtkWidget *message;
 };
 

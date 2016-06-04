@@ -34,7 +34,7 @@ static void gst_element_ui_set_property (GObject * object, guint prop_id,
 static void gst_element_ui_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 
-static void on_optionmenu_deactivate (GtkWidget * menu, gpointer user_data);
+static void on_combobox_changed (GtkComboBox * combobox, gpointer user_data);
 
 static gboolean offset_hack (GstElementUI * ui);
 
@@ -166,28 +166,22 @@ gst_element_ui_class_init (GstElementUIClass * klass)
 static void
 gst_element_ui_init (GstElementUI * ui)
 {
-  GtkWidget *name;
-  GtkWidget *optionmenu;
-  GtkWidget *optionmenu_menu;
-
   g_object_set (ui, "n-columns", 2, "n-rows", 2, NULL);
 
-  name = gtk_label_new ("No element selected");
-  gtk_widget_show (name);
-  gtk_table_attach (GTK_TABLE (ui), name, 0, 2, 0, 1, GTK_EXPAND | GTK_FILL,
+  ui->name = gtk_label_new ("No element selected");
+  gtk_widget_show (ui->name);
+  gtk_table_attach (GTK_TABLE (ui), ui->name, 0, 2, 0, 1, GTK_EXPAND | GTK_FILL,
       GTK_FILL, 2, 2);
-  gtk_label_set_justify (GTK_LABEL (name), GTK_JUSTIFY_RIGHT);
-  gtk_widget_set_usize (name, 150, -2);
-  gtk_misc_set_padding (GTK_MISC (name), 2, 0);
+  gtk_label_set_justify (GTK_LABEL (ui->name), GTK_JUSTIFY_RIGHT);
+  gtk_widget_set_size_request (ui->name, 150, -1);
+  gtk_misc_set_padding (GTK_MISC (ui->name), 2, 0);
 
-  optionmenu = gtk_option_menu_new ();
-  gtk_table_attach (GTK_TABLE (ui), optionmenu, 0, 2, 1, 2,
+  ui->combobox = gtk_combo_box_text_new ();
+  gtk_table_attach (GTK_TABLE (ui), ui->combobox, 0, 2, 1, 2,
       GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 2);
-  optionmenu_menu = gtk_menu_new ();
-  gtk_option_menu_set_menu (GTK_OPTION_MENU (optionmenu), optionmenu_menu);
 
-  ui->name = name;
-  ui->optionmenu = optionmenu;
+  g_signal_connect (ui->combobox, "changed",
+      G_CALLBACK (on_combobox_changed), ui);
 }
 
 GstElementUI *
@@ -207,7 +201,6 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
   GstElementUI *ui;
   guint i = 0, j = 0, nprops;
   GParamSpec **params;
-  GtkWidget *menu, *w;
 
   ui = GST_ELEMENT_UI (object);
 
@@ -257,6 +250,8 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
       ui->nprops = nprops - j;
 
       if (ui->nprops) {
+        GtkTreeModel *combobox_store;
+
         ui->params = g_new (GParamSpec *, ui->nprops);
 
         j = 0;
@@ -264,21 +259,19 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
           if (SHOWABLE_PARAMETER (params[i]))
             ui->params[j++] = params[i];
 
-        menu = gtk_menu_new ();
-        for (j = 0; j < ui->nprops; j++) {
-          w = gtk_menu_item_new_with_label (ui->params[j]->name);
-          gtk_widget_show (w);
-          gtk_menu_append (GTK_MENU (menu), w);
-        }
+        // clears the combo box
+        combobox_store =
+            gtk_combo_box_get_model (GTK_COMBO_BOX (ui->combobox));
+        if (combobox_store)
+          gtk_list_store_clear (GTK_LIST_STORE (combobox_store));
+
+        for (j = 0; j < ui->nprops; j++)
+          gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (ui->combobox),
+              ui->params[j]->name);
         ui->selected = 0;
-        gtk_widget_show (menu);
-        gtk_option_menu_set_menu (GTK_OPTION_MENU (ui->optionmenu), menu);
 
         if (ui->view_mode == GST_ELEMENT_UI_VIEW_MODE_COMPACT)
-          gtk_widget_show (ui->optionmenu);
-
-        g_signal_connect (G_OBJECT (menu), "deactivate",
-            G_CALLBACK (on_optionmenu_deactivate), ui);
+          gtk_widget_show (ui->combobox);
 
         gtk_table_resize (GTK_TABLE (ui), 2, 2 + ui->nprops);
 
@@ -355,13 +348,13 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
       gtk_widget_hide (GTK_WIDGET (ui->pviews[i]));
     }
     gtk_widget_show (GTK_WIDGET (ui->pviews[ui->selected]));
-    gtk_widget_show (ui->optionmenu);
+    gtk_widget_show (ui->combobox);
   } else {
     for (i = 0; i < ui->nprops; i++) {
       gtk_widget_show (ui->plabels[i]);
       gtk_widget_show (GTK_WIDGET (ui->pviews[i]));
     }
-    gtk_widget_hide (ui->optionmenu);
+    gtk_widget_hide (ui->combobox);
   }
 }
 
@@ -481,7 +474,7 @@ offset_hack (GstElementUI * ui)
 }
 
 static void
-on_optionmenu_deactivate (GtkWidget * menu, gpointer user_data)
+on_combobox_changed (GtkComboBox * combobox, gpointer user_data)
 {
   GstElementUI *element_ui = GST_ELEMENT_UI (user_data);
 
@@ -489,8 +482,7 @@ on_optionmenu_deactivate (GtkWidget * menu, gpointer user_data)
     gtk_widget_hide (GTK_WIDGET (element_ui->pviews[element_ui->selected]));
 
   element_ui->selected =
-      g_list_index (GTK_MENU_SHELL (menu)->children,
-      gtk_menu_get_active (GTK_MENU (menu)));
+      gtk_combo_box_get_active (combobox);
   debug ("selected: %d", element_ui->selected);
 
   if (element_ui->selected < 0)
