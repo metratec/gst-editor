@@ -401,7 +401,7 @@ gste_debugui_size_request (GtkWidget * widget, GtkRequisition * requisition)
   GtkBin *bin = GTK_BIN (widget);
   GtkRequisition child_requisition;
 
-  if (bin->child && GTK_WIDGET_VISIBLE (bin->child)) {
+  if (bin->child && gtk_widget_get_visible (bin->child)) {
     gtk_widget_size_request (bin->child, &child_requisition);
     requisition->width = child_requisition.width;
     requisition->height = child_requisition.height;
@@ -417,7 +417,7 @@ gste_debugui_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
 
   widget->allocation = *allocation;
 
-  if (bin->child && GTK_WIDGET_VISIBLE (bin->child)) {
+  if (bin->child && gtk_widget_get_visible (bin->child)) {
     gtk_widget_size_allocate (bin->child, allocation);
   }
 }
