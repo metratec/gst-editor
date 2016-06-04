@@ -27,11 +27,11 @@
 #define __GST_ELEMENT_BROWSER_H__
 
 
-#define GST_TYPE_ELEMENT_BROWSER           (gst_element_browser_get_type())
-#define GST_ELEMENT_BROWSER(obj)           (GTK_CHECK_CAST ((obj), GST_TYPE_ELEMENT_BROWSER, GstElementBrowser))
-#define GST_ELEMENT_BROWSER_CLASS(klass)   (GTK_CHECK_CLASS_CAST ((klass), GST_TYPE_ELEMENT_BROWSER, GstElementBrowserClass))
-#define GST_IS_ELEMENT_BROWSER(obj)        (GTK_CHECK_TYPE ((obj), GST_TYPE_ELEMENT_BROWSER))
-#define GST_IS_ELEMENT_BROWSER_CLASS(obj)  (GTK_CHECK_CLASS_TYPE ((klass), GST_TYPE_ELEMENT_BROWSER))
+#define GST_TYPE_ELEMENT_BROWSER            (gst_element_browser_get_type())
+#define GST_ELEMENT_BROWSER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_ELEMENT_BROWSER, GstElementBrowser))
+#define GST_ELEMENT_BROWSER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_ELEMENT_BROWSER, GstElementBrowserClass))
+#define GST_IS_ELEMENT_BROWSER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_ELEMENT_BROWSER))
+#define GST_IS_ELEMENT_BROWSER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_ELEMENT_BROWSER))
 
 
 typedef struct _GstElementBrowser GstElementBrowser;
