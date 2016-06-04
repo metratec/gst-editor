@@ -24,11 +24,11 @@
 #ifndef __GST_ELEMENT_UI_PROP_VIEW_H__
 #define __GST_ELEMENT_UI_PROP_VIEW_H__
 
-#define GST_TYPE_ELEMENT_UI_PROP_VIEW           (gst_element_ui_prop_view_get_type())
-#define GST_ELEMENT_UI_PROP_VIEW(obj)           (GTK_CHECK_CAST ((obj), GST_TYPE_ELEMENT_UI_PROP_VIEW, GstElementUIPropView))
-#define GST_ELEMENT_UI_PROP_VIEW_CLASS(klass)   (GTK_CHECK_CLASS_CAST ((klass), GST_TYPE_ELEMENT_UI_PROP_VIEW, GstElementUIPropViewClass))
-#define GST_IS_ELEMENT_UI_PROP_VIEW(obj)        (GTK_CHECK_TYPE ((obj), GST_TYPE_ELEMENT_UI_PROP_VIEW))
-#define GST_IS_ELEMENT_UI_PROP_VIEW_CLASS(obj)  (GTK_CHECK_CLASS_TYPE ((klass), GST_TYPE_ELEMENT_UI_PROP_VIEW))
+#define GST_TYPE_ELEMENT_UI_PROP_VIEW            (gst_element_ui_prop_view_get_type())
+#define GST_ELEMENT_UI_PROP_VIEW(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_ELEMENT_UI_PROP_VIEW, GstElementUIPropView))
+#define GST_ELEMENT_UI_PROP_VIEW_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), GST_TYPE_ELEMENT_UI_PROP_VIEW, GstElementUIPropViewClass))
+#define GST_IS_ELEMENT_UI_PROP_VIEW(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), GST_TYPE_ELEMENT_UI_PROP_VIEW))
+#define GST_IS_ELEMENT_UI_PROP_VIEW_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_ELEMENT_UI_PROP_VIEW))
 
 typedef struct _GstElementUIPropView GstElementUIPropView;
 typedef struct _GstElementUIPropViewClass GstElementUIPropViewClass;
@@ -47,7 +47,7 @@ struct _GstElementUIPropView
   gboolean on_pending;
   gboolean on_set;
   GtkObject *adjustment;
-  GtkWidget *optionmenu;
+  GtkWidget *combobox;
   gint *enum_values;
   gpointer *enum_pointer;
   GtkWidget *label_lower;

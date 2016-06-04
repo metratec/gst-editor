@@ -42,8 +42,7 @@ static void on_adjustment_value_changed (GtkAdjustment * adjustment,
 static void on_toggle_button_toggled (GtkToggleButton * button,
     GstElementUIPropView * pview);
 static void on_entry_activate (GtkEntry * entry, GstElementUIPropView * pview);
-static void on_optionmenu_changed (GtkOptionMenu * option,
-    GstElementUIPropView * pview);
+static void on_combobox_changed (GtkComboBox * combobox, gpointer userdata);
 static void on_location_hit (GtkWidget * widget, GstElementUIPropView * pview);
 static void block_signals (GstElementUIPropView * pview);
 static void unblock_signals (GstElementUIPropView * pview);
@@ -121,7 +120,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   GtkWidget *entry;
   GtkWidget *label_upper;
   GtkWidget *hscale;
-  GtkWidget *optionmenu;
+  GtkWidget *combobox;
   GtkWidget *file;
   GtkWidget *filetext;
 
@@ -172,8 +171,8 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   gtk_scale_set_draw_value (GTK_SCALE (hscale), FALSE);
   gtk_scale_set_digits (GTK_SCALE (hscale), 2);
 
-  optionmenu = gtk_option_menu_new ();
-  gtk_table_attach (GTK_TABLE (table_args), optionmenu, 0, 6, 4, 5,
+  combobox = gtk_combo_box_text_new ();
+  gtk_table_attach (GTK_TABLE (table_args), combobox, 0, 6, 4, 5,
       GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
 
 
@@ -193,7 +192,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
       pview);
   g_signal_connect (entry, "activate", G_CALLBACK (on_entry_activate), pview);
   g_signal_connect (filetext, "activate", G_CALLBACK (on_entry_activate), pview);
-  g_signal_connect (optionmenu, "changed", G_CALLBACK (on_optionmenu_changed),
+  g_signal_connect (combobox, "changed", G_CALLBACK (on_combobox_changed),
       pview);
   g_signal_connect (file, "clicked", G_CALLBACK (on_location_hit),
       pview);
@@ -206,7 +205,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   pview->entry = entry;
   pview->label_upper = label_upper;
   pview->hscale = hscale;
-  pview->optionmenu = optionmenu;
+  pview->combobox = combobox;
   pview->file = file;
   pview->filetext = filetext;
 }
@@ -410,7 +409,7 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
 
         while (pview->enum_values[i] != val)
           i++;
-        gtk_option_menu_set_history (GTK_OPTION_MENU (pview->optionmenu), i);
+        gtk_combo_box_set_active (GTK_COMBO_BOX (pview->combobox), i);
       } 
       else if (!strcmp("GstCaps",g_type_name (pview->param->value_type))){
         //g_print("Try to show caps\n");
@@ -420,16 +419,17 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
           gtk_entry_set_text (GTK_ENTRY (pview->entry), capsstring);
           g_free (capsstring);
         }
-	else gtk_entry_set_text (GTK_ENTRY (pview->entry),"Caps are NULL");
+        else
+          gtk_entry_set_text (GTK_ENTRY (pview->entry),"Caps are NULL");
       }
       else if (!strcmp("GstPad",g_type_name (pview->param->value_type))){
-	gint i = 0;
-	GstPad* val = (GstPad*)g_value_get_object (pview->value);
-	while (pview->enum_pointer[i] != val) {
-		//g_print("Keep on searching for %p,Round %d\n",val,i);
-		i++;
-	}
-        gtk_option_menu_set_history (GTK_OPTION_MENU (pview->optionmenu), i);
+        gint i = 0;
+        GstPad* val = (GstPad*)g_value_get_object (pview->value);
+        while (pview->enum_pointer[i] != val) {
+          //g_print("Keep on searching for %p,Round %d\n",val,i);
+          i++;
+        }
+        gtk_combo_box_set_active (GTK_COMBO_BOX (pview->combobox), i);
       }
       else {
         g_warning ("prop_view_update for type %s not yet implemented",
@@ -441,6 +441,14 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
   unblock_signals (pview);
   GST_DEBUG ("property updated");
   return FALSE;
+}
+
+static inline void
+combobox_clear (GtkComboBox * combobox)
+{
+  GtkTreeModel *combobox_store = gtk_combo_box_get_model (combobox);
+  if (combobox_store)
+    gtk_list_store_clear (GTK_LIST_STORE (combobox_store));
 }
 
 static void
@@ -468,7 +476,7 @@ pview_param_changed (GstElementUIPropView * pview)
   gtk_widget_hide (pview->label_lower);
   gtk_widget_hide (pview->label_upper);
   gtk_widget_hide (pview->hscale);
-  gtk_widget_hide (pview->optionmenu);
+  gtk_widget_hide (pview->combobox);
   gtk_widget_hide (pview->file);
   gtk_widget_hide (pview->filetext);
 
@@ -530,20 +538,20 @@ pview_param_changed (GstElementUIPropView * pview)
 #undef CASE_NUMERIC
 
     case G_TYPE_STRING:
-      if (strstr(param->name,"ocation")||strstr(param->name,"ilename")||strstr(param->name,"uri")){
-	gtk_widget_show(pview->file);
-	gtk_widget_show(pview->filetext);	
-      }
-      else gtk_widget_show (pview->entry);
+      if (strstr (param->name, "ocation") || strstr (param->name, "ilename") ||
+          strstr (param->name, "uri")) {
+        gtk_widget_show (pview->file);
+        gtk_widget_show (pview->filetext);
+      } else
+        gtk_widget_show (pview->entry);
       break;
     default:
       if (G_IS_PARAM_SPEC_ENUM (param)) {
-        GtkWidget *menu, *w;
         gint i;
         gchar *str;
         GEnumClass *class = G_ENUM_CLASS (g_type_class_ref (param->value_type));
 
-        menu = gtk_menu_new ();
+        combobox_clear (GTK_COMBO_BOX (pview->combobox));
 
         if (pview->enum_values)
           g_free (pview->enum_values);
@@ -554,72 +562,66 @@ pview_param_changed (GstElementUIPropView * pview)
 
           pview->enum_values[i] = value->value;
           str = g_strdup_printf ("%s (%d)", value->value_nick, value->value);
-          w = gtk_menu_item_new_with_label (str);
+          gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (pview->combobox),
+              str);
           g_free (str);
-          gtk_widget_show (w);
-          gtk_menu_append (GTK_MENU (menu), w);
         }
 
-        gtk_option_menu_set_menu (GTK_OPTION_MENU (pview->optionmenu), menu);
-
-        gtk_widget_show (pview->optionmenu);
+        gtk_widget_show (pview->combobox);
       } else if (!strcmp("GstCaps",g_type_name (pview->param->value_type))){
-	gtk_widget_show (pview->entry);
+        gtk_widget_show (pview->entry);
       } else if (!strcmp("GstPad",g_type_name (pview->param->value_type))){
-	//guess which of the Pads are Request pads, or take all
-	//
-        GtkWidget *menu, *w;
+        //guess which of the Pads are Request pads, or take all
+        //
         gint i=0;//iterator
         gchar *str;
         //GEnumClass *class = G_ENUM_CLASS (g_type_class_ref (param->value_type));
 
-        menu = gtk_menu_new ();
+        combobox_clear (GTK_COMBO_BOX (pview->combobox));
 
         if (pview->enum_pointer)
           g_free (pview->enum_pointer);
 
         pview->enum_pointer = g_new0 (gpointer, 1+element->numpads);//save gpointers inside the elements
-	GstIterator* padit=gst_element_iterate_pads (element);
-	gboolean done=FALSE;
-	gpointer item;
-	while (!done) {
-	  switch (gst_iterator_next (padit, (gpointer*)&item)) {
-	  case GST_ITERATOR_OK:
-		pview->enum_pointer[i++]=item;
-		str = g_strdup (gst_pad_get_name((GstPad*)item));
-		//g_print("Adding pad pointer %p, Name %s\n",item,str);
-                w = gtk_menu_item_new_with_label (str);
+        GstIterator* padit=gst_element_iterate_pads (element);
+        gboolean done=FALSE;
+        gpointer item;
+        while (!done) {
+          switch (gst_iterator_next (padit, (gpointer*)&item)) {
+          case GST_ITERATOR_OK:
+                pview->enum_pointer[i++]=item;
+                str = g_strdup (gst_pad_get_name((GstPad*)item));
+                //g_print("Adding pad pointer %p, Name %s\n",item,str);
+                gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (pview->combobox),
+                    str);
                 g_free (str);
-                gtk_widget_show (w);
-		gtk_menu_append (GTK_MENU (menu), w);
-		gst_object_unref (item);
-		break;
-	  case GST_ITERATOR_RESYNC:
-		gst_iterator_free (padit);
-		padit=gst_element_iterate_pads (element);
-		i=0;
-		break;
-	  case GST_ITERATOR_ERROR:
-		//g_print("GstIterator Returning Unexpected Error");
-		done = TRUE;
-		break;
-	  case GST_ITERATOR_DONE:
-		//g_print("GstIterator Done");
-		done = TRUE;
-		break;
-	  default:
-		//g_print("GstIterator Returning Unexpected Error"); 
-		done = TRUE;
-		break;
-	  }
-	}
-	gst_iterator_free (padit);
-        w = gtk_menu_item_new_with_label ("NULL");
-        gtk_widget_show (w);
-        gtk_menu_append (GTK_MENU (menu), w);
+                gst_object_unref (item);
+                break;
+          case GST_ITERATOR_RESYNC:
+                gst_iterator_free (padit);
+                padit=gst_element_iterate_pads (element);
+                i=0;
+                break;
+          case GST_ITERATOR_ERROR:
+                //g_print("GstIterator Returning Unexpected Error");
+                done = TRUE;
+                break;
+          case GST_ITERATOR_DONE:
+                //g_print("GstIterator Done");
+                done = TRUE;
+                break;
+          default:
+                //g_print("GstIterator Returning Unexpected Error"); 
+                done = TRUE;
+                break;
+          }
+        }
+        gst_iterator_free (padit);
 
-        gtk_option_menu_set_menu (GTK_OPTION_MENU (pview->optionmenu), menu);
-        gtk_widget_show (pview->optionmenu);	
+        gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (pview->combobox),
+            "NULL");
+
+        gtk_widget_show (pview->combobox);
       } else {
         g_warning ("param_changed for type %s not yet implemented",
             g_type_name (param->value_type));
@@ -675,18 +677,18 @@ pview_value_changed (GstElementUIPropView * pview)
     default:
       if (G_IS_PARAM_SPEC_ENUM (param)) {
         g_object_set (G_OBJECT (pview->element), param->name,
-            pview->
-            enum_values[gtk_option_menu_get_history (GTK_OPTION_MENU (pview->
-                        optionmenu))], NULL);
-	//GstCaps
+            pview->enum_values[gtk_combo_box_get_active (
+                GTK_COMBO_BOX (pview->combobox))],
+            NULL);
+        // GstCaps
       } else if (!strcmp("GstCaps",g_type_name (pview->param->value_type))){
 	GstCaps *temp=gst_caps_from_string (gtk_entry_get_text (GTK_ENTRY (pview->entry)));
 	if (temp) g_object_set (G_OBJECT (pview->element), param->name,temp, NULL);
       } else if (!strcmp("GstPad",g_type_name (pview->param->value_type))){
-	GstPad *temp=(GstPad*)pview->enum_pointer[gtk_option_menu_get_history (GTK_OPTION_MENU (pview->
-                        optionmenu))];
-	g_object_set (G_OBJECT (pview->element), param->name,temp, NULL);
-	gst_element_ui_prop_view_update (pview);
+        GstPad *temp = (GstPad *)pview->enum_pointer[gtk_combo_box_get_active (
+            GTK_COMBO_BOX (pview->combobox))];
+        g_object_set (G_OBJECT (pview->element), param->name, temp, NULL);
+        gst_element_ui_prop_view_update (pview);
       } else {
         g_warning ("value_changed for type %s not yet implemented",
             g_type_name (param->value_type));
@@ -757,8 +759,9 @@ on_entry_activate (GtkEntry * entry, GstElementUIPropView * pview)
 }
 
 static void
-on_optionmenu_changed (GtkOptionMenu * option, GstElementUIPropView * pview)
+on_combobox_changed (GtkComboBox * combobox, gpointer userdata)
 {
+  GstElementUIPropView *pview = GST_ELEMENT_UI_PROP_VIEW (userdata);
   pview_value_changed (pview);
 }
 
@@ -773,15 +776,15 @@ block_signals (GstElementUIPropView * pview)
       G_CALLBACK (on_toggle_button_toggled), pview);
   g_signal_handlers_block_by_func ((GObject *) pview->toggle_off,
       G_CALLBACK (on_entry_activate), pview);
-  g_signal_handlers_block_by_func ((GObject *) pview->optionmenu,
-      G_CALLBACK (on_optionmenu_changed), pview);
+  g_signal_handlers_block_by_func ((GObject *) pview->combobox,
+      G_CALLBACK (on_combobox_changed), pview);
 }
 
 static void
 unblock_signals (GstElementUIPropView * pview)
 {
-  g_signal_handlers_unblock_by_func ((GObject *) pview->optionmenu,
-      G_CALLBACK (on_optionmenu_changed), pview);
+  g_signal_handlers_unblock_by_func ((GObject *) pview->combobox,
+      G_CALLBACK (on_combobox_changed), pview);
   g_signal_handlers_unblock_by_func ((GObject *) pview->toggle_off,
       G_CALLBACK (on_toggle_button_toggled), pview);
   g_signal_handlers_unblock_by_func ((GObject *) pview->toggle_on,
