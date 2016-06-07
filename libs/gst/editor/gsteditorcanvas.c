@@ -180,10 +180,11 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec)
 {
   GooCanvasBounds bounds;
-  gdouble width, height, x, y;
+  gdouble x, y;
   gboolean b;
   const gchar *status;
   GstEditorCanvas *canvas = GST_EDITOR_CANVAS (object);
+  GtkAllocation allocation;
 
   GooCanvasItem * bin;
 
@@ -193,16 +194,18 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       EDITOR_DEBUG ("canvas_set_prop: attributesp: %p", canvas->attributes);
       break;
     case PROP_BIN:
-      width = GTK_WIDGET (object)->allocation.width;
-      height = GTK_WIDGET (object)->allocation.height;
+      gtk_widget_get_allocation (GTK_WIDGET (object), &allocation);
 
       if (!canvas->bin) {
         bin = goo_canvas_item_new (
             GOO_CANVAS_ITEM (goo_canvas_get_root_item (GOO_CANVAS (canvas))),
-            gst_editor_bin_get_type (), "globallock", &canvas->globallock,
-            "attributes", canvas->attributes, "width", width, "height", height,
-            "object", g_value_get_object (value), "resizeable", FALSE,
-            "moveable", FALSE, NULL);
+            gst_editor_bin_get_type (),
+            "globallock", &canvas->globallock,
+            "attributes", canvas->attributes,
+            "width", (gdouble)allocation.width,
+            "height", (gdouble)allocation.height,
+            "object", g_value_get_object (value),
+            "resizeable", FALSE, "moveable", FALSE, NULL);
         EDITOR_DEBUG ("created a new bin canvas");
         gst_editor_bin_realize (bin);
         canvas->bin = GST_EDITOR_BIN (bin);
