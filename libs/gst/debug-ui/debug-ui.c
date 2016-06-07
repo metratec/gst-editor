@@ -397,11 +397,11 @@ gste_debugui_dispose (GObject * object)
 static void
 gste_debugui_size_request (GtkWidget * widget, GtkRequisition * requisition)
 {
-  GtkBin *bin = GTK_BIN (widget);
+  GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
   GtkRequisition child_requisition;
 
-  if (bin->child && gtk_widget_get_visible (bin->child)) {
-    gtk_widget_size_request (bin->child, &child_requisition);
+  if (child && gtk_widget_get_visible (child)) {
+    gtk_widget_size_request (child, &child_requisition);
     requisition->width = child_requisition.width;
     requisition->height = child_requisition.height;
   } else {
@@ -412,12 +412,12 @@ gste_debugui_size_request (GtkWidget * widget, GtkRequisition * requisition)
 static void
 gste_debugui_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
 {
-  GtkBin *bin = GTK_BIN (widget);
+  GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
 
-  widget->allocation = *allocation;
+  gtk_widget_set_allocation (widget, allocation);
 
-  if (bin->child && gtk_widget_get_visible (bin->child)) {
-    gtk_widget_size_allocate (bin->child, allocation);
+  if (child && gtk_widget_get_visible (child)) {
+    gtk_widget_size_allocate (child, allocation);
   }
 }
 
