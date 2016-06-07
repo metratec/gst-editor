@@ -47,7 +47,7 @@ struct _GstEditorImage
 
 
 GstEditorImage *gst_editor_image_get (GstEditorImageType type);
-GstEditorImage *gst_editor_image_get_for_type (GtkType type);
+GstEditorImage *gst_editor_image_get_for_type (GType type);
 
 
 #endif /* __GST_EDITOR_IMAGE_H__ */

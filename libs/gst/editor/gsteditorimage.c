@@ -46,14 +46,13 @@ static char *_gst_editor_image_name[] = {
 struct _image_entry
 {
   GstEditorImageType type;
-    GtkType (*gtktype) (void);
+  GType (*gtype) (void);
 };
 
-#define TYPES_SIZE 3
-struct _image_entry _image_types[TYPES_SIZE] = {
+static const struct _image_entry _image_types[] = {
   {GST_EDITOR_IMAGE_BIN, gst_bin_get_type},
 //  {GST_EDITOR_IMAGE_THREAD, gst_thread_get_type},
-  {GST_EDITOR_IMAGE_PIPELINE, gst_pipeline_get_type},
+  {GST_EDITOR_IMAGE_PIPELINE, gst_pipeline_get_type}
 };
 
 GstEditorImage *
@@ -77,13 +76,12 @@ gst_editor_image_get (GstEditorImageType type)
 }
 
 GstEditorImage *
-gst_editor_image_get_for_type (GtkType type)
+gst_editor_image_get_for_type (GType type)
 {
-
   gint i;
 
-  for (i = 0; i < TYPES_SIZE; i++) {
-    if (_image_types[i].gtktype () == type) {
+  for (i = 0; i < G_N_ELEMENTS (_image_types); i++) {
+    if (_image_types[i].gtype () == type) {
       return gst_editor_image_get (_image_types[i].type);
     }
   }
