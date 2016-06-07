@@ -19,10 +19,11 @@
  * Boston, MA 02111-1307, USA.
  */  
     
-#include <gtk/gtk.h>
-    
 #include "config.h"
     
+#include <gtk/gtk.h>
+#include <gdk/gdk.h>
+
 #include "gsteditor.h"
 #include "gsteditorstatusbar.h"
     
@@ -41,7 +42,7 @@ gst_editor_statusbar_init (GstEditor * editor)
   statusbar_timeout = STATUSBAR_TIMEOUT;
 }
 
-static gint
+static gboolean
 gst_editor_statusbar_clear (gpointer data)
 {
   if (gst_editor_statusbar) {
@@ -49,16 +50,16 @@ gst_editor_statusbar_clear (gpointer data)
   }
   statusbar_timeout_id = 0; /* indicate that timeout handler is
                                 clear (0 cannot be a handler id) */
-  return FALSE;
+  return G_SOURCE_REMOVE;
 }
 
 static void
 gst_editor_statusbar_reset_timeout (void)
 {
   if (statusbar_timeout_id != 0) /* remove last timeout, if still present */
-    gtk_timeout_remove (statusbar_timeout_id);
-  statusbar_timeout_id = gtk_timeout_add (
-      statusbar_timeout, (GtkFunction)gst_editor_statusbar_clear, NULL);
+    g_source_remove (statusbar_timeout_id);
+  statusbar_timeout_id = gdk_threads_add_timeout (
+      statusbar_timeout, gst_editor_statusbar_clear, NULL);
 }
 
 void
