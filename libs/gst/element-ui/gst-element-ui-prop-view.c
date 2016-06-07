@@ -142,7 +142,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   gtk_label_set_justify (GTK_LABEL (label_lower), GTK_JUSTIFY_LEFT);
   gtk_misc_set_alignment (GTK_MISC (label_lower), 0, 0.5);
 
-  spinbutton_adj = gtk_adjustment_new (1, 0, 100, 1, 10, 10);
+  spinbutton_adj = gtk_adjustment_new (1, 0, 100, 1, 10, 0);
   spinbutton = gtk_spin_button_new (GTK_ADJUSTMENT (spinbutton_adj), 1, 0);
   gtk_table_attach (GTK_TABLE (table_spin), spinbutton, 1, 2, 0, 1,
       GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
