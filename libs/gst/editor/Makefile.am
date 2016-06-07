@@ -5,7 +5,6 @@ libgsteditor_la_SOURCES =	\
 	gsteditorbin.c		\
 	gsteditorcanvas.c	\
 	gsteditorelement.c	\
-	gsteditorimage.c	\
 	gsteditoritem.c		\
 	gsteditorlink.c	\
 	gsteditorpad.c		\
@@ -27,7 +26,6 @@ noinst_HEADERS =                \
         gsteditorproperty.h     \
 	gsteditorpopup.h	\
         gsteditorpalette.h      \
-        gsteditorimage.h        \
 	gst-helper.h		\
 	stockicons.h
 
