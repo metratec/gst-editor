@@ -443,7 +443,6 @@ offset_hack (GstElementUI * ui)
   GstElementUIPropView *pview = NULL;
   GtkAdjustment *adj;
   gchar *lower, *upper;
-  const gchar *format;
 
   for (i = 0; i < ui->nprops; i++) {
     if (strcmp ("offset", ui->params[i]->name) == 0) {
@@ -454,17 +453,18 @@ offset_hack (GstElementUI * ui)
   g_return_val_if_fail (pview != NULL, FALSE);
 
   adj = GTK_ADJUSTMENT (pview->adjustment);
-  adj->lower = G_PARAM_SPEC_INT64 (pview->param)->minimum;
+  gtk_adjustment_set_lower (adj, G_PARAM_SPEC_INT64 (pview->param)->minimum);
   g_object_set (G_OBJECT (ui->element), "filesize", &my_int64, NULL);
-  adj->upper = adj->lower + my_int64;
-  debug ("setting upper = %lld = %f", my_int64, adj->upper);
-  adj->step_increment = (adj->upper - adj->lower) / 20;
-  adj->page_increment = (adj->upper - adj->lower) / 4;
+  gtk_adjustment_set_upper (adj, gtk_adjustment_get_lower (adj) + my_int64);
+  debug ("setting upper = %lld = %f", my_int64, gtk_adjustment_get_upper (adj));
+  gtk_adjustment_set_step_increment (adj,
+      (gtk_adjustment_get_upper (adj) - gtk_adjustment_get_lower (adj)) / 20);
+  gtk_adjustment_set_page_increment (adj,
+      (gtk_adjustment_get_upper (adj) - gtk_adjustment_get_lower (adj)) / 4);
   gtk_adjustment_changed (adj);
 
-  format = "%.4g";
-  lower = g_strdup_printf (format, adj->lower);
-  upper = g_strdup_printf (format, adj->upper);
+  lower = g_strdup_printf ("%.4g", gtk_adjustment_get_lower (adj));
+  upper = g_strdup_printf ("%.4g", gtk_adjustment_get_upper (adj));
   gtk_label_set_text (GTK_LABEL (pview->label_lower), lower);
   gtk_label_set_text (GTK_LABEL (pview->label_upper), upper);
   g_free (lower);
