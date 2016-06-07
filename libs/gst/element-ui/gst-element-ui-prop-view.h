@@ -46,7 +46,7 @@ struct _GstElementUIPropView
 
   gboolean on_pending;
   gboolean on_set;
-  GtkObject *adjustment;
+  GtkAdjustment *adjustment;
   GtkWidget *combobox;
   gint *enum_values;
   gpointer *enum_pointer;

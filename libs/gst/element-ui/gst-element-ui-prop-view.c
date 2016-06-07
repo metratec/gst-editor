@@ -113,7 +113,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   GtkWidget *table_args;
   GtkWidget *table_spin;
   GtkWidget *label_lower;
-  GtkObject *spinbutton_adj;
+  GtkAdjustment *spinbutton_adj;
   GtkWidget *spinbutton;
   GtkWidget *toggle_on;
   GtkWidget *toggle_off;
@@ -143,7 +143,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   gtk_misc_set_alignment (GTK_MISC (label_lower), 0, 0.5);
 
   spinbutton_adj = gtk_adjustment_new (1, 0, 100, 1, 10, 0);
-  spinbutton = gtk_spin_button_new (GTK_ADJUSTMENT (spinbutton_adj), 1, 0);
+  spinbutton = gtk_spin_button_new (spinbutton_adj, 1, 0);
   gtk_table_attach (GTK_TABLE (table_spin), spinbutton, 1, 2, 0, 1,
       GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
 
@@ -165,7 +165,7 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   gtk_table_attach (GTK_TABLE (table_args), entry, 0, 6, 2, 3,
       GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
 
-  hscale = gtk_hscale_new (GTK_ADJUSTMENT (spinbutton_adj));
+  hscale = gtk_hscale_new (spinbutton_adj);
   gtk_table_attach (GTK_TABLE (table_args), hscale, 0, 6, 3, 4,
       GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 0);
   gtk_scale_set_draw_value (GTK_SCALE (hscale), FALSE);
@@ -359,28 +359,28 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
           !pview->on_set);
       break;
     case G_TYPE_INT:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_int (pview->value));
       break;
     case G_TYPE_UINT:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_uint (pview->value));
       break;
     case G_TYPE_LONG:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_long (pview->value));
       break;
     case G_TYPE_ULONG:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_ulong (pview->value));
       break;
     case G_TYPE_INT64:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_int64 (pview->value));
       break;
 #ifndef _MSC_VER
     case G_TYPE_UINT64:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_uint64 (pview->value));
       break;
       
@@ -388,11 +388,11 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
 #pragma message ("Check if cast from uint64 to double is supported with msvc 6.0")
 #endif
     case G_TYPE_FLOAT:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_float (pview->value));
       break;
     case G_TYPE_DOUBLE:
-      gtk_adjustment_set_value (GTK_ADJUSTMENT (pview->adjustment),
+      gtk_adjustment_set_value (pview->adjustment,
           g_value_get_double (pview->value));
       break;
     case G_TYPE_STRING:
@@ -456,7 +456,6 @@ pview_param_changed (GstElementUIPropView * pview)
 {
   GstElement *element = pview->element;
   GParamSpec *param = pview->param;
-  GtkAdjustment *adj;
   gchar *lower, *upper;
   const gchar *format;
 
@@ -486,44 +485,51 @@ pview_param_changed (GstElementUIPropView * pview)
       gtk_widget_show (pview->toggle_off);
       break;
 
-#define CASE_NUMERIC(type, digits)                                            \
-  case G_TYPE_##type:                                                         \
-    gtk_widget_show (pview->spinbutton);                                      \
-    gtk_widget_show (pview->hscale);                                          \
-    gtk_widget_show (pview->label_lower);                                     \
-    gtk_widget_show (pview->label_upper);                                     \
-                                                                              \
-    adj = GTK_ADJUSTMENT (pview->adjustment);                                 \
-    gtk_adjustment_set_lower (adj, G_PARAM_SPEC_##type (param)->minimum);     \
-    gtk_adjustment_set_upper (adj, G_PARAM_SPEC_##type (param)->maximum);     \
-    gtk_adjustment_set_value (adj,                                            \
-        (gtk_adjustment_get_upper (adj) - gtk_adjustment_get_lower (adj)) /   \
-            2);                                                               \
-    gtk_adjustment_set_step_increment (adj,                                   \
-        (gtk_adjustment_get_upper (adj) - gtk_adjustment_get_lower (adj)) /   \
-            20);                                                              \
-    gtk_adjustment_set_page_increment (adj,                                   \
-        (gtk_adjustment_get_upper (adj) - gtk_adjustment_get_lower (adj)) /   \
-            4);                                                               \
-    gtk_adjustment_set_page_size (adj, 0);                                    \
-    gtk_adjustment_changed (adj);                                             \
-                                                                              \
-    if (digits == 0 && (ABS (gtk_adjustment_get_lower (adj)) > 100000 ||      \
-                           ABS (gtk_adjustment_get_upper (adj)) > 100000))    \
-      format = "%.4g";                                                        \
-    else if (digits == 0)                                                     \
-      format = "%.0f";                                                        \
-    else                                                                      \
-      format = "%." #digits "g";                                              \
-    lower = g_strdup_printf (format, gtk_adjustment_get_lower (adj));         \
-    upper = g_strdup_printf (format, gtk_adjustment_get_upper (adj));         \
-    gtk_label_set_text (GTK_LABEL (pview->label_lower), lower);               \
-    gtk_label_set_text (GTK_LABEL (pview->label_upper), upper);               \
-    g_free (lower);                                                           \
-    g_free (upper);                                                           \
-                                                                              \
-    gtk_scale_set_digits (GTK_SCALE (pview->hscale), digits);                 \
-    gtk_spin_button_set_digits (GTK_SPIN_BUTTON (pview->spinbutton), digits); \
+#define CASE_NUMERIC(type, digits)                                             \
+  case G_TYPE_##type:                                                          \
+    gtk_widget_show (pview->spinbutton);                                       \
+    gtk_widget_show (pview->hscale);                                           \
+    gtk_widget_show (pview->label_lower);                                      \
+    gtk_widget_show (pview->label_upper);                                      \
+                                                                               \
+    gtk_adjustment_set_lower (                                                 \
+        pview->adjustment, G_PARAM_SPEC_##type (param)->minimum);              \
+    gtk_adjustment_set_upper (                                                 \
+        pview->adjustment, G_PARAM_SPEC_##type (param)->maximum);              \
+    gtk_adjustment_set_value (                                                 \
+        pview->adjustment, (gtk_adjustment_get_upper (pview->adjustment) -     \
+                               gtk_adjustment_get_lower (pview->adjustment)) / \
+                               2);                                             \
+    gtk_adjustment_set_step_increment (                                        \
+        pview->adjustment, (gtk_adjustment_get_upper (pview->adjustment) -     \
+                               gtk_adjustment_get_lower (pview->adjustment)) / \
+                               20);                                            \
+    gtk_adjustment_set_page_increment (                                        \
+        pview->adjustment, (gtk_adjustment_get_upper (pview->adjustment) -     \
+                               gtk_adjustment_get_lower (pview->adjustment)) / \
+                               4);                                             \
+    gtk_adjustment_set_page_size (pview->adjustment, 0);                       \
+    gtk_adjustment_changed (pview->adjustment);                                \
+                                                                               \
+    if (digits == 0 &&                                                         \
+        (ABS (gtk_adjustment_get_lower (pview->adjustment)) > 100000 ||        \
+            ABS (gtk_adjustment_get_upper (pview->adjustment)) > 100000))      \
+      format = "%.4g";                                                         \
+    else if (digits == 0)                                                      \
+      format = "%.0f";                                                         \
+    else                                                                       \
+      format = "%." #digits "g";                                               \
+    lower = g_strdup_printf (                                                  \
+        format, gtk_adjustment_get_lower (pview->adjustment));                 \
+    upper = g_strdup_printf (                                                  \
+        format, gtk_adjustment_get_upper (pview->adjustment));                 \
+    gtk_label_set_text (GTK_LABEL (pview->label_lower), lower);                \
+    gtk_label_set_text (GTK_LABEL (pview->label_upper), upper);                \
+    g_free (lower);                                                            \
+    g_free (upper);                                                            \
+                                                                               \
+    gtk_scale_set_digits (GTK_SCALE (pview->hscale), digits);                  \
+    gtk_spin_button_set_digits (GTK_SPIN_BUTTON (pview->spinbutton), digits);  \
     break
 
       CASE_NUMERIC (FLOAT, 2);
@@ -663,11 +669,10 @@ pview_value_changed (GstElementUIPropView * pview)
 	}
       break;
 
-#define CASE_NUMERIC(type_lower, type_upper)                                       \
-  case G_TYPE_##type_upper:                                                        \
-    g_object_set (G_OBJECT (pview->element), param->name,                          \
-        (type_lower)gtk_adjustment_get_value (GTK_ADJUSTMENT (pview->adjustment)), \
-        NULL);                                                                     \
+#define CASE_NUMERIC(type_lower, type_upper)                             \
+  case G_TYPE_##type_upper:                                              \
+    g_object_set (G_OBJECT (pview->element), param->name,                \
+        (type_lower)gtk_adjustment_get_value (pview->adjustment), NULL); \
     break
 
       CASE_NUMERIC (gfloat, FLOAT);
