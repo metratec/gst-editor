@@ -75,11 +75,7 @@ dnl This is installed from GTK+ 2.0's gdk-pixbuf
 AC_PATH_PROG(GDK_PIXBUF_CSOURCE, gdk-pixbuf-csource)
 test -z "$GDK_PIXBUF_CSOURCE" && AC_MSG_ERROR([
 *** You need the gdk-pixbuf-csource tool which is installed
-*** from GTK+ 2.0's gdk-pixbuf.
-***
-*** Either the location where you installed your GTK+ 2.0 is
-*** not in your PATH or something is screwed up with your
-*** GTK+ 2.0 installation
+*** from GTK+'s gdk-pixbuf.
 ])
 
 AG_GST_DEBUGINFO
@@ -114,17 +110,14 @@ if test $GST_DISABLE_LOADSAVE = "1"; then
   AC_MSG_ERROR("Load/Save XML persistence disabled")
 fi
 
-PKG_CHECK_MODULES(GOOCANVAS, goocanvas,,
-   [AC_MSG_ERROR([GOOCANVAS 0.8 required but not found])])
+PKG_CHECK_MODULES(GOOCANVAS, goocanvas-2.0 >= 2.0,,
+   [AC_MSG_ERROR([GOOCANVAS 2.0 required but not found])])
 
 PKG_CHECK_MODULES(GDK_PIXBUF, gdk-pixbuf-2.0,,
    [AC_MSG_ERROR([gdk-pixbuf 2.0 required but not found])])
 
-PKG_CHECK_MODULES(GTK, gtk+-2.0,,
-   [AC_MSG_ERROR([gtk 2.0 required but not found])])
-
-PKG_CHECK_MODULES(GTK, goocanvas,,
-   [AC_MSG_ERROR([goocanvas required but not found])])
+PKG_CHECK_MODULES(GTK, gtk+-3.0 >= 3.10.8,,
+   [AC_MSG_ERROR([GTK 3.10.8 required but not found])])
 
 AC_SUBST(GST_CFLAGS)
 AC_SUBST(GST_LIBS)
