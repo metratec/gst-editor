@@ -32,11 +32,12 @@ gsth_element_unlink_all (GstElement * element)
       case GST_ITERATOR_OK: {
         GstPad * pad = GST_PAD (item);
         GstPad * peer = GST_PAD_PEER (pad);
-        if (peer)
+        if (peer) {
           if (GST_PAD_IS_SRC (pad))
             gst_pad_unlink (pad, peer);
           else
             gst_pad_unlink (peer, pad);
+        }
         gst_object_unref (pad);
         break;
       }
