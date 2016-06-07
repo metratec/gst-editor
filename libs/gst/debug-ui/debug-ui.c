@@ -165,9 +165,9 @@ set_default_level (GtkAdjustment * adj, GtkWidget * widget)
 {
   GsteDebugUI *debug_ui = GSTE_DEBUGUI (widget);
 
-  gst_debug_set_default_threshold ((int) adj->value);
+  gst_debug_set_default_threshold ((int) gtk_adjustment_get_value (adj));
   gtk_label_set_label (debug_ui->default_label,
-      gst_debug_level_get_name ((int) adj->value));
+      gst_debug_level_get_name ((int) gtk_adjustment_get_value (adj)));
   refresh_categories (NULL, GTK_WIDGET (debug_ui));
 }
 
@@ -341,7 +341,6 @@ gste_debugui_init (GsteDebugUI * debug_ui)
   g_signal_connect (adj,
       "value-changed", G_CALLBACK (set_default_level), debug_ui);
   gtk_adjustment_set_value (adj, gst_debug_get_default_threshold ());
-  adj->value = gst_debug_get_default_threshold ();
   set_default_level (adj, GTK_WIDGET (debug_ui));
 
   adj = gtk_range_get_adjustment (GTK_RANGE (debug_ui->custom_hscale));
