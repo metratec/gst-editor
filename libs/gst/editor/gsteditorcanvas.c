@@ -257,7 +257,7 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       break;
 
     case PROP_PROPERTIES_VISIBLE:
-      g_return_if_fail (GTK_WIDGET_REALIZED (canvas) == TRUE);
+      g_return_if_fail (gtk_widget_get_realized (GTK_WIDGET (canvas)) == TRUE);
 
       b = g_value_get_boolean (value);
 
@@ -280,7 +280,7 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       break;
 
     case PROP_PALETTE_VISIBLE:
-      g_return_if_fail (GTK_WIDGET_REALIZED (canvas) == TRUE);
+      g_return_if_fail (gtk_widget_get_realized (GTK_WIDGET (canvas)) == TRUE);
 
       b = g_value_get_boolean (value);
       g_message ("palette visible: %s", b ? "TRUE" : "FALSE");
