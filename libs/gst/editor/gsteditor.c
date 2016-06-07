@@ -514,13 +514,6 @@ gst_editor_new (GstElement * element)
   return ret;
 }
 
-typedef struct
-{
-  GtkWidget *selection;
-  GstEditor *editor;
-}
-file_select;
-
 static gboolean
 do_save (GstEditor * editor)
 {
@@ -548,47 +541,30 @@ do_save (GstEditor * editor)
   return TRUE;
 }
 
-static void
-on_save_as_file_selected (GtkWidget * button, file_select * data)
-{
-  GtkWidget *selector = data->selection;
-  GstEditor *editor = data->editor;
-
-  g_object_set (editor, "filename",
-      gtk_file_selection_get_filename (GTK_FILE_SELECTION (selector)), NULL);
-
-  do_save (editor);
-
-  g_free (data);
-}
-
 void
 gst_editor_on_save_as (GtkWidget * widget, GstEditor * editor)
 {
-  GtkWidget *file_selector;
-  file_select *file_data = g_new0 (file_select, 1);
+  GtkWidget *file_chooser;
 
-  file_selector = gtk_file_selection_new ("Please select a file for saving.");
+  file_chooser = gtk_file_chooser_dialog_new ("Please select a file for saving.",
+      GTK_WINDOW (editor->window), GTK_FILE_CHOOSER_ACTION_SAVE,
+      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+      GTK_STOCK_SAVE_AS, GTK_RESPONSE_ACCEPT,
+      NULL);
 
-  g_object_set (file_selector, "filename", editor->filename, NULL);
+  gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (file_chooser),
+      editor->filename);
 
-  file_data->selection = file_selector;
-  file_data->editor = editor;
+  if (gtk_dialog_run (GTK_DIALOG (file_chooser)) == GTK_RESPONSE_ACCEPT) {
+    gchar *filename =
+        gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (file_chooser));
+    g_object_set (editor, "filename", filename, NULL);
+    g_free (filename);
 
-  g_signal_connect (G_OBJECT (GTK_FILE_SELECTION (file_selector)->
-          ok_button), "clicked", GTK_SIGNAL_FUNC (on_save_as_file_selected),
-      file_data);
+    do_save (editor);
+  }
 
-  /* Ensure that the dialog box is destroyed when the user clicks a button. */
-  g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION (file_selector)->
-          ok_button), "clicked", GTK_SIGNAL_FUNC (gtk_widget_destroy),
-      (gpointer) file_selector);
-  g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION (file_selector)->
-          cancel_button), "clicked", GTK_SIGNAL_FUNC (gtk_widget_destroy),
-      (gpointer) file_selector);
-
-  /* Display that dialog */
-  gtk_widget_show (file_selector);
+  gtk_widget_destroy (file_chooser);
 }
 
 void
@@ -600,20 +576,6 @@ gst_editor_on_save (GtkWidget * widget, GstEditor * editor)
   }
 
   do_save (editor);
-}
-
-static void
-on_load_file_selected (GtkWidget * button, file_select * data)
-{
-  GtkWidget *selector = data->selection;
-  const gchar *file_name;
-  GstEditor *editor = data->editor;
-
-  file_name = gtk_file_selection_get_filename (GTK_FILE_SELECTION (selector));
-
-  gst_editor_load (editor, file_name);
-
-  g_free (data);
 }
 
 void
@@ -687,27 +649,22 @@ gst_editor_load (GstEditor * editor, const gchar * file_name)
 void
 gst_editor_on_open (GtkWidget * widget, GstEditor * editor)
 {
-  GtkWidget *file_selector;
-  file_select *file_data = g_new0 (file_select, 1);
+  GtkWidget *file_chooser;
 
-  file_selector = gtk_file_selection_new ("Please select a file to load.");
+  file_chooser = gtk_file_chooser_dialog_new ("Please select a file to load.",
+      GTK_WINDOW (editor->window), GTK_FILE_CHOOSER_ACTION_OPEN,
+      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
+      GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+      NULL);
 
-  file_data->selection = file_selector;
-  file_data->editor = editor;
+  if (gtk_dialog_run (GTK_DIALOG (file_chooser)) == GTK_RESPONSE_ACCEPT) {
+    gchar *filename =
+        gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (file_chooser));
+    gst_editor_load (editor, filename);
+    g_free (filename);
+  }
 
-  g_signal_connect (G_OBJECT (GTK_FILE_SELECTION (file_selector)->ok_button),
-      "clicked", G_CALLBACK (on_load_file_selected), file_data);
-
-  /* Ensure that the dialog box is destroyed when the user clicks a button. */
-  g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION (file_selector)->
-          ok_button), "clicked", G_CALLBACK (gtk_widget_destroy),
-      (gpointer) file_selector);
-  g_signal_connect_swapped (G_OBJECT (GTK_FILE_SELECTION (file_selector)->
-          cancel_button), "clicked", G_CALLBACK (gtk_widget_destroy),
-      (gpointer) file_selector);
-
-  /* Display that dialog */
-  gtk_widget_show (file_selector);
+  gtk_widget_destroy (file_chooser);
 }
 
 void
