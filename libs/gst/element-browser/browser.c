@@ -88,7 +88,8 @@ gst_element_browser_init (GstElementBrowser * browser)
   gtk_window_set_title (GTK_WINDOW (dialog), _("Select element..."));
 
   hpaned = gtk_hpaned_new ();
-  gtk_box_pack_start (GTK_BOX (dialog->vbox), hpaned, TRUE, TRUE, 0);
+  gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)),
+      hpaned, TRUE, TRUE, 0);
 
   tree = g_object_new (gst_element_browser_element_tree_get_type (), NULL);
   gtk_widget_set_size_request (GTK_WIDGET (tree), 200, -1);
