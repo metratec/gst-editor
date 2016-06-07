@@ -729,11 +729,13 @@ gst_editor_on_new_from_pipeline_description (GtkWidget * widget,
         GTK_RESPONSE_ACCEPT, GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
     label = gtk_label_new ("Please enter in a pipeline description. "
         "See the gst-launch man page for help on the syntax.");
-    gtk_container_add (GTK_CONTAINER (GTK_DIALOG (request)->vbox), label);
+    gtk_container_add (
+        GTK_CONTAINER (gtk_dialog_get_content_area (GTK_DIALOG (request))),
+        label);
     /* set up text entry widget */
     /* entry = gtk_entry_new();
        gtk_entry_set_text(entry, "fakesrc ! fakesink");
-       gtk_box_pack_end ( GTK_BOX(GTK_DIALOG(dialog)->vbox), 
+       gtk_box_pack_end ( GTK_BOX(GTK_DIALOG(dialog)->vbox),
        entry, FALSE, FALSE, GNOME_PAD_SMALL );
        ...
      */
