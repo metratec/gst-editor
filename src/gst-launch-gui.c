@@ -37,6 +37,9 @@
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 
+#include <glib.h>
+#include <glib/gprintf.h>
+
 #include <gst/editor/editor.h>
 #include <gst/element-ui/gst-element-ui.h>
 #include <gst/debug-ui/debug-ui.h>
@@ -71,33 +74,39 @@ load_history (GtkWidget * pipe_combo)
 
   gchar *history_filename, *history_string, **split, **walk;
   gint num_entries = 0, entries_limit = 50;
-  GList *history = NULL;
   FILE *history_file;
 
-  history_filename =
-      g_strdup_printf ("%s/.gstreamer-guilaunch.history", g_get_home_dir ());
+  history_filename = g_build_filename (
+      g_get_home_dir (), ".gstreamer-guilaunch.history", NULL);
 
-  if (!g_file_get_contents (history_filename, &history_string, NULL, NULL)) {
-    history_string = g_strdup ("");
+  if (g_file_get_contents (history_filename, &history_string, NULL, NULL)) {
+    split = g_strsplit (history_string, "\n", 0);
+    g_free (history_string);
+  } else {
+    /* no history file -> empty history list */
+    split = g_new0 (gchar *, 1);
   }
 
-  split = g_strsplit (history_string, "\n", 0);
-
-  /* go to the end of the list and append entries from there */
+  /*
+   * go to the end of the list and append entries from there
+   * This appends the last `entry_limit` history entries in reverse order
+   */
   walk = split;
   while (*walk)
     walk++;
   while (--walk >= split && num_entries++ < entries_limit)
-    history = g_list_append (history, *walk);
+    gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (pipe_combo),
+        *walk);
 
-  gtk_combo_set_popdown_strings (GTK_COMBO (pipe_combo), history);
+  g_strfreev (split);
 
   history_file = fopen (history_filename, "a");
   if (history_file == NULL) {
     perror ("couldn't open history file");
   }
-  g_object_set_data (G_OBJECT (pipe_combo), "history", history);
   g_object_set_data (G_OBJECT (pipe_combo), "history_file", history_file);
+
+  g_free (history_filename);
 }
 
 void
@@ -114,35 +123,10 @@ void
 handle_have_size (GstElement * element, int width, int height)
 {
   g_print ("setting window size\n");
-  gtk_widget_set_usize (GTK_WIDGET (g_object_get_data (G_OBJECT (element),
+  gtk_widget_set_size_request (GTK_WIDGET (g_object_get_data (G_OBJECT (element),
               "gtk_socket")), width, height);
   gtk_widget_show_all (GTK_WIDGET (g_object_get_data (G_OBJECT (element),
               "vid_window")));
-}
-
-void
-xid_handler (GstElement * element, gint xid, void *priv)
-{
-  GtkWidget *gtk_socket, *vid_window;
-
-  g_print ("handling xid %d\n", xid);
-  vid_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-
-  gtk_socket = gtk_socket_new ();
-  gtk_widget_show (gtk_socket);
-
-  gtk_container_add (GTK_CONTAINER (vid_window), gtk_socket);
-
-  gtk_widget_realize (gtk_socket);
-  gtk_socket_steal (GTK_SOCKET (gtk_socket), xid);
-
-  gtk_object_set (GTK_OBJECT (vid_window), "allow_grow", TRUE, NULL);
-  gtk_object_set (GTK_OBJECT (vid_window), "allow_shrink", TRUE, NULL);
-
-  g_signal_connect (G_OBJECT (element), "have_size",
-      G_CALLBACK (handle_have_size), element);
-  g_object_set_data (G_OBJECT (element), "vid_window", vid_window);
-  g_object_set_data (G_OBJECT (element), "gtk_socket", gtk_socket);
 }
 
 void
@@ -227,14 +211,12 @@ parse_callback (GtkWidget * widget, GtkWidget * pipe_combo)
 {
   GError *err = NULL;
 
-  GList *history =
-      (GList *) g_object_get_data (G_OBJECT (pipe_combo), "history");
   FILE *history_file =
       (FILE *) g_object_get_data (G_OBJECT (pipe_combo), "history_file");
   gchar *last_pipe =
       (gchar *) g_object_get_data (G_OBJECT (widget), "last_pipe");
   gchar *try_pipe =
-      g_strdup (gtk_entry_get_text (GTK_ENTRY (GTK_COMBO (pipe_combo)->entry)));
+      gtk_combo_box_text_get_active_text (GTK_COMBO_BOX_TEXT (pipe_combo));
 
   if (pipeline) {
     g_print ("unreffing\n");
@@ -248,6 +230,7 @@ parse_callback (GtkWidget * widget, GtkWidget * pipe_combo)
   if (!pipeline) {
     gtk_label_set_text (GTK_LABEL (status),
         err ? err->message : "unknown parse error");
+    g_free (try_pipe);
     return;
   }
 
@@ -260,24 +243,23 @@ parse_callback (GtkWidget * widget, GtkWidget * pipe_combo)
   gtk_tree_view_expand_all (view);
 
   if (last_pipe == NULL || strcmp (last_pipe, try_pipe) != 0) {
-    gchar *write_pipe = g_strdup_printf ("%s\n", try_pipe);
+    g_object_set_data (G_OBJECT (widget), "last_pipe", g_strdup (try_pipe));
 
-    g_object_set_data (G_OBJECT (widget), "last_pipe", try_pipe);
-    fwrite (write_pipe, sizeof (gchar), strlen (write_pipe), history_file);
+    g_fprintf (history_file, "%s\n", try_pipe);
     fflush (history_file);
-    history = g_list_prepend (history, try_pipe);
-    gtk_combo_set_popdown_strings (GTK_COMBO (pipe_combo), history);
-    g_free (write_pipe);
-    g_free (last_pipe);
+
+    gtk_combo_box_text_prepend_text (GTK_COMBO_BOX_TEXT (pipe_combo), try_pipe);
   }
 
+  g_free (try_pipe);
+  g_free (last_pipe);
 }
 
 void
 start_callback (GtkWidget * widget, gpointer data)
 {
   GtkWidget *pipe_combo =
-      gtk_object_get_data (GTK_OBJECT (widget), "pipe_combo");
+      GTK_WIDGET (g_object_get_data (G_OBJECT (widget), "pipe_combo"));
 
   if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (widget))) {
     gtk_widget_set_sensitive (GTK_WIDGET (pause_but), TRUE);
@@ -324,7 +306,6 @@ main (int argc, char *argv[])
   GtkWidget *page_scroll;
   GtkTreeViewColumn *column;
   GtkTreeSelection *selection;
-  gchar **argvn, *joined;
   GdkPixbuf *icon = NULL;
 
   gst_init (&argc, &argv);
@@ -333,7 +314,7 @@ main (int argc, char *argv[])
 
                   /***** set up the GUI *****/
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-  g_signal_connect (window, "delete-event", GTK_SIGNAL_FUNC (quit_live), NULL);
+  g_signal_connect (window, "delete-event", G_CALLBACK (quit_live), NULL);
   vbox = gtk_vbox_new (FALSE, 0);
   gtk_container_add (GTK_CONTAINER (window), vbox);
   gtk_window_set_default_size (GTK_WINDOW (window), 500, 300);
@@ -349,8 +330,7 @@ main (int argc, char *argv[])
   parse_line = gtk_hbox_new (FALSE, 3);
   gtk_box_pack_start (GTK_BOX (vbox), parse_line, FALSE, FALSE, 0);
 
-  pipe_combo = gtk_combo_new ();
-  gtk_combo_set_value_in_list (GTK_COMBO (pipe_combo), FALSE, FALSE);
+  pipe_combo = gtk_combo_box_text_new_with_entry ();
   load_history (pipe_combo);
 
   parse_but = gtk_button_new_with_label ("Parse");
@@ -366,21 +346,20 @@ main (int argc, char *argv[])
   gtk_widget_set_sensitive (GTK_WIDGET (start_but), FALSE);
   gtk_widget_set_sensitive (GTK_WIDGET (pause_but), FALSE);
 
-  gtk_signal_connect (GTK_OBJECT (start_but), "clicked",
-      GTK_SIGNAL_FUNC (start_callback), NULL);
-  gtk_signal_connect (GTK_OBJECT (pause_but), "clicked",
-      GTK_SIGNAL_FUNC (pause_callback), NULL);
-  gtk_signal_connect (GTK_OBJECT (parse_but), "clicked",
-      GTK_SIGNAL_FUNC (parse_callback), pipe_combo);
+  g_signal_connect (start_but, "clicked",
+      G_CALLBACK (start_callback), NULL);
+  g_signal_connect (pause_but, "clicked",
+      G_CALLBACK (pause_callback), NULL);
+  g_signal_connect (parse_but, "clicked",
+      G_CALLBACK (parse_callback), pipe_combo);
 
-
-  gtk_object_set_data (GTK_OBJECT (start_but), "pipe_combo", pipe_combo);
+  g_object_set_data (G_OBJECT (start_but), "pipe_combo", pipe_combo);
 
   store = gtk_tree_store_new (2, G_TYPE_STRING, GST_TYPE_ELEMENT);
   view = GTK_TREE_VIEW (gtk_tree_view_new_with_model (GTK_TREE_MODEL (store)));
   selection = gtk_tree_view_get_selection (GTK_TREE_VIEW (view));
   gtk_tree_selection_set_mode (selection, GTK_SELECTION_SINGLE);
-  g_signal_connect (G_OBJECT (selection), "changed",
+  g_signal_connect (selection, "changed",
       G_CALLBACK (selection_changed_cb), NULL);
   gtk_tree_view_set_headers_visible (view, FALSE);
   gtk_tree_view_insert_column_with_attributes (view,
@@ -435,10 +414,14 @@ main (int argc, char *argv[])
   gtk_widget_show (element_ui);
 
   if (argc) {
-    argvn = g_new0 (char *, argc);
-    memcpy (argvn, argv + 1, sizeof (char *) * (argc - 1));
-    joined = g_strjoinv (" ", argvn);
-    g_object_set (GTK_COMBO (pipe_combo)->entry, "text", joined, NULL);
+    GtkWidget *entry = gtk_bin_get_child (GTK_BIN (pipe_combo));
+    gchar *joined;
+
+    /* NOTE: the argv array is guaranteed to be NULL-terminated */
+    joined = g_strjoinv (" ", argv + 1);
+    gtk_entry_set_text (GTK_ENTRY (entry), joined);
+    g_free (joined);
+
     parse_callback (parse_but, pipe_combo);
   }
 
