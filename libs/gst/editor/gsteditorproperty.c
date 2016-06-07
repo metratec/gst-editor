@@ -230,7 +230,7 @@ gst_editor_property_set_property (GObject * object, guint prop_id,
           GTK_WINDOW (g_value_get_object (value)));
 
       /* we are assumed to be realized at this point.. */
-      window = property->window->window;
+      window = gtk_widget_get_window (property->window);
 
       atoms[0] = gdk_atom_intern ("_NET_WM_WINDOW_TYPE", FALSE);
 

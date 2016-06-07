@@ -207,7 +207,7 @@ gst_editor_palette_set_property (GObject * object, guint prop_id,
                         canvas))));
 
         /* we are assumed to be realized at this point.. */
-        window = palette->window->window;
+        window = gtk_widget_get_window (palette->window);
 
         atoms[0] = gdk_atom_intern ("_NET_WM_WINDOW_TYPE_UTILITY", FALSE);
         gdk_property_change (window,
