@@ -776,29 +776,29 @@ on_combobox_changed (GtkComboBox * combobox, gpointer userdata)
 static void
 block_signals (GstElementUIPropView * pview)
 {
-  g_signal_handlers_block_by_func ((GObject *) pview->adjustment,
+  g_signal_handlers_block_by_func (pview->adjustment,
       G_CALLBACK (on_adjustment_value_changed), pview);
-  g_signal_handlers_block_by_func ((GObject *) pview->toggle_on,
+  g_signal_handlers_block_by_func (pview->toggle_on,
       G_CALLBACK (on_toggle_button_toggled), pview);
-  g_signal_handlers_block_by_func ((GObject *) pview->toggle_off,
+  g_signal_handlers_block_by_func (pview->toggle_off,
       G_CALLBACK (on_toggle_button_toggled), pview);
-  g_signal_handlers_block_by_func ((GObject *) pview->toggle_off,
+  g_signal_handlers_block_by_func (pview->toggle_off,
       G_CALLBACK (on_entry_activate), pview);
-  g_signal_handlers_block_by_func ((GObject *) pview->combobox,
+  g_signal_handlers_block_by_func (pview->combobox,
       G_CALLBACK (on_combobox_changed), pview);
 }
 
 static void
 unblock_signals (GstElementUIPropView * pview)
 {
-  g_signal_handlers_unblock_by_func ((GObject *) pview->combobox,
+  g_signal_handlers_unblock_by_func (pview->combobox,
       G_CALLBACK (on_combobox_changed), pview);
-  g_signal_handlers_unblock_by_func ((GObject *) pview->toggle_off,
+  g_signal_handlers_unblock_by_func (pview->toggle_off,
       G_CALLBACK (on_toggle_button_toggled), pview);
-  g_signal_handlers_unblock_by_func ((GObject *) pview->toggle_on,
+  g_signal_handlers_unblock_by_func (pview->toggle_on,
       G_CALLBACK (on_toggle_button_toggled), pview);
-  g_signal_handlers_unblock_by_func ((GObject *) pview->adjustment,
+  g_signal_handlers_unblock_by_func (pview->adjustment,
       G_CALLBACK (on_adjustment_value_changed), pview);
-  g_signal_handlers_unblock_by_func ((GObject *) pview->adjustment,
+  g_signal_handlers_unblock_by_func (pview->adjustment,
       G_CALLBACK (on_entry_activate), pview);
 }
