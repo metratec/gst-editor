@@ -22,7 +22,6 @@
 #define __GST_EDITOR_PALETTE_H__
 
 #include <gst/gst.h>
-#include <glade/glade.h>
 #include <gst/editor/editor.h>
 
 #define GST_TYPE_EDITOR_PALETTE (gst_editor_palette_get_type())
@@ -41,7 +40,7 @@ struct _GstEditorPalette
 
   GstEditorCanvas *canvas;
 
-  GladeXML *xml;
+  GtkBuilder *builder;
   GtkWidget *window;
   GtkWidget *element_tree;
   GtkWidget *debug_ui;

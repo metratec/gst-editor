@@ -20,14 +20,13 @@
  */
 
 
-#include <string.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <glade/glade.h>
-
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "../common/gste-common.h"
 #include "debug-ui.h"
@@ -270,72 +269,82 @@ gste_debugui_class_init (GsteDebugUIClass * class)
   widget_class->size_allocate = gste_debugui_size_allocate;
 }
 
-/* given the root, return the glade_xml in the glade file for that root */
-static GladeXML *
-gste_debugui_get_xml (const gchar * root)
+/* given the root, return the GtkBuilder in the glade file for that root */
+static GtkBuilder *
+gste_debugui_get_xml (const gchar ** object_ids)
 {
   char *path;
-  GladeXML *result;
+  GtkBuilder *result;
 
-  path = gste_get_ui_file ("editor.glade2");
+  path = gste_get_ui_file ("editor.ui");
   if (!path) {
-    g_warning ("editor.glade2 not found in uninstalled or installed dir.");
+    g_warning ("editor.ui not found in uninstalled or installed dir.");
     return NULL;
   }
 
-  result = glade_xml_new (path, root, NULL);
+  result = gtk_builder_new ();
+  if (!gtk_builder_add_objects_from_file (result,
+          path, (gchar **)object_ids, NULL)) {
+    g_object_unref (result);
+    g_free (path);
+    return NULL;
+  }
+
   g_free (path);
-  return (result);
+  return result;
 }
 
 static void
 gste_debugui_init (GsteDebugUI * debug_ui)
 {
-  GladeXML *xml;
+  GtkBuilder *builder;
   GtkWidget *box;
   GtkWidget *add_button, *remove_button, *refresh_button;
   GtkAdjustment *adj;
   GtkTreeSelection *selection;
   GtkTreeViewColumn *column;
+  const gchar *object_ids[] = {
+      "debug_palette", "adjustment3", "adjustment4", NULL
+  };
 
   debug_ui->handling_select = FALSE;
   debug_ui->list_store = NULL;
   debug_ui->priv_list = NULL;
   debug_ui->add_window = NULL;
 
-  xml = gste_debugui_get_xml ("debug_palette");
-  if (!xml) {
+  builder = gste_debugui_get_xml (object_ids);
+  if (!builder) {
     g_critical ("GstEditor user interface file %s not found. "
-        "Try running from the Gst-Editor source directory.", "editor.glade2");
+        "Try running from the Gst-Editor source directory.", "editor.ui");
     return;
   }
 
-  box = glade_xml_get_widget (xml, "debug_palette");
+  box = GTK_WIDGET (gtk_builder_get_object (builder, "debug_palette"));
   debug_ui->treeview =
-      GTK_TREE_VIEW (glade_xml_get_widget (xml, "custom-levels-treeview"));
+      GTK_TREE_VIEW (gtk_builder_get_object (builder, "custom-levels-treeview"));
   debug_ui->default_hscale =
-      GTK_HSCALE (glade_xml_get_widget (xml, "default-level-hscale"));
+      GTK_HSCALE (gtk_builder_get_object (builder, "default-level-hscale"));
   debug_ui->default_label =
-      GTK_LABEL (glade_xml_get_widget (xml, "default-level-label"));
+      GTK_LABEL (gtk_builder_get_object (builder, "default-level-label"));
   debug_ui->custom_hscale =
-      GTK_HSCALE (glade_xml_get_widget (xml, "custom-level-hscale"));
+      GTK_HSCALE (gtk_builder_get_object (builder, "custom-level-hscale"));
   debug_ui->custom_label =
-      GTK_LABEL (glade_xml_get_widget (xml, "custom-level-label"));
-  debug_ui->custom_box = GTK_WIDGET (glade_xml_get_widget (xml, "custom-box"));
-  add_button = GTK_WIDGET (glade_xml_get_widget (xml, "add-button"));
-  remove_button = GTK_WIDGET (glade_xml_get_widget (xml, "remove-button"));
-  refresh_button = GTK_WIDGET (glade_xml_get_widget (xml, "refresh-button"));
-  g_object_unref (xml);
+      GTK_LABEL (gtk_builder_get_object (builder, "custom-level-label"));
+  debug_ui->custom_box = GTK_WIDGET (gtk_builder_get_object (builder, "custom-box"));
+  add_button = GTK_WIDGET (gtk_builder_get_object (builder, "add-button"));
+  remove_button = GTK_WIDGET (gtk_builder_get_object (builder, "remove-button"));
+  refresh_button = GTK_WIDGET (gtk_builder_get_object (builder, "refresh-button"));
 
-  g_return_if_fail (GTK_IS_TREE_VIEW (debug_ui->treeview));
-  g_return_if_fail (GTK_IS_HSCALE (debug_ui->default_hscale));
-  g_return_if_fail (GTK_IS_HSCALE (debug_ui->custom_hscale));
-  g_return_if_fail (GTK_IS_LABEL (debug_ui->default_label));
-  g_return_if_fail (GTK_IS_LABEL (debug_ui->custom_label));
-  g_return_if_fail (GTK_IS_WIDGET (debug_ui->custom_box));
-  g_return_if_fail (GTK_IS_WIDGET (add_button));
-  g_return_if_fail (GTK_IS_WIDGET (remove_button));
-  g_return_if_fail (GTK_IS_WIDGET (refresh_button));
+  if (!GTK_IS_TREE_VIEW (debug_ui->treeview) ||
+      !GTK_IS_HSCALE (debug_ui->default_hscale) ||
+      !GTK_IS_HSCALE (debug_ui->custom_hscale) ||
+      !GTK_IS_LABEL (debug_ui->default_label) ||
+      !GTK_IS_LABEL (debug_ui->custom_label) ||
+      !GTK_IS_WIDGET (debug_ui->custom_box) ||
+      !GTK_IS_WIDGET (add_button) ||
+      !GTK_IS_WIDGET (remove_button) ||
+      !GTK_IS_WIDGET (refresh_button))
+    goto cleanup;
 
   adj = gtk_range_get_adjustment (GTK_RANGE (debug_ui->default_hscale));
   g_signal_connect (adj,
@@ -379,6 +388,9 @@ gste_debugui_init (GsteDebugUI * debug_ui)
 
   gtk_container_add (GTK_CONTAINER (debug_ui), box);
   gtk_widget_show_all (GTK_WIDGET (debug_ui));
+
+cleanup:
+  g_object_unref (builder);
 }
 
 static void
@@ -631,21 +643,22 @@ populate_add_categories (GsteDebugUI * debug_ui, GtkTreeView * tview)
 static void
 show_add_window (GtkButton * button, GsteDebugUI * debug_ui)
 {
-  GladeXML *xml;
+  GtkBuilder *builder;
+  const gchar *object_ids[] = {"add-debug-win", NULL};
 
   if (!debug_ui->add_window) {
     GtkWidget *add_button, *cancel_button;
     GtkTreeSelection *selection;
     GtkTreeViewColumn *column;
 
-    xml = gste_debugui_get_xml ("add-debug-win");
-    if (!xml) {
+    builder = gste_debugui_get_xml (object_ids);
+    if (!builder) {
       g_critical ("GstEditor user interface file %s not found. "
-          "Try running from the Gst-Editor source directory.", "editor.glade2");
+          "Try running from the Gst-Editor source directory.", "editor.ui");
       return;
     }
     debug_ui->add_window =
-        GTK_WINDOW (glade_xml_get_widget (xml, "add-debug-win"));
+        GTK_WINDOW (gtk_builder_get_object (builder, "add-debug-win"));
     g_object_ref (debug_ui->add_window);
 
     gtk_window_set_transient_for (GTK_WINDOW (debug_ui->add_window),
@@ -653,9 +666,9 @@ show_add_window (GtkButton * button, GsteDebugUI * debug_ui)
 
     /* Connect the callbacks and populate the list of debug categories */
     debug_ui->add_cats_treeview =
-        GTK_TREE_VIEW (glade_xml_get_widget (xml, "categories-tree"));
-    add_button = glade_xml_get_widget (xml, "add-button");
-    cancel_button = glade_xml_get_widget (xml, "cancel-button");
+        GTK_TREE_VIEW (gtk_builder_get_object (builder, "categories-tree"));
+    add_button = GTK_WIDGET (gtk_builder_get_object (builder, "add-button"));
+    cancel_button = GTK_WIDGET (gtk_builder_get_object (builder, "cancel-button"));
 
     g_signal_connect (add_button,
         "clicked", G_CALLBACK (handle_add_cats), debug_ui);
@@ -680,6 +693,8 @@ show_add_window (GtkButton * button, GsteDebugUI * debug_ui)
         gtk_tree_view_get_selection (GTK_TREE_VIEW (debug_ui->
             add_cats_treeview));
     gtk_tree_selection_set_mode (selection, GTK_SELECTION_MULTIPLE);
+
+    g_object_unref (builder);
   }
   populate_add_categories (debug_ui, debug_ui->add_cats_treeview);
   gtk_widget_show_all (GTK_WIDGET (debug_ui->add_window));

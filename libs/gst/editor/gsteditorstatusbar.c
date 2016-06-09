@@ -38,7 +38,8 @@ gst_editor_statusbar_init (GstEditor * editor)
 {
   //    gst_editor_statusbar = gtkpod_xml_get_widget (main_window_xml,
   //    "gtkpod_status");
-  gst_editor_statusbar = glade_xml_get_widget (editor->xml, "status_bar");
+  gst_editor_statusbar =
+      GTK_WIDGET (gtk_builder_get_object (editor->builder, "status_bar"));
   statusbar_timeout = STATUSBAR_TIMEOUT;
 }
 

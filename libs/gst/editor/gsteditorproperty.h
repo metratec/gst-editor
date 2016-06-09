@@ -22,7 +22,6 @@
 #define __GST_EDITOR_PROPERTY_H__
 
 #include <gst/gst.h>
-#include <glade/glade.h>
 #include <gst/editor/editor.h>
 
 #define GST_TYPE_EDITOR_PROPERTY (gst_editor_property_get_type())
@@ -46,7 +45,7 @@ struct _GstEditorProperty
 
   GstElement *shown_element;
 
-  GladeXML *xml;
+  GtkBuilder *builder;
   GtkWidget *window;
   GtkWidget *element_ui;
   GtkWidget *caps_browser;

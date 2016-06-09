@@ -19,13 +19,12 @@
 
 #include "config.h"
 
-#include "element-tree.h"
-
 #include <string.h>
 #include <gtk/gtk.h>
-#include <glade/glade.h>
 #include <gst/common/gste-common.h>
 #include <gst/common/gste-marshal.h>
+
+#include "element-tree.h"
 
 struct element_select_classlist
 {
@@ -158,26 +157,36 @@ gst_element_browser_element_tree_init (GstElementBrowserElementTree * tree)
   GtkTreeViewColumn *column;
   GtkTreeSelection *selection;
   GSList *classtree;
-  GladeXML *xml;
+  GtkBuilder *builder;
   GtkWidget *palette, *tview, *find_box;
   gchar *path;
+  GError *error = NULL;
+  static const gchar *object_ids[] = {"quicklaunch_palette", NULL};
 
-  path = gste_get_ui_file ("editor.glade2");
+  path = gste_get_ui_file ("editor.ui");
   if (!path)
-    g_error ("GStreamer Editor user interface file 'editor.glade2' not found.");
-  xml = glade_xml_new (path, "quicklaunch_palette", NULL);
+    g_error ("GStreamer Editor user interface file 'editor.ui' not found.");
 
-  if (!xml) {
-    g_error ("GStreamer Editor could not load quicklaunch_palette from %s",
-        path);
+  builder = gtk_builder_new ();
+
+  if (!gtk_builder_add_objects_from_file (builder,
+          path, (gchar **) object_ids, &error)) {
+    g_error (
+        "GStreamer Editor could not load quicklaunch_palette from builder "
+        "file: %s",
+        error->message);
+    g_error_free (error);
   }
   g_free (path);
 
-  palette = glade_xml_get_widget (xml, "quicklaunch_palette");
-  tview = glade_xml_get_widget (xml, "element-tree");
-  find_box = glade_xml_get_widget (xml, "find-entry");
+  palette = GTK_WIDGET (gtk_builder_get_object (builder, "quicklaunch_palette"));
+  g_object_ref (palette);
+  tview = GTK_WIDGET (gtk_builder_get_object (builder, "element-tree"));
+  g_object_ref (tview);
+  find_box = GTK_WIDGET (gtk_builder_get_object (builder, "find-entry"));
+  g_object_ref (find_box);
 
-  g_object_unref (xml);
+  g_object_unref (builder);
   g_return_if_fail (GTK_IS_TREE_VIEW (tview));
   g_return_if_fail (GTK_IS_ENTRY (find_box));
 

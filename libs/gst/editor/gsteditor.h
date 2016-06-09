@@ -24,7 +24,6 @@
 
 #include <gst/gst.h>
 #include <gst/editor/editor.h>
-#include <glade/glade-xml.h>
 #include <gtk/gtk.h>
 
 #define GST_TYPE_EDITOR (gst_editor_get_type())
@@ -43,7 +42,7 @@ struct _GstEditor
 {
   GObject object;
 
-  GladeXML *xml;
+  GtkBuilder *builder;
   GtkWidget *window;
   GtkWidget *element_tree;
   GtkSpinButton *sw,*sh;

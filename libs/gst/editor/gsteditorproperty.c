@@ -58,14 +58,11 @@ static void gst_editor_property_set_property (GObject * object, guint prop_id,
 static void gst_editor_property_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 static void gst_editor_property_dispose (GObject * object);
-static void gst_editor_property_connect_func (const gchar * handler_name,
-    GObject * object,
-    const gchar * signal_name,
-    const gchar * signal_data,
-    GObject * connect_object, gboolean after, gpointer user_data);
-static gint on_delete_event (GtkWidget * widget, GdkEvent * event,
-    gpointer data);
-
+static void gst_editor_property_connect_func (GtkBuilder * builder,
+    GObject * object, const gchar * signal_name, const gchar * handler_name,
+    GObject * connect_object, GConnectFlags flags, gpointer user_data);
+static gint on_delete_event (
+    GtkWidget * widget, GdkEvent * event, gpointer data);
 
 static GtkObjectClass *parent_class;
 
@@ -125,40 +122,50 @@ gst_editor_property_init (GstEditorProperty * property)
   connect_struct data;
   GModule *symbols;
   gchar *path;
+  GError *error = NULL;
+  static const gchar *object_ids[] = {"property_window", NULL};
 
   symbols = g_module_open (NULL, 0);
 
   data.property = property;
   data.symbols = symbols;
 
-  path = gste_get_ui_file ("editor.glade2");
+  path = gste_get_ui_file ("editor.ui");
   if (!path)
-    g_error ("GStreamer Editor user interface file 'editor.glade2' not found.");
-  property->xml = glade_xml_new (path, "property_window", NULL);
+    g_error ("GStreamer Editor user interface file 'editor.ui' not found.");
 
-  if (!property->xml) {
-    g_error ("GStreamer Editor could not load property_window from %s", path);
+  property->builder = gtk_builder_new ();
+
+  if (!gtk_builder_add_objects_from_file (property->builder,
+          path, (gchar **) object_ids, &error)) {
+    g_error (
+        "GStreamer Editor could not load property_window from builder file: %s",
+        error->message);
+    g_error_free (error);
   }
   g_free (path);
 
-  glade_xml_signal_autoconnect_full (property->xml,
+  gtk_builder_connect_signals_full (property->builder,
       gst_editor_property_connect_func, &data);
 
-  property->window = glade_xml_get_widget (property->xml, "property_window");
+  property->window =
+      GTK_WIDGET (gtk_builder_get_object (property->builder, "property_window"));
   gtk_widget_show (property->window);
 
   property->element_ui =
       g_object_new (gst_element_ui_get_type (), "view-mode",
       GST_ELEMENT_UI_VIEW_MODE_FULL, NULL);
   gtk_widget_show (property->element_ui);
-  gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW
-      (glade_xml_get_widget (property->xml, "scrolledwindow-element-ui")),
+  gtk_scrolled_window_add_with_viewport (
+      GTK_SCROLLED_WINDOW (
+          gtk_builder_get_object (property->builder, "scrolledwindow-element-ui")),
       property->element_ui);
 
   property->caps_browser =
       g_object_new (gst_element_browser_caps_tree_get_type (), NULL);
-  gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW
-      (glade_xml_get_widget (property->xml, "scrolledwindow-caps-browser")),
+  gtk_scrolled_window_add_with_viewport (
+      GTK_SCROLLED_WINDOW (gtk_builder_get_object (
+          property->builder, "scrolledwindow-caps-browser")),
       property->caps_browser);
 
   property->shown_element = NULL;
@@ -169,26 +176,26 @@ gst_editor_property_init (GstEditorProperty * property)
 
 /* we need more control here so... */
 static void
-gst_editor_property_connect_func (const gchar * handler_name,
+gst_editor_property_connect_func (GtkBuilder * builder,
     GObject * object,
     const gchar * signal_name,
-    const gchar * signal_data,
-    GObject * connect_object, gboolean after, gpointer user_data)
+    const gchar * handler_name,
+    GObject * connect_object,
+    GConnectFlags flags, gpointer user_data)
 {
-  GCallback func;
-  gpointer *funcp = NULL;
+  gpointer func;
   connect_struct *data = (connect_struct *) user_data;
 
-  if (!g_module_symbol (data->symbols, handler_name, funcp))
+  if (!g_module_symbol (data->symbols, handler_name, &func))
     g_warning ("gsteditorproperty: could not find signal handler '%s'.",
         handler_name);
   else {
-    func = (GCallback) * funcp;
-    if (after)
-      g_signal_connect_after (object, signal_name, func,
+    if (flags & G_CONNECT_AFTER)
+      g_signal_connect_after (object, signal_name, G_CALLBACK (func),
           (gpointer) data->property);
     else
-      g_signal_connect (object, signal_name, func, (gpointer) data->property);
+      g_signal_connect (object, signal_name, G_CALLBACK (func),
+          (gpointer) data->property);
   }
 }
 

@@ -53,11 +53,9 @@ static void gst_editor_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_editor_dispose (GObject * object);
 static void gst_editor_finalize (GObject * object);
-static void gst_editor_connect_func (const gchar * handler_name,
-    GObject * object,
-    const gchar * signal_name,
-    const gchar * signal_data,
-    GObject * connect_object, gboolean after, gpointer user_data);
+static void gst_editor_connect_func (GtkBuilder * builder, GObject * object,
+    const gchar * signal_name, const gchar * handler_name,
+    GObject * connect_object, GConnectFlags flags, gpointer user_data);
 
 static gint on_delete_event (GtkWidget * widget,
     GdkEvent * event, GstEditor * editor);
@@ -169,36 +167,46 @@ gst_editor_init (GstEditor * editor)
   connect_struct data;
   GModule *symbols;
   gchar *path;
+  GError *error = NULL;
+  static const gchar *object_ids[] = {
+      "main_project_window", "adjustment1", "adjustment2", NULL
+  };
 
   symbols = g_module_open (NULL, 0);
 
   data.editor = editor;
   data.symbols = symbols;
 
-  path = gste_get_ui_file ("editor.glade2");
+  path = gste_get_ui_file ("editor.ui");
   if (!path)
-    g_error ("GStreamer Editor user interface file 'editor.glade2' not found.");
-  editor->xml = glade_xml_new (path, "main_project_window", NULL);
+    g_error ("GStreamer Editor user interface file 'editor.ui' not found.");
 
-  if (!editor->xml) {
-    g_error ("GStreamer Editor could not load main_project_window from %s",
-        path);
+  editor->builder = gtk_builder_new ();
+
+  if (!gtk_builder_add_objects_from_file (editor->builder,
+          path, (gchar **) object_ids, &error)) {
+    g_error (
+        "GStreamer Editor could not load main_project_window from builder "
+        "file: %s",
+        error->message);
+    g_error_free (error);
   }
   g_free (path);
 
-  glade_xml_signal_autoconnect_full (editor->xml, gst_editor_connect_func,
-      &data);
+  gtk_builder_connect_signals_full (editor->builder,
+      gst_editor_connect_func, &data);
 
-  editor->window = glade_xml_get_widget (editor->xml, "main_project_window");
+  editor->window =
+      GTK_WIDGET (gtk_builder_get_object (editor->builder, "main_project_window"));
 
-  editor->sw = GTK_SPIN_BUTTON (glade_xml_get_widget (editor->xml, "spinbutton1"));
-  editor->sh = GTK_SPIN_BUTTON (glade_xml_get_widget (editor->xml, "spinbutton2"));
+  editor->sw = GTK_SPIN_BUTTON (gtk_builder_get_object (editor->builder, "spinbutton1"));
+  editor->sh = GTK_SPIN_BUTTON (gtk_builder_get_object (editor->builder, "spinbutton2"));
 
   gtk_widget_show (editor->window);
 //Code for element tree
   editor->element_tree =
       g_object_new (gst_element_browser_element_tree_get_type (), NULL);
-  gtk_box_pack_start (GTK_BOX (glade_xml_get_widget (editor->xml,
+  gtk_box_pack_start (GTK_BOX (gtk_builder_get_object (editor->builder,
               "main_element_tree_box")), editor->element_tree, TRUE, TRUE, 0);
   g_signal_connect (editor->element_tree, "element-activated",
       G_CALLBACK (on_element_tree_select), editor);
@@ -213,7 +221,7 @@ gst_editor_init (GstEditor * editor)
   editor->canvas->parent=editor;
   gtk_widget_show (GTK_WIDGET (editor->canvas));
 
-  gtk_container_add (GTK_CONTAINER (glade_xml_get_widget (editor->xml,
+  gtk_container_add (GTK_CONTAINER (gtk_builder_get_object (editor->builder,
               "canvasSW")), GTK_WIDGET (editor->canvas));
 
   _num_editor_windows++;
@@ -478,26 +486,25 @@ gst_editor_element_connect (GstEditor * editor, GstElement * pipeline)
 
 /* we need more control here so... */
 static void
-gst_editor_connect_func (const gchar * handler_name,
+gst_editor_connect_func (GtkBuilder * builder,
     GObject * object,
     const gchar * signal_name,
-    const gchar * signal_data,
-    GObject * connect_object, gboolean after, gpointer user_data)
+    const gchar * handler_name,
+    GObject * connect_object,
+    GConnectFlags flags, gpointer user_data)
 {
-  gpointer func_ptr;
+  gpointer func;
   connect_struct *data = (connect_struct *) user_data;
 
-  if (!g_module_symbol (data->symbols, handler_name, &func_ptr))
+  if (!g_module_symbol (data->symbols, handler_name, &func))
     g_warning ("GstEditor: could not find signal handler '%s'.", handler_name);
   else {
-    GCallback func;
-
-    func = *(GCallback) (func_ptr);
-    if (after)
-      g_signal_connect_after (object, signal_name, func,
+    if (flags & G_CONNECT_AFTER)
+      g_signal_connect_after (object, signal_name, G_CALLBACK (func),
           (gpointer) data->editor);
     else
-      g_signal_connect (object, signal_name, func, (gpointer) data->editor);
+      g_signal_connect (object, signal_name, G_CALLBACK (func),
+          (gpointer) data->editor);
   }
 }
 
@@ -1046,14 +1053,14 @@ on_canvas_notify (GObject * object, GParamSpec * param, GstEditor * editor)
   if (g_ascii_strcasecmp (param->name, "properties-visible") == 0) {
     g_value_init (&v, param->value_type);
     g_object_get_property (object, param->name, &v);
-    g_object_set_property (G_OBJECT (glade_xml_get_widget (editor->xml,
-                "view-element-inspector")), "active", &v);
+    g_object_set_property (gtk_builder_get_object (editor->builder,
+                "view-element-inspector"), "active", &v);
   } else if (g_ascii_strcasecmp (param->name, "palette-visible") == 0) {
     g_message ("canvas property notify");
     g_value_init (&v, param->value_type);
     g_object_get_property (object, param->name, &v);
-    g_object_set_property (G_OBJECT (glade_xml_get_widget (editor->xml,
-                "view-utility-palette")), "active", &v);
+    g_object_set_property (gtk_builder_get_object (editor->builder,
+                "view-utility-palette"), "active", &v);
   } else if (g_ascii_strcasecmp (param->name, "status") == 0) {
     g_object_get (object, "status", &status, NULL);
     gst_editor_statusbar_message (status);
@@ -1137,8 +1144,10 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
   }
 
   //GtkWidget * check = lookup_widget(GTK_WIDGET(togglebutton), "defaultnamebutton");
-  GtkWidget * check = glade_xml_get_widget(editor->xml,"defaultnamebutton");
-  GtkWidget * entry = glade_xml_get_widget(editor->xml,"elementname");
+  GtkWidget * check =
+      GTK_WIDGET (gtk_builder_get_object (editor->builder, "defaultnamebutton"));
+  GtkWidget * entry =
+      GTK_WIDGET (gtk_builder_get_object (editor->builder, "elementname"));
   gboolean b_act;
   const gchar *elementname = gtk_entry_get_text (GTK_ENTRY (entry));
   g_object_get (GTK_BUTTON (check), "active", &b_act, NULL);

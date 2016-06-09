@@ -17,7 +17,7 @@ gst_inspect_gui_LDADD = $(GST_EDITOR_LIBS) \
 gst_inspect_gui_CFLAGS = $(GST_EDITOR_CFLAGS)
 
 gladedir = $(datadir)/gsteditor
-glade_DATA = editor.glade2 
+glade_DATA = editor.ui
 
 man_MANS = gst-editor.1 gst-launch-gui.1 gst-inspect-gui.1
 

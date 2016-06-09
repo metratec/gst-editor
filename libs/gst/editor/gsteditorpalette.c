@@ -59,14 +59,12 @@ static void gst_editor_palette_set_property (GObject * object, guint prop_id,
 static void gst_editor_palette_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
 static void gst_editor_palette_dispose (GObject * object);
-static void gst_editor_palette_connect_func (const gchar * handler_name,
-    GObject * object,
-    const gchar * signal_name,
-    const gchar * signal_data,
-    GObject * connect_object, gboolean after, gpointer user_data);
+static void gst_editor_palette_connect_func (GtkBuilder * builder,
+    GObject * object, const gchar * signal_name, const gchar * handler_name,
+    GObject * connect_object, GConnectFlags flags, gpointer user_data);
 
-static gint on_delete_event (GtkWidget * widget, GdkEvent * event,
-    gpointer data);
+static gint on_delete_event (
+    GtkWidget * widget, GdkEvent * event, gpointer data);
 static void on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data);
 
@@ -125,38 +123,45 @@ gst_editor_palette_init (GstEditorPalette * palette)
   connect_struct data;
   GModule *symbols;
   gchar *path;
+  GError *error = NULL;
+  static const gchar *object_ids[] = {"utility_palette", NULL};
 
   symbols = g_module_open (NULL, 0);
 
   data.palette = palette;
   data.symbols = symbols;
 
-  path = gste_get_ui_file ("editor.glade2");
+  path = gste_get_ui_file ("editor.ui");
   if (!path)
-    g_error ("GStreamer Editor user interface file 'editor.glade2' not found.");
-  palette->xml = glade_xml_new (path, "utility_palette", NULL);
+    g_error ("GStreamer Editor user interface file 'editor.ui' not found.");
 
-  if (!palette->xml) {
-    g_error ("GStreamer Editor could not load utility_palette from %s", path);
+  palette->builder = gtk_builder_new ();
+
+  if (!gtk_builder_add_objects_from_file (palette->builder,
+          path, (gchar **) object_ids, &error)) {
+    g_error (
+        "GStreamer Editor could not load utility_palette from builder file: %s",
+        error->message);
+    g_error_free (error);
   }
   g_free (path);
-  g_assert (palette->xml != NULL);
 
-  glade_xml_signal_autoconnect_full (palette->xml,
+  gtk_builder_connect_signals_full (palette->builder,
       gst_editor_palette_connect_func, &data);
 
-  palette->window = glade_xml_get_widget (palette->xml, "utility_palette");
+  palette->window =
+      GTK_WIDGET (gtk_builder_get_object (palette->builder, "utility_palette"));
   palette->element_tree =
       g_object_new (gst_element_browser_element_tree_get_type (), NULL);
 
-  gtk_box_pack_start (GTK_BOX (glade_xml_get_widget (palette->xml,
+  gtk_box_pack_start (GTK_BOX (gtk_builder_get_object (palette->builder,
               "element-browser-vbox")), palette->element_tree, TRUE, TRUE, 0);
   g_signal_connect (palette->element_tree, "element-activated",
       G_CALLBACK (on_element_tree_select), palette);
   
 #ifndef _MSC_VER
-      palette->debug_ui = gst_debug_ui_new ();
-  gtk_box_pack_start (GTK_BOX (glade_xml_get_widget (palette->xml,
+  palette->debug_ui = gst_debug_ui_new ();
+  gtk_box_pack_start (GTK_BOX (gtk_builder_get_object (palette->builder,
               "debug-vbox")), palette->debug_ui, TRUE, TRUE, 0);
 #endif
   g_signal_connect (palette->window, "delete-event",
@@ -167,11 +172,12 @@ gst_editor_palette_init (GstEditorPalette * palette)
 
 /* we need more control here so... */
 static void
-gst_editor_palette_connect_func (const gchar * handler_name,
+gst_editor_palette_connect_func (GtkBuilder * builder,
     GObject * object,
     const gchar * signal_name,
-    const gchar * signal_data,
-    GObject * connect_object, gboolean after, gpointer user_data)
+    const gchar * handler_name,
+    GObject * connect_object,
+    GConnectFlags flags, gpointer user_data)
 {
   gpointer func;
   connect_struct *data = (connect_struct *) user_data;
@@ -180,11 +186,11 @@ gst_editor_palette_connect_func (const gchar * handler_name,
     g_warning ("gsteditorpalette: could not find signal handler '%s'.",
         handler_name);
   else {
-    if (after)
-      g_signal_connect_after (object, signal_name, (GCallback) func,
+    if (flags & G_CONNECT_AFTER)
+      g_signal_connect_after (object, signal_name, G_CALLBACK (func),
           (gpointer) data->palette);
     else
-      g_signal_connect (object, signal_name, (GCallback) func,
+      g_signal_connect (object, signal_name, G_CALLBACK (func),
           (gpointer) data->palette);
   }
 }
