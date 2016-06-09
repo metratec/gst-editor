@@ -1496,17 +1496,11 @@ Name</property>
                             <property name="can_focus">True</property>
                             <property name="hscrollbar_policy">automatic</property>
                             <property name="vscrollbar_policy">automatic</property>
+                            <property name="shadow_type">in</property>
                             <child>
-                              <widget class="GtkScrolledWindow" id="scrolledwindow9">
+                              <widget class="GtkTreeView" id="treeview2">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
-                                <property name="shadow_type">in</property>
-                                <child>
-                                  <widget class="GtkTreeView" id="treeview2">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                  </widget>
-                                </child>
                               </widget>
                             </child>
                           </widget>
@@ -1542,17 +1536,11 @@ Name</property>
                             <property name="can_focus">True</property>
                             <property name="hscrollbar_policy">automatic</property>
                             <property name="vscrollbar_policy">automatic</property>
+                            <property name="shadow_type">in</property>
                             <child>
-                              <widget class="GtkScrolledWindow" id="scrolledwindow8">
+                              <widget class="GtkTreeView" id="treeview1">
                                 <property name="visible">True</property>
                                 <property name="can_focus">True</property>
-                                <property name="shadow_type">in</property>
-                                <child>
-                                  <widget class="GtkTreeView" id="treeview1">
-                                    <property name="visible">True</property>
-                                    <property name="can_focus">True</property>
-                                  </widget>
-                                </child>
                               </widget>
                             </child>
                           </widget>
