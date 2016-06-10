@@ -323,9 +323,12 @@ gste_debugui_init (GsteDebugUI * debug_ui)
   debug_ui->custom_label =
       GTK_LABEL (gtk_builder_get_object (builder, "custom-level-label"));
   debug_ui->custom_box = GTK_WIDGET (gtk_builder_get_object (builder, "custom-box"));
-  add_button = GTK_WIDGET (gtk_builder_get_object (builder, "add-button"));
-  remove_button = GTK_WIDGET (gtk_builder_get_object (builder, "remove-button"));
-  refresh_button = GTK_WIDGET (gtk_builder_get_object (builder, "refresh-button"));
+  add_button =
+      GTK_WIDGET (gtk_builder_get_object (builder, "debug-palette-add-button"));
+  remove_button =
+      GTK_WIDGET (gtk_builder_get_object (builder, "debug-palette-remove-button"));
+  refresh_button =
+      GTK_WIDGET (gtk_builder_get_object (builder, "debug-palette-refresh-button"));
 
   if (!GTK_IS_TREE_VIEW (debug_ui->treeview) ||
       !GTK_IS_HSCALE (debug_ui->default_hscale) ||
@@ -632,8 +635,10 @@ show_add_window (GtkButton * button, GsteDebugUI * debug_ui)
     /* Connect the callbacks and populate the list of debug categories */
     debug_ui->add_cats_treeview =
         GTK_TREE_VIEW (gtk_builder_get_object (builder, "categories-tree"));
-    add_button = GTK_WIDGET (gtk_builder_get_object (builder, "add-button"));
-    cancel_button = GTK_WIDGET (gtk_builder_get_object (builder, "cancel-button"));
+    add_button =
+        GTK_WIDGET (gtk_builder_get_object (builder, "debug-win-add-button"));
+    cancel_button =
+        GTK_WIDGET (gtk_builder_get_object (builder, "debug-win-cancel-button"));
 
     g_signal_connect (add_button,
         "clicked", G_CALLBACK (handle_add_cats), debug_ui);
