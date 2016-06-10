@@ -62,10 +62,10 @@ struct _GsteDebugUI
   GtkBin parent;
   GtkTreeView *treeview;
   GtkListStore *list_store;
-  GtkHScale *default_hscale;
+  GtkScale *default_hscale;
   GtkLabel *default_label;
 
-  GtkHScale *custom_hscale;
+  GtkScale *custom_hscale;
   GtkLabel *custom_label;
 
   GtkWidget *custom_box;
@@ -315,14 +315,15 @@ gste_debugui_init (GsteDebugUI * debug_ui)
   debug_ui->treeview =
       GTK_TREE_VIEW (gtk_builder_get_object (builder, "custom-levels-treeview"));
   debug_ui->default_hscale =
-      GTK_HSCALE (gtk_builder_get_object (builder, "default-level-hscale"));
+      GTK_SCALE (gtk_builder_get_object (builder, "default-level-hscale"));
   debug_ui->default_label =
       GTK_LABEL (gtk_builder_get_object (builder, "default-level-label"));
   debug_ui->custom_hscale =
-      GTK_HSCALE (gtk_builder_get_object (builder, "custom-level-hscale"));
+      GTK_SCALE (gtk_builder_get_object (builder, "custom-level-hscale"));
   debug_ui->custom_label =
       GTK_LABEL (gtk_builder_get_object (builder, "custom-level-label"));
-  debug_ui->custom_box = GTK_WIDGET (gtk_builder_get_object (builder, "custom-box"));
+  debug_ui->custom_box =
+      GTK_WIDGET (gtk_builder_get_object (builder, "custom-box"));
   add_button =
       GTK_WIDGET (gtk_builder_get_object (builder, "debug-palette-add-button"));
   remove_button =
@@ -331,8 +332,8 @@ gste_debugui_init (GsteDebugUI * debug_ui)
       GTK_WIDGET (gtk_builder_get_object (builder, "debug-palette-refresh-button"));
 
   if (!GTK_IS_TREE_VIEW (debug_ui->treeview) ||
-      !GTK_IS_HSCALE (debug_ui->default_hscale) ||
-      !GTK_IS_HSCALE (debug_ui->custom_hscale) ||
+      !GTK_IS_SCALE (debug_ui->default_hscale) ||
+      !GTK_IS_SCALE (debug_ui->custom_hscale) ||
       !GTK_IS_LABEL (debug_ui->default_label) ||
       !GTK_IS_LABEL (debug_ui->custom_label) ||
       !GTK_IS_WIDGET (debug_ui->custom_box) ||
