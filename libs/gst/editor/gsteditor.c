@@ -701,8 +701,8 @@ have_pipeline_description (gchar * string, gpointer data)
         "Pipeline failed to parse: %s", error->message);
 
     gtk_widget_show (dialog);
-    g_signal_connect_swapped (GTK_OBJECT (dialog), "response",
-        G_CALLBACK (gtk_widget_destroy), GTK_OBJECT (dialog));
+    g_signal_connect_swapped (dialog, "response",
+        G_CALLBACK (gtk_widget_destroy), dialog);
 
     return;
   }

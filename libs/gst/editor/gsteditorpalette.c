@@ -68,7 +68,7 @@ static gint on_delete_event (
 static void on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data);
 
-static GtkObjectClass *parent_class;
+static gpointer parent_class = NULL;
 
 /* static guint gst_editor_palette_signals[LAST_SIGNAL] = { 0 }; */
 
@@ -254,8 +254,7 @@ gst_editor_palette_dispose (GObject * object)
 
   gtk_widget_destroy (palette->window);
 
-  if (G_OBJECT_CLASS (parent_class)->dispose)
-    G_OBJECT_CLASS (parent_class)->dispose (object);
+  G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
 static gint

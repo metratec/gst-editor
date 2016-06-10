@@ -12,6 +12,6 @@ gst_editor_popup_warning (const gchar * message)
   dialog = gtk_message_dialog_new (NULL, 0, GTK_MESSAGE_WARNING,
       GTK_BUTTONS_CLOSE, "%s", message);
   gtk_widget_show (dialog);
-  g_signal_connect_swapped (GTK_OBJECT (dialog), "response",
-      G_CALLBACK (gtk_widget_destroy), GTK_OBJECT (dialog));
+  g_signal_connect_swapped (dialog, "response",
+      G_CALLBACK (gtk_widget_destroy), dialog);
 }

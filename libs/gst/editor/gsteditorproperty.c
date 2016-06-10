@@ -64,7 +64,7 @@ static void gst_editor_property_connect_func (GtkBuilder * builder,
 static gint on_delete_event (
     GtkWidget * widget, GdkEvent * event, gpointer data);
 
-static GtkObjectClass *parent_class;
+static gpointer parent_class = NULL;
 
 /* static guint gst_editor_property_signals[LAST_SIGNAL] = { 0 }; */
 
@@ -280,8 +280,7 @@ gst_editor_property_dispose (GObject * object)
 
   gtk_widget_destroy (property->window);
 
-  if (G_OBJECT_CLASS (parent_class)->dispose)
-    G_OBJECT_CLASS (parent_class)->dispose (object);
+  G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
 static gint
