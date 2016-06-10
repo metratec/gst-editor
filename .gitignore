@@ -42,6 +42,7 @@ stamp-*
 # Generated at build time
 /po/nl.gmo
 /po/no.gmo
+/po/.intltool-merge-cache
 
 /help/C/gst-editor-manual-C.omf.out
 /help/C/omf_timestamp
