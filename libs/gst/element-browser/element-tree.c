@@ -63,10 +63,6 @@ static void gst_element_browser_element_tree_set_property (GObject * object,
     guint prop_id, const GValue * value, GParamSpec * pspec);
 static void gst_element_browser_element_tree_get_property (GObject * object,
     guint prop_id, GValue * value, GParamSpec * pspec);
-static void gst_element_browser_size_request (GtkWidget * widget,
-    GtkRequisition * requisition);
-static void gst_element_browser_size_allocate (GtkWidget * widget,
-    GtkAllocation * allocation);
 
 
 static gint compare_name (gconstpointer a, gconstpointer b);
@@ -116,11 +112,7 @@ static void
 gst_element_browser_element_tree_class_init (GstElementBrowserElementTreeClass *
     klass)
 {
-  GObjectClass *gobject_class;
-  GtkWidgetClass *widget_class;
-
-  gobject_class = G_OBJECT_CLASS (klass);
-  widget_class = GTK_WIDGET_CLASS (klass);
+  GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
   parent_class = g_type_class_ref (GTK_TYPE_BIN);
 
@@ -145,8 +137,6 @@ gst_element_browser_element_tree_class_init (GstElementBrowserElementTreeClass *
       G_STRUCT_OFFSET (GstElementBrowserElementTreeClass, activated_sig),
       NULL, NULL, gst_editor_marshal_VOID__VOID, G_TYPE_NONE, 0);
 
-  widget_class->size_request = gst_element_browser_size_request;
-  widget_class->size_allocate = gst_element_browser_size_allocate;
   klass->selected_sig = NULL;
   klass->activated_sig = NULL;
 }
@@ -265,35 +255,6 @@ gst_element_browser_element_tree_get_property (GObject * object, guint prop_id,
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
-  }
-}
-
-static void
-gst_element_browser_size_request (GtkWidget * widget,
-    GtkRequisition * requisition)
-{
-  GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
-  GtkRequisition child_requisition;
-
-  if (child && gtk_widget_get_visible (child)) {
-    gtk_widget_size_request (child, &child_requisition);
-    requisition->width = child_requisition.width;
-    requisition->height = child_requisition.height;
-  } else {
-    requisition->width = requisition->height = 0;
-  }
-}
-
-static void
-gst_element_browser_size_allocate (GtkWidget * widget,
-    GtkAllocation * allocation)
-{
-  GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
-
-  gtk_widget_set_allocation (widget, allocation);
-
-  if (child && gtk_widget_get_visible (child)) {
-    gtk_widget_size_allocate (child, allocation);
   }
 }
 

@@ -85,10 +85,6 @@ struct _GsteDebugUIClass
 static void gste_debugui_class_init (GsteDebugUIClass * class);
 static void gste_debugui_init (GsteDebugUI * debug_ui);
 static void gste_debugui_dispose (GObject * object);
-static void gste_debugui_size_request (GtkWidget * widget,
-    GtkRequisition * requisition);
-static void gste_debugui_size_allocate (GtkWidget * widget,
-    GtkAllocation * allocation);
 static void tree_select (GsteDebugUI * debug_ui);
 static void remove_custom_cats (GtkButton * button, GsteDebugUI * debug_ui);
 static void show_add_window (GtkButton * button, GsteDebugUI * debug_ui);
@@ -258,15 +254,11 @@ gst_debug_ui_new (void)
 static void
 gste_debugui_class_init (GsteDebugUIClass * class)
 {
-  GtkWidgetClass *widget_class = GTK_WIDGET_CLASS (class);
   GObjectClass *object_class = G_OBJECT_CLASS (class);
 
   parent_class = g_type_class_ref (GTK_TYPE_BIN);
 
   object_class->dispose = gste_debugui_dispose;
-
-  widget_class->size_request = gste_debugui_size_request;
-  widget_class->size_allocate = gste_debugui_size_allocate;
 }
 
 /* given the root, return the GtkBuilder in the glade file for that root */
@@ -404,33 +396,6 @@ gste_debugui_dispose (GObject * object)
     debug_ui->add_window = NULL;
   }
   G_OBJECT_CLASS (parent_class)->dispose (G_OBJECT (debug_ui));
-}
-
-static void
-gste_debugui_size_request (GtkWidget * widget, GtkRequisition * requisition)
-{
-  GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
-  GtkRequisition child_requisition;
-
-  if (child && gtk_widget_get_visible (child)) {
-    gtk_widget_size_request (child, &child_requisition);
-    requisition->width = child_requisition.width;
-    requisition->height = child_requisition.height;
-  } else {
-    requisition->width = requisition->height = 0;
-  }
-}
-
-static void
-gste_debugui_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
-{
-  GtkWidget *child = gtk_bin_get_child (GTK_BIN (widget));
-
-  gtk_widget_set_allocation (widget, allocation);
-
-  if (child && gtk_widget_get_visible (child)) {
-    gtk_widget_size_allocate (child, allocation);
-  }
 }
 
 static void
