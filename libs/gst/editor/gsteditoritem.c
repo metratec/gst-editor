@@ -239,7 +239,7 @@ gst_editor_item_init (GstEditorItem * item)
   item->texty = 1.0;
   item->height = 10;
   item->width = 30;
-  item->textanchor = GTK_ANCHOR_NORTH_WEST;
+  item->textanchor = GOO_CANVAS_ANCHOR_NORTH_WEST;
 }
 
 static void
@@ -376,7 +376,7 @@ gst_editor_item_realize (GooCanvasItem * citem)
   GST_EDITOR_SET_OBJECT (item->border, item);
   item->title =
       goo_canvas_text_new (citem, NULL, 0, 0, -1,
-          GTK_ANCHOR_NW, "font", "Sans", "fill-color", "black", NULL);
+          GOO_CANVAS_ANCHOR_NW, "font", "Sans", "fill-color", "black", NULL);
   g_return_if_fail (item->title != NULL);
   g_object_set (G_OBJECT (item->title), "text", item->title_text, NULL);
   GST_EDITOR_SET_OBJECT (item->title, item);

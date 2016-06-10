@@ -93,7 +93,7 @@ struct _GstEditorItem
 
   gchar *title_text;
   gdouble textx, texty;
-  GtkAnchorType textanchor;
+  GooCanvasAnchorType textanchor;
 
   gboolean resize;
   gboolean realized;
