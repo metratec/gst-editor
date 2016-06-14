@@ -90,7 +90,7 @@ gst_element_browser_init (GstElementBrowser * browser)
   gtk_window_set_default_size (GTK_WINDOW (dialog), 550, 400);
   gtk_window_set_title (GTK_WINDOW (dialog), _("Select element..."));
 
-  hpaned = gtk_hpaned_new ();
+  hpaned = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   gtk_box_pack_start (GTK_BOX (gtk_dialog_get_content_area (dialog)),
       hpaned, TRUE, TRUE, 0);
 
@@ -98,7 +98,7 @@ gst_element_browser_init (GstElementBrowser * browser)
   gtk_widget_set_size_request (GTK_WIDGET (tree), 200, -1);
   gtk_paned_pack1 (GTK_PANED (hpaned), tree, FALSE, TRUE);
 
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_widget_set_size_request (vbox, 100, -1);
   gtk_paned_pack2 (GTK_PANED (hpaned), vbox, TRUE, TRUE);
 
