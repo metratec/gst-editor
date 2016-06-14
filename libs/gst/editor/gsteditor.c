@@ -322,7 +322,7 @@ gst_editor_finalize (GObject * object)
 static void
 gst_editor_dialog_gerror (GtkWindow * window, GstMessage* message)
 {
-  GtkWidget *error_dialog;
+  GtkWidget *error_dialog, *button, *image;
   gint response;
 //getting GError
 
@@ -343,18 +343,19 @@ gst_editor_dialog_gerror (GtkWindow * window, GstMessage* message)
   /* add a stop pipeline button */
 //  gtk_dialog_add_button (GTK_DIALOG (error_dialog), "STOP",
 //      GTK_RESPONSE_CANCEL);
-  gtk_dialog_add_button (GTK_DIALOG (error_dialog), GTK_STOCK_CANCEL,
-      GTK_RESPONSE_CANCEL);
+  gtk_dialog_add_button (GTK_DIALOG (error_dialog),
+      _("_Cancel"), GTK_RESPONSE_CANCEL);
   /* add a debug button if there is debug info */
   if (debug) {
-    gtk_dialog_add_button (GTK_DIALOG (error_dialog), GTK_STOCK_DIALOG_INFO,
-        GST_EDITOR_RESPONSE_DEBUG);
+    button = gtk_dialog_add_button (GTK_DIALOG (error_dialog),
+        _("_Debug"), GST_EDITOR_RESPONSE_DEBUG);
+    image = gtk_image_new_from_icon_name ("dialog-information",
+        GTK_ICON_SIZE_BUTTON);
+    gtk_button_set_image (GTK_BUTTON (button), image);
   }
   /* make sure OK is on the right and default action to be HIG-compliant */
-  gtk_dialog_add_button (GTK_DIALOG (error_dialog), GTK_STOCK_OK,
-      GTK_RESPONSE_OK);
-
-
+  gtk_dialog_add_button (GTK_DIALOG (error_dialog),
+      _("_OK"), GTK_RESPONSE_OK);
 
   gtk_dialog_set_default_response (GTK_DIALOG (error_dialog), GTK_RESPONSE_OK);
   response = gtk_dialog_run (GTK_DIALOG (error_dialog));
@@ -555,8 +556,8 @@ gst_editor_on_save_as (GtkWidget * widget, GstEditor * editor)
 
   file_chooser = gtk_file_chooser_dialog_new ("Please select a file for saving.",
       GTK_WINDOW (editor->window), GTK_FILE_CHOOSER_ACTION_SAVE,
-      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-      GTK_STOCK_SAVE_AS, GTK_RESPONSE_ACCEPT,
+      _("_Cancel"), GTK_RESPONSE_CANCEL,
+      _("Save _As"), GTK_RESPONSE_ACCEPT,
       NULL);
 
   gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (file_chooser),
@@ -660,8 +661,8 @@ gst_editor_on_open (GtkWidget * widget, GstEditor * editor)
 
   file_chooser = gtk_file_chooser_dialog_new ("Please select a file to load.",
       GTK_WINDOW (editor->window), GTK_FILE_CHOOSER_ACTION_OPEN,
-      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-      GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+      _("_Cancel"), GTK_RESPONSE_CANCEL,
+      _("_Open"), GTK_RESPONSE_ACCEPT,
       NULL);
 
   if (gtk_dialog_run (GTK_DIALOG (file_chooser)) == GTK_RESPONSE_ACCEPT) {
@@ -732,8 +733,9 @@ gst_editor_on_new_from_pipeline_description (GtkWidget * widget,
     request = gtk_dialog_new_with_buttons ("Gst-Editor",
         GTK_WINDOW (editor->window),
         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-        GTK_STOCK_OK,
-        GTK_RESPONSE_ACCEPT, GTK_STOCK_CANCEL, GTK_RESPONSE_REJECT, NULL);
+        _("_OK"), GTK_RESPONSE_ACCEPT,
+        _("_Cancel"), GTK_RESPONSE_REJECT,
+        NULL);
     label = gtk_label_new ("Please enter in a pipeline description. "
         "See the gst-launch man page for help on the syntax.");
     gtk_container_add (
