@@ -43,7 +43,7 @@ typedef struct _GstElementUIClass GstElementUIClass;
 
 struct _GstElementUI
 {
-  GtkTable table;
+  GtkGrid grid;
 
   GstElement *element;
 
@@ -67,7 +67,7 @@ struct _GstElementUI
 
 struct _GstElementUIClass
 {
-  GtkTableClass parent_class;
+  GtkGridClass parent_class;
 };
 
 GType gst_element_ui_get_type ();

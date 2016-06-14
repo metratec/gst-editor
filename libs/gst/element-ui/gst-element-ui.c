@@ -29,6 +29,8 @@ static void gst_element_ui_on_element_dispose (GstElementUI * ui,
     GstElement * destroyed_element);
 static void gst_element_ui_dispose (GObject * object);
 
+static void gst_element_ui_reset (GstElementUI * ui);
+
 static void gst_element_ui_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_element_ui_get_property (GObject * object, guint prop_id,
@@ -38,7 +40,7 @@ static void on_combobox_changed (GtkComboBox * combobox, gpointer user_data);
 
 static gboolean offset_hack (GstElementUI * ui);
 
-static GObjectClass *parent_class = NULL;
+static gpointer parent_class = NULL;
 
 enum
 {
@@ -113,9 +115,8 @@ gst_element_ui_get_type (void)
       0,
       (GInstanceInitFunc) gst_element_ui_init,
     };
-    element_ui_type =
-        g_type_register_static (GTK_TYPE_TABLE, "GstElementUI",
-        &element_ui_info, 0);
+    element_ui_type = g_type_register_static (
+        GTK_TYPE_GRID, "GstElementUI", &element_ui_info, 0);
   }
   return element_ui_type;
 }
@@ -133,7 +134,7 @@ gst_element_ui_class_init (GstElementUIClass * klass)
 
   object_class->dispose = gst_element_ui_dispose;
 
-  parent_class = (GObjectClass *) g_type_class_ref (gtk_table_get_type ());
+  parent_class = g_type_class_peek_parent (klass);
 
   object_class->set_property = gst_element_ui_set_property;
   object_class->get_property = gst_element_ui_get_property;
@@ -166,22 +167,25 @@ gst_element_ui_class_init (GstElementUIClass * klass)
 static void
 gst_element_ui_init (GstElementUI * ui)
 {
-  g_object_set (ui, "n-columns", 2, "n-rows", 2, NULL);
+  gtk_grid_set_row_spacing (GTK_GRID (ui), 2);
+  gtk_grid_set_column_spacing (GTK_GRID (ui), 2);
 
   ui->name = gtk_label_new ("No element selected");
+  g_object_ref (G_OBJECT (ui->name));
   gtk_widget_show (ui->name);
-  gtk_table_attach (GTK_TABLE (ui), ui->name, 0, 2, 0, 1, GTK_EXPAND | GTK_FILL,
-      GTK_FILL, 2, 2);
+  gtk_widget_set_hexpand (ui->name, TRUE);
   gtk_label_set_justify (GTK_LABEL (ui->name), GTK_JUSTIFY_RIGHT);
   gtk_widget_set_size_request (ui->name, 150, -1);
   gtk_misc_set_padding (GTK_MISC (ui->name), 2, 0);
 
   ui->combobox = gtk_combo_box_text_new ();
-  gtk_table_attach (GTK_TABLE (ui), ui->combobox, 0, 2, 1, 2,
-      GTK_FILL | GTK_EXPAND, GTK_FILL, 0, 2);
+  g_object_ref (G_OBJECT (ui->combobox));
+  gtk_widget_set_hexpand (ui->combobox, TRUE);
 
   g_signal_connect (ui->combobox, "changed",
       G_CALLBACK (on_combobox_changed), ui);
+
+  gst_element_ui_reset (ui);
 }
 
 GstElementUI *
@@ -192,6 +196,26 @@ gst_element_ui_new (GstElement * element)
           NULL));
 
   return ui;
+}
+
+static void
+gst_element_ui_reset (GstElementUI * ui)
+{
+  GList *children = gtk_container_get_children (GTK_CONTAINER (ui));
+  GList *cur;
+
+  for (cur = children; cur; cur = g_list_next (cur))
+    gtk_container_remove (GTK_CONTAINER (ui),
+        GTK_WIDGET (cur->data));
+
+  g_list_free (children);
+
+  /*
+   * We keep a reference on the GtkLabel and GtkComboBoxText,
+   * so they have not been destroyed.
+   */
+  gtk_grid_attach (GTK_GRID (ui), ui->name, 0, 0, 2, 1);
+  gtk_grid_attach (GTK_GRID (ui), ui->combobox, 0, 1, 2, 1);
 }
 
 static void
@@ -273,20 +297,24 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
         if (ui->view_mode == GST_ELEMENT_UI_VIEW_MODE_COMPACT)
           gtk_widget_show (ui->combobox);
 
-        gtk_table_resize (GTK_TABLE (ui), 2, 2 + ui->nprops);
+        gst_element_ui_reset (ui);
 
         ui->pviews = g_new0 (GstElementUIPropView *, ui->nprops);
         ui->plabels = g_new0 (GtkWidget *, ui->nprops);
         for (i = 0; i < ui->nprops; i++) {
+          gchar *str;
+
           ui->pviews[i] = g_object_new (gst_element_ui_prop_view_get_type (),
               "element", ui->element, "param", ui->params[i], NULL);
-          gtk_table_attach (GTK_TABLE (ui), GTK_WIDGET (ui->pviews[i]),
-              1, 2, i + 2, i + 3, GTK_EXPAND | GTK_FILL, GTK_FILL, 2, 4);
+          gtk_grid_attach (GTK_GRID (ui), GTK_WIDGET (ui->pviews[i]),
+              1, i + 2, 1, 1);
+          gtk_widget_set_hexpand (GTK_WIDGET (ui->pviews[i]), TRUE);
 
-          ui->plabels[i] =
-              gtk_label_new (g_strdup_printf ("%s:", ui->params[i]->name));
-          gtk_table_attach (GTK_TABLE (ui), ui->plabels[i], 0, 1, i + 2, i + 3,
-              GTK_FILL, GTK_FILL, 2, 4);
+          str = g_strconcat (ui->params[i]->name, ":", NULL);
+          ui->plabels[i] = gtk_label_new (str);
+          g_free (str);
+          gtk_grid_attach (GTK_GRID (ui), ui->plabels[i],
+              0, i + 2, 1, 1);
         }
 
         if (g_object_class_find_property (G_OBJECT_GET_CLASS (ui->element),
@@ -299,13 +327,14 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
             G_CALLBACK (gst_element_ui_on_element_notify), ui);
         gst_element_ui_prop_view_update (ui->pviews[ui->selected]);
       } else {
-        gtk_table_resize (GTK_TABLE (ui), 2, 3);
+        gst_element_ui_reset (ui);
         ui->message = gtk_label_new ("This element has no properties.");
         gtk_widget_show (ui->message);
-        gtk_table_attach (GTK_TABLE (ui), ui->message,
-            0, 2, 2, 3, GTK_FILL, GTK_FILL, 2, 4);
+        gtk_grid_attach (GTK_GRID (ui), ui->message,
+            0, 2, 2, 1);
       }
       //debug as it crashes here
+      /* FIXME: Memory leaks below */
       if (gst_element_get_factory (ui->element)) gtk_label_set_text (GTK_LABEL (ui->name),
           g_strdup_printf ("%s: %s",
               gst_element_get_factory (ui->element)->details.longname,
