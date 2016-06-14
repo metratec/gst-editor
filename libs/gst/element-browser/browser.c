@@ -21,7 +21,10 @@
 #  include "config.h"
 #endif
 
+#include <gst/gst.h>
+#include <gtk/gtk.h>
 #include <glib/gi18n-lib.h>
+
 #include "browser.h"
 #include "element-tree.h"
 
@@ -79,8 +82,8 @@ gst_element_browser_init (GstElementBrowser * browser)
   dialog = GTK_DIALOG (browser);
 
   gtk_dialog_add_buttons (dialog,
-      GTK_STOCK_OK, GTK_RESPONSE_ACCEPT,
-      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, NULL);
+      _("_OK"), GTK_RESPONSE_ACCEPT,
+      _("_Cancel"), GTK_RESPONSE_CANCEL, NULL);
   gtk_dialog_set_default_response (dialog, GTK_RESPONSE_CANCEL);
 
   gtk_window_set_resizable (GTK_WINDOW (dialog), TRUE);
