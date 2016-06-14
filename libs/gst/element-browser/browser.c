@@ -73,7 +73,7 @@ gst_element_browser_init (GstElementBrowser * browser)
 {
   GtkDialog *dialog;
   GtkWidget *tree;
-  GtkTable *table;
+  GtkWidget *table;
   GtkWidget *vbox, *hpaned;
   GtkWidget *frame;
 
@@ -106,42 +106,43 @@ gst_element_browser_init (GstElementBrowser * browser)
   gtk_box_pack_start (GTK_BOX (vbox), frame, FALSE, FALSE, 0);
 
   /* create the details table and put a title on it */
-  table = GTK_TABLE (gtk_table_new (2, 3, FALSE));
+  table = gtk_grid_new ();
+  gtk_grid_set_column_spacing (GTK_GRID (table), 5);
 
   /* the long name of the element */
   longname = gtk_label_new ("Name:");
   gtk_misc_set_alignment (GTK_MISC (longname), 1.0, 0.0);
-  gtk_table_attach (table, longname, 0, 1, 0, 1, GTK_FILL, 0, 5, 0);
+  gtk_grid_attach (GTK_GRID (table), longname, 0, 0, 1, 1);
   browser->longname = GTK_WIDGET (g_object_new (GTK_TYPE_LABEL,
           "selectable", TRUE,
           "wrap", TRUE,
           "justify", GTK_JUSTIFY_LEFT, "xalign", 0.0, "yalign", 0.0, NULL));
-  gtk_table_attach (table, browser->longname, 1, 2, 0, 1, GTK_FILL | GTK_EXPAND,
-      0, 0, 0);
+  gtk_widget_set_hexpand (browser->longname, TRUE);
+  gtk_grid_attach (GTK_GRID (table), browser->longname, 1, 0, 1, 1);
 
   /* the description */
   description = gtk_label_new ("Description:");
   gtk_misc_set_alignment (GTK_MISC (description), 1.0, 0.0);
-  gtk_table_attach (table, description, 0, 1, 1, 2, GTK_FILL, 0, 5, 0);
+  gtk_grid_attach (GTK_GRID (table), description, 0, 1, 1, 1);
   browser->description = GTK_WIDGET (g_object_new (GTK_TYPE_LABEL,
           "selectable", TRUE,
           "wrap", TRUE,
           "justify", GTK_JUSTIFY_LEFT, "xalign", 0.0, "yalign", 0.0, NULL));
-  gtk_table_attach (table, browser->description, 1, 2, 1, 2,
-      GTK_FILL | GTK_EXPAND, 0, 0, 0);
+  gtk_widget_set_hexpand (browser->description, TRUE);
+  gtk_grid_attach (GTK_GRID (table), browser->description, 1, 1, 1, 1);
 
   /* the author */
   author = gtk_label_new ("Author:");
   gtk_misc_set_alignment (GTK_MISC (author), 1.0, 0.0);
-  gtk_table_attach (table, author, 0, 1, 3, 4, GTK_FILL, 0, 5, 0);
+  gtk_grid_attach (GTK_GRID (table), author, 0, 2, 1, 1);
   browser->author = GTK_WIDGET (g_object_new (GTK_TYPE_LABEL,
           "selectable", TRUE,
           "wrap", TRUE,
           "justify", GTK_JUSTIFY_LEFT, "xalign", 0.0, "yalign", 0.0, NULL));
-  gtk_table_attach (table, browser->author, 1, 2, 2, 3, GTK_FILL | GTK_EXPAND,
-      0, 0, 0);
+  gtk_widget_set_hexpand (browser->author, TRUE);
+  gtk_grid_attach (GTK_GRID (table), browser->author, 1, 2, 1, 1);
 
-  gtk_container_add (GTK_CONTAINER (frame), GTK_WIDGET (table));
+  gtk_container_add (GTK_CONTAINER (frame), table);
 
   frame = gtk_frame_new ("Pads");
   gtk_box_pack_start (GTK_BOX (vbox), frame, TRUE, TRUE, 0);
