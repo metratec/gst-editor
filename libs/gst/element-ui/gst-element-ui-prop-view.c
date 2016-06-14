@@ -18,7 +18,14 @@
  * Boston, MA 02111-1307, USA.
  */
 
+#include "config.h"
+
 #include <string.h>
+
+#include <gst/gst.h>
+#include <gtk/gtk.h>
+#include <glib/gi18n-lib.h>
+
 #include "gst-element-ui-prop-view.h"
 
 GST_DEBUG_CATEGORY (gste_element_ui_debug);
@@ -178,7 +185,10 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   gtk_widget_set_hexpand (combobox, TRUE);
   gtk_grid_attach (GTK_GRID (table_args), combobox, 0, 4, 6, 1);
 
-  file = gtk_button_new_from_stock (GTK_STOCK_OPEN);
+  file = gtk_button_new_from_icon_name ("document-open",
+      GTK_ICON_SIZE_BUTTON);
+  gtk_button_set_label (GTK_BUTTON (file), _("_Open"));
+  gtk_button_set_use_underline (GTK_BUTTON (file), TRUE);
   gtk_grid_attach (GTK_GRID (table_args), file, 0, 5, 1, 1);
   filetext = gtk_entry_new ();
   gtk_widget_set_hexpand (filetext, TRUE);
@@ -719,8 +729,8 @@ on_location_hit (GtkWidget * widget, GstElementUIPropView * pview)
   dialog = gtk_file_chooser_dialog_new ("Choose File",
 				      NULL,
 				      GTK_FILE_CHOOSER_ACTION_OPEN,
-				      GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-				      GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
+				      _("_Cancel"), GTK_RESPONSE_CANCEL,
+				      _("_Open"), GTK_RESPONSE_ACCEPT,
 				      NULL);
   if (strstr (pview->param->name, "uri"))
     gtk_file_chooser_select_filename (GTK_FILE_CHOOSER (dialog),
