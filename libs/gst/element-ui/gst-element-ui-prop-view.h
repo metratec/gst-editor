@@ -35,7 +35,7 @@ typedef struct _GstElementUIPropViewClass GstElementUIPropViewClass;
 
 struct _GstElementUIPropView
 {
-  GtkVBox vbox;
+  GtkBox vbox;
 
   GstElement *element;		/* element we're viewing properties of */
   GParamSpec *param;
@@ -63,7 +63,7 @@ struct _GstElementUIPropView
 
 struct _GstElementUIPropViewClass
 {
-  GtkVBoxClass parent_class;
+  GtkBoxClass parent_class;
 };
 
 GType gst_element_ui_prop_view_get_type ();

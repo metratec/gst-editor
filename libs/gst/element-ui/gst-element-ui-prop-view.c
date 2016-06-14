@@ -47,7 +47,7 @@ static void on_location_hit (GtkWidget * widget, GstElementUIPropView * pview);
 static void block_signals (GstElementUIPropView * pview);
 static void unblock_signals (GstElementUIPropView * pview);
 
-static GObjectClass *parent_class = NULL;
+static gpointer parent_class = NULL;
 
 enum
 {
@@ -75,8 +75,8 @@ gst_element_ui_prop_view_get_type (void)
     };
 
     element_ui_prop_view_type =
-        g_type_register_static (GTK_TYPE_VBOX, "GstElementUIPropView",
-        &element_ui_prop_view_info, 0);
+        g_type_register_static (GTK_TYPE_BOX, "GstElementUIPropView",
+            &element_ui_prop_view_info, 0);
   }
   return element_ui_prop_view_type;
 }
@@ -89,7 +89,7 @@ gst_element_ui_prop_view_class_init (GstElementUIPropViewClass * klass)
   object_class->dispose = gst_element_ui_prop_view_dispose;
   object_class->finalize = gst_element_ui_prop_view_finalize;
 
-  parent_class = (GObjectClass *) g_type_class_ref (gtk_vbox_get_type ());
+  parent_class = g_type_class_peek_parent (klass);
 
   object_class->set_property = gst_element_ui_prop_view_set_property;
   object_class->get_property = gst_element_ui_prop_view_get_property;
@@ -123,6 +123,9 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   GtkWidget *combobox;
   GtkWidget *file;
   GtkWidget *filetext;
+
+  gtk_orientable_set_orientation (GTK_ORIENTABLE (pview),
+      GTK_ORIENTATION_VERTICAL);
 
   pview->value = g_new0 (GValue, 1);
   g_mutex_init (&pview->value_mutex);
