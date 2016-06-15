@@ -878,30 +878,23 @@ gst_editor_on_help_contents (GtkWidget * widget, GstEditor * editor)
 void
 gst_editor_on_about (GtkWidget * widget, GstEditor * editor)
 {
-  GtkWidget *about;
-  GdkPixbuf *pixbuf;
-  const gchar *authors[] = {  "Hannes Bistry","Andy Wingo", "Erik Walthinsen",
-    "Jan Schmidt", NULL
+  static const gchar *authors[] = {
+      "Hannes Bistry", "Andy Wingo", "Erik Walthinsen",
+      "Jan Schmidt", "Robin Haberkorn", NULL
   };
 
-  about = g_object_new (GTK_TYPE_ABOUT_DIALOG,
+  gtk_show_about_dialog (GTK_WINDOW (editor->window),
       "name", "GStreamer Pipeline Editor",
       "version", VERSION,
-      "copyright", "(c) 2001-2007 GStreamer Team, 2008-2010 Hannes Bistry",
-      "comments", "A graphical pipeline editor for "
+      "copyright",
+      "(c) 2001-2007 GStreamer Team, 2008-2010 Hannes Bistry, 2016 metraTec GmbH",
+      "comments",
+      "A graphical pipeline editor for "
       "GStreamer capable of loading and saving XML.",
-      "website", "http://gstreamer.freedesktop.org/", "authors", authors, NULL);
-
-  pixbuf = gtk_widget_render_icon (about, GST_EDITOR_STOCK_LOGO,
-      GTK_ICON_SIZE_DIALOG, NULL);
-  if (!pixbuf)
-    g_warning ("no pixbuf found");
-  else
-    g_object_set (about, "logo", pixbuf, NULL);
-
-  g_signal_connect (about, "response", G_CALLBACK (gtk_widget_destroy), about);
-
-  gtk_widget_show (about);
+      "website", "https://github.com/metratec/gst-editor/",
+      "authors", authors,
+      "logo-icon-name", GST_EDITOR_STOCK_LOGO,
+      NULL);
 }
 
 #if 0
