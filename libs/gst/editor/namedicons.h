@@ -16,16 +16,20 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-#ifndef __GST_EDITOR_STOCK_ICONS_H__
-#define __GST_EDITOR_STOCK_ICONS_H__
+#ifndef __GST_EDITOR_NAMED_ICONS_H__
+#define __GST_EDITOR_NAMED_ICONS_H__
 
 #include <glib.h>
 
 #include <gtk/gtk.h>
 
 G_BEGIN_DECLS
-#define GST_EDITOR_STOCK_LOGO		"gst-editor-stock-logo"
-void _gst_editor_stock_icons_init (void);
+
+#define GST_EDITOR_NAMED_ICON_LOGO \
+    "gst-editor-stock-logo"
+
+void gst_editor_named_icons_init (void);
 
 G_END_DECLS
-#endif /* __GST_EDITOR_STOCK_ICONS_H__ */
+
+#endif /* __GST_EDITOR_NAMED_ICONS_H__ */

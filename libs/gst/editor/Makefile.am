@@ -13,7 +13,7 @@ libgsteditor_la_SOURCES =	\
 	gsteditorproperty.c	\
 	gsteditorstatusbar.c \
 	gst-helper.c		\
-	stockicons.c
+	namedicons.c
 
 libgsteditor_la_CFLAGS = -DDATADIR="\"$(pkgdatadir)/\"" $(GST_EDITOR_CFLAGS)
 libgsteditor_la_LDFLAGS = $(GST_EDITOR_LIBS) \
@@ -27,7 +27,7 @@ noinst_HEADERS =                \
 	gsteditorpopup.h	\
         gsteditorpalette.h      \
 	gst-helper.h		\
-	stockicons.h
+	namedicons.h
 
 libgsteditorincludedir = $(includedir)/@PACKAGE@-@VERSION@/gst/editor
 libgsteditorinclude_HEADERS = editor.h \

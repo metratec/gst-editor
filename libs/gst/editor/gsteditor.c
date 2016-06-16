@@ -28,20 +28,17 @@
 
 #include <glib/gi18n-lib.h>
 #include <gtk/gtk.h>
+#include <goocanvas.h>
 
 #include "gsteditor.h"
 #include "gsteditoritem.h"
 #include "gsteditorelement.h"
 #include "gsteditorstatusbar.h"
-#include "stockicons.h"
+#include "namedicons.h"
 #include <gst/common/gste-common.h>
 #include <gst/common/gste-debug.h>
 #include "../element-browser/browser.h"
 #include <gst/element-browser/element-tree.h>
-#include <goocanvas.h>
-#include "../../../pixmaps/pixmaps.h"
-
-
 
 #define GST_CAT_DEFAULT gste_debug_cat
 
@@ -135,8 +132,6 @@ gst_editor_get_type (void)
 static void
 gst_editor_class_init (GstEditorClass * klass)
 {
-  GList *list;
-  GdkPixbuf *pixbuf;
   GObjectClass *gobject_class = G_OBJECT_CLASS (klass);
 
   parent_class = g_type_class_ref (G_TYPE_OBJECT);
@@ -150,15 +145,13 @@ gst_editor_class_init (GstEditorClass * klass)
       g_param_spec_string ("filename", "Filename", "File name",
           NULL, G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
 
-  _gst_editor_stock_icons_init ();
+  gst_editor_named_icons_init ();
 
-  /* give all windows the same icon (in theory) */
-  pixbuf = gdk_pixbuf_new_from_inline (-1, gst_editor_stock_image, FALSE, NULL);
-  list = g_list_prepend (NULL, pixbuf);
-  gtk_window_set_default_icon_list (list);
-
-  g_list_free (list);
-  g_object_unref (G_OBJECT (pixbuf));
+  /*
+   * FIXME: This will affect the entire application,
+   * even if it just embeds the GstEditor.
+   */
+  gtk_window_set_default_icon_name (GST_EDITOR_NAMED_ICON_LOGO);
 }
 
 static void
@@ -909,7 +902,7 @@ gst_editor_on_about (GtkWidget * widget, GstEditor * editor)
       "GStreamer capable of loading and saving XML.",
       "website", "https://github.com/metratec/gst-editor/",
       "authors", authors,
-      "logo-icon-name", GST_EDITOR_STOCK_LOGO,
+      "logo-icon-name", GST_EDITOR_NAMED_ICON_LOGO,
       NULL);
 }
 
