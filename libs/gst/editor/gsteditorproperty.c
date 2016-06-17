@@ -156,15 +156,15 @@ gst_editor_property_init (GstEditorProperty * property)
       g_object_new (gst_element_ui_get_type (), "view-mode",
       GST_ELEMENT_UI_VIEW_MODE_FULL, NULL);
   gtk_widget_show (property->element_ui);
-  gtk_scrolled_window_add_with_viewport (
-      GTK_SCROLLED_WINDOW (
+  gtk_container_add (
+      GTK_CONTAINER (
           gtk_builder_get_object (property->builder, "scrolledwindow-element-ui")),
       property->element_ui);
 
   property->caps_browser =
       g_object_new (gst_element_browser_caps_tree_get_type (), NULL);
-  gtk_scrolled_window_add_with_viewport (
-      GTK_SCROLLED_WINDOW (gtk_builder_get_object (
+  gtk_container_add (
+      GTK_CONTAINER (gtk_builder_get_object (
           property->builder, "scrolledwindow-caps-browser")),
       property->caps_browser);
 

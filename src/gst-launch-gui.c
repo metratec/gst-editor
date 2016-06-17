@@ -376,8 +376,7 @@ main (int argc, char *argv[])
   page_scroll = gtk_scrolled_window_new (NULL, NULL);
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (page_scroll),
       GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-  gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW (page_scroll),
-      prop_box);
+  gtk_container_add (GTK_CONTAINER (page_scroll), prop_box);
   gtk_notebook_append_page (GTK_NOTEBOOK (notebook), page_scroll,
       gtk_label_new ("Properties"));
 
@@ -391,8 +390,7 @@ main (int argc, char *argv[])
       build_debug_page (notebook);
 #endif
   page_scroll = gtk_scrolled_window_new (NULL, NULL);
-  gtk_scrolled_window_add_with_viewport (GTK_SCROLLED_WINDOW (page_scroll),
-      GTK_WIDGET (view));
+  gtk_container_add (GTK_CONTAINER (page_scroll), GTK_WIDGET (view));
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (page_scroll),
       GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
