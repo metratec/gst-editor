@@ -1101,7 +1101,7 @@ gst_editor_pad_link_start (GstEditorPad * pad)
       GOO_CANVAS_ITEM (pad),
       GDK_POINTER_MOTION_MASK | GDK_BUTTON_RELEASE_MASK, cursor,
       GDK_CURRENT_TIME);
-  gdk_cursor_unref (cursor);
+  g_object_unref (cursor);
 
   pad->linking = TRUE;
 }

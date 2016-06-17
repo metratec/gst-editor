@@ -613,7 +613,7 @@ gst_editor_element_button_press_event (GooCanvasItem * citem,
 /*                             GDK_ENTER_NOTIFY_MASK | */
 /*                             GDK_LEAVE_NOTIFY_MASK | */
           GDK_BUTTON_RELEASE_MASK, fleur, event->time);
-      gdk_cursor_unref (fleur);
+      g_object_unref (fleur);
     }
 
     return TRUE;
@@ -888,7 +888,7 @@ gst_editor_element_state_enter_notify_event (GooCanvasItem * citem,
       GDK_POINTER_MOTION_MASK |
       GDK_BUTTON_RELEASE_MASK | GDK_LEAVE_NOTIFY_MASK, uparrow, event->time);
 
-  gdk_cursor_unref (uparrow);
+  g_object_unref (uparrow);
   /* NOTE: when grabbing canvas item, always get pointer_motion,
      this will allow you to actually get all the other synth events */
 
