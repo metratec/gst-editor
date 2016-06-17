@@ -3,7 +3,8 @@ AC_PREREQ(2.65)
 dnl This is the configure.ac file for the gst-editor module
 dnl when going to/from release please set the nano (fourth number) right !
 dnl releases only do Wall, cvs and prerelease does Werror too
-AC_INIT([GstEditor],[0.10.3.2],[http://gstreamer.freedesktop.org],[gsteditor])
+AC_INIT([GstEditor], [1.2.4.0],
+        [https://github.com/metratec/gst-editor/], [gsteditor])
 
 AC_CONFIG_MACRO_DIR([common/m4])
 AC_CONFIG_AUX_DIR([config])
@@ -95,19 +96,12 @@ if test "x$GST_WALL" = "xyes"; then
    fi
 fi
 dnl check for appropriate GStreamer libs.
-GSTREAMER_REQ="0.10.6"
+GSTREAMER_REQ="1.2.4"
 AC_SUBST(GSTREAMER_REQ)
 
-GSTREAMER_MAJORMINOR="0.10"
+GSTREAMER_MAJORMINOR="1.0"
 PKG_CHECK_MODULES(GST, gstreamer-$GSTREAMER_MAJORMINOR >= $GSTREAMER_REQ,,
-					[AC_MSG_ERROR([GStreamer 0.10 required but not found])])
-
-dnl check for gstreamer core features (subsystems)
-GST_CONFIGPATH=`$PKG_CONFIG --variable=includedir gstreamer-0.10`"/gst/gstconfig.h"
-AG_GST_PARSE_SUBSYSTEM_DISABLES($GST_CONFIGPATH)
-if test $GST_DISABLE_LOADSAVE = "1"; then
-  AC_MSG_ERROR("Load/Save XML persistence disabled")
-fi
+                  [AC_MSG_ERROR([GStreamer $GSTREAMER_MAJORMINOR required but not found])])
 
 PKG_CHECK_MODULES(GOOCANVAS, goocanvas-2.0 >= 2.0,,
    [AC_MSG_ERROR([GOOCANVAS 2.0 required but not found])])
