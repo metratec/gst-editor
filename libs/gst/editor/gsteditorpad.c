@@ -16,8 +16,9 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#include "config.h"
 
-
+#include <gio/gio.h>
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 #include <gst/editor/editor.h>
@@ -39,6 +40,7 @@ static gboolean gst_editor_pad_button_release_event (GooCanvasItem * citem,
     GooCanvasItem * target, GdkEventButton * event);
 
 /* class functions */
+static void gst_editor_pad_base_init (GstEditorPadClass * klass);
 static void gst_editor_pad_class_init (GstEditorPadClass * klass);
 static void gst_editor_pad_init (GstEditorPad * pad);
 static gboolean gst_editor_pad_realize_source (GooCanvasItem * citem);
@@ -61,12 +63,18 @@ static void gst_editor_pad_link_drag (GstEditorPad * pad,
     gdouble wx, gdouble wy);
 static void gst_editor_pad_link_start (GstEditorPad * pad);
 
-static void on_pad_status (GtkWidget * unused, GstEditorPadAlways * pad);
-static void on_derequest_pad (GtkWidget * unused, GstEditorPadAlways * pad);
-static void on_ghost (GtkWidget * unused, GstEditorPadAlways * pad);
-static void on_remove_ghost_pad (GtkWidget * unused, GstEditorPadAlways * pad);
-static void on_request_pad (GtkWidget * unused, GstEditorPadRequest * pad);
-static void on_frobate (GtkWidget * unused, GstEditorPadSometimes * pad);
+static void on_pad_status (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_derequest_pad (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_ghost (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_remove_ghost_pad (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_request_pad (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_frobate (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
 
 struct help
 {
@@ -89,123 +97,111 @@ enum
 
 static GstEditorItemClass *parent_class;
 
-
-#ifdef POPUP_MENU
-static GnomeUIInfo always_pad_menu_items[] = {
-  GNOMEUIINFO_ITEM_STOCK ("Pad status...", "Query pad caps, formats, etc",
-      on_pad_status, "gtk-properties"),
-  GNOMEUIINFO_ITEM_STOCK ("Ghost to parent bin...",
-      "Ghost this pad to the parent bin",
-      on_ghost, "gtk-jump-to"),
-  GNOMEUIINFO_SEPARATOR,
-  GNOMEUIINFO_END
-};
-
-static GnomeUIInfo ghost_pad_menu_items[] = {
-  GNOMEUIINFO_ITEM_STOCK ("Pad status...", "Query pad caps, formats, etc",
-      on_pad_status, "gtk-properties"),
-  GNOMEUIINFO_ITEM_STOCK ("Remove ghost pad",
-      "De-request this previously-requested pad",
-      on_remove_ghost_pad, "gtk-cancel"),
-  GNOMEUIINFO_ITEM_STOCK ("Ghost to parent bin...",
-      "Ghost this pad to the parent bin",
-      on_ghost, "gtk-jump-to"),
-  GNOMEUIINFO_SEPARATOR,
-  GNOMEUIINFO_END
-};
-
-static GnomeUIInfo requested_pad_menu_items[] = {
-  GNOMEUIINFO_ITEM_STOCK ("Pad status...", "Query pad caps, formats, etc",
-      on_pad_status, "gtk-properties"),
-  GNOMEUIINFO_ITEM_STOCK ("Release request pad",
-      "Release this previously-requested pad",
-      on_derequest_pad, "gtk-cancel"),
-  GNOMEUIINFO_ITEM_STOCK ("Ghost to parent bin...",
-      "Ghost this pad to the parent bin",
-      on_ghost, "gtk-jump-to"),
-  GNOMEUIINFO_SEPARATOR,
-  GNOMEUIINFO_END
-};
-
-static GnomeUIInfo request_pad_menu_items[] = {
-  GNOMEUIINFO_ITEM_STOCK ("Request pad by name...",
-      "Request a pad from this template by name",
-      on_request_pad, "gtk-select-font"),
-  GNOMEUIINFO_SEPARATOR,
-  GNOMEUIINFO_END
-};
-
-static GnomeUIInfo sometimes_pad_menu_items[] = {
-  GNOMEUIINFO_ITEM_STOCK ("Frobate...",
-      "Frobate this pad into a cromulate mass of goo",
-      on_frobate, "gtk-execute"),
-  GNOMEUIINFO_SEPARATOR,
-  GNOMEUIINFO_END
-};
-#endif
-
-static const GtkActionEntry action_entries[] = { 
-      {"status", "gtk-properties", "Pad status...", NULL,
-       "Query pad caps, formats, etc", G_CALLBACK (on_pad_status)},
-      {"ghost", "gtk-jump-to", "Ghost to parent bin...", NULL,
-       "Ghost this pad to the parent bin", G_CALLBACK (on_ghost)},
-      {"remove", "gtk-cancel", "Remove ghost pad", NULL,
-       "De-request this previously-requested pad",
-       G_CALLBACK (on_remove_ghost_pad)},
-      {"release", "gtk-cancel", "Release request pad", NULL,
-       "Release this previously-requested pad",
-       G_CALLBACK (on_derequest_pad)},
-      {"request", "gtk-select-font",
-       "Request pad by name...", NULL,
-       "Request a pad from this template by name", G_CALLBACK (on_request_pad)},
-      {"frobate", "gtk-execute", "Frobate...", NULL,
-       "Frobate this pad into a cromulate mass of goo", G_CALLBACK (on_frobate)},
+static const GActionEntry action_entries[] = {
+      {"status", on_pad_status, NULL, NULL, NULL},
+      {"ghost", on_ghost, NULL, NULL, NULL},
+      {"remove", on_remove_ghost_pad, NULL, NULL, NULL},
+      {"release", on_derequest_pad, NULL, NULL, NULL},
+      {"request", on_request_pad, NULL, NULL, NULL},
+      {"frobate", on_frobate, NULL, NULL, NULL}
 };
 
 static const char *always_pad_ui_description =
-  "<ui>"
-    "  <popup name='alwaysMenu'>" 
-    "    <menuitem name='status' action='status' />" 
-    "    <menuitem name='ghost' action='ghost'/>" 
-    "    <separator/>"
-    "  </popup>"
-  "</ui>";
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section id='padSection'>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Pad status...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Query pad caps, formats, etc</attribute>"
+            "<attribute name='icon'>document-properties</attribute>"
+            "<attribute name='action'>local.status</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Ghost to parent bin...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Ghost this pad to the parent bin</attribute>"
+            "<attribute name='icon'>go-jump</attribute>"
+            "<attribute name='action'>local.ghost</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
 static const char *ghost_pad_ui_description =
-  "<ui>" 
-    "  <popup name='itemMenu'>" 
-    "    <menuitem name='status' action='status'/>" 
-    "    <menuitem name='remove' action='remove'/>" 
-    "    <menuitem name='ghost' action='ghost'/>" 
-    "    <separator/>"
-    "  </popup>"
-  "</ui>";
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section id='padSection'>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Pad status...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Query pad caps, formats, etc</attribute>"
+            "<attribute name='icon'>document-properties</attribute>"
+            "<attribute name='action'>local.status</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Remove ghost pad</attribute>"
+            "<attribute name='tooltip' translatable='yes'>De-request this previously-requested pad</attribute>"
+            "<attribute name='action'>local.remove</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Ghost to parent bin...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Ghost this pad to the parent bin</attribute>"
+            "<attribute name='icon'>go-jump</attribute>"
+            "<attribute name='action'>local.ghost</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
-static const char *requested_pad_ui_description = 
-  "<ui>" 
-    "  <popup name='itemMenu'>" 
-    "    <menuitem name='status' action='status'/>" 
-    "    <menuitem name='release' action='release'/>" 
-    "    <menuitem name='ghost' action='ghost'/>" 
-    "    <separator/>" 
-    "  </popup>" 
- "</ui>";
+static const char *requested_pad_ui_description =
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section id='padSection'>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Pad status...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Query pad caps, formats, etc</attribute>"
+            "<attribute name='icon'>document-properties</attribute>"
+            "<attribute name='action'>local.status</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Release request pad</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Release this previously-requested pad</attribute>"
+            "<attribute name='action'>local.release</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Ghost to parent bin...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Ghost this pad to the parent bin</attribute>"
+            "<attribute name='icon'>go-jump</attribute>"
+            "<attribute name='action'>local.ghost</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
 static const char *request_pad_ui_description =
-  "<ui>" 
-    "  <popup name='itemMenu'>" 
-    "    <menuitem name='request' action='request'/>" 
-    "    <separator/>"
-    "  </popup>"
-  "</ui>";
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section id='padSection'>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Request pad by name...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Request a pad from this template by name</attribute>"
+            "<attribute name='action'>local.request</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
 static const char *sometimes_pad_ui_description =
-  "<ui>" 
-    "  <popup name='itemMenu'>" 
-    "    <menuitem name='frobate' action='frobate'/>" 
-    "    <separator/>"
-    "  </popup>"
-  "</ui>";
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section id='padSection'>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Frobate...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Frobate this pad into a cromulate mass of goo</attribute>"
+            "<attribute name='icon'>system-run</attribute>"
+            "<attribute name='action'>local.frobate</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
 GType
 gst_editor_pad_get_type (void)
@@ -248,7 +244,7 @@ gst_editor_pad_always_get_type (void)
   if (!pad_always_type) {
     static const GTypeInfo pad_always_info = {
       sizeof (GstEditorPadAlwaysClass),
-      (GBaseInitFunc) NULL,
+      (GBaseInitFunc) gst_editor_pad_base_init,
       (GBaseFinalizeFunc) NULL,
       (GClassInitFunc) gst_editor_pad_class_init,
       NULL,
@@ -273,7 +269,7 @@ gst_editor_pad_sometimes_get_type (void)
   if (!pad_sometimes_type) {
     static const GTypeInfo pad_sometimes_info = {
       sizeof (GstEditorPadSometimesClass),
-      (GBaseInitFunc) NULL,
+      (GBaseInitFunc) gst_editor_pad_base_init,
       (GBaseFinalizeFunc) NULL,
       (GClassInitFunc) gst_editor_pad_class_init,
       NULL,
@@ -298,7 +294,7 @@ gst_editor_pad_request_get_type (void)
   if (!pad_request_type) {
     static const GTypeInfo pad_request_info = {
       sizeof (GstEditorPadRequestClass),
-      (GBaseInitFunc) NULL,
+      (GBaseInitFunc) gst_editor_pad_base_init,
       (GBaseFinalizeFunc) NULL,
       (GClassInitFunc) gst_editor_pad_class_init,
       NULL,
@@ -323,7 +319,7 @@ gst_editor_pad_requested_get_type (void)
   if (!pad_requested_type) {
     static const GTypeInfo pad_requested_info = {
       sizeof (GstEditorPadRequestedClass),
-      (GBaseInitFunc) NULL,
+      (GBaseInitFunc) gst_editor_pad_base_init,
       (GBaseFinalizeFunc) NULL,
       (GClassInitFunc) gst_editor_pad_class_init,
       NULL,
@@ -348,7 +344,7 @@ gst_editor_pad_ghost_get_type (void)
   if (!pad_ghost_type) {
     static const GTypeInfo pad_ghost_info = {
       sizeof (GstEditorPadGhostClass),
-      (GBaseInitFunc) NULL,
+      (GBaseInitFunc) gst_editor_pad_base_init,
       (GBaseFinalizeFunc) NULL,
       (GClassInitFunc) gst_editor_pad_class_init,
       NULL,
@@ -366,72 +362,48 @@ gst_editor_pad_ghost_get_type (void)
 }
 
 static void
+gst_editor_pad_base_init (GstEditorPadClass * klass)
+{
+  GstEditorItemClass *item_class = GST_EDITOR_ITEM_CLASS (klass);
+  GtkBuilder *ui_builder = NULL;
+
+  if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_ALWAYS) {
+    ui_builder = gtk_builder_new_from_string (always_pad_ui_description, -1);
+//    item_class->whats_this = gst_editor_pad_always_whats_this;
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_SOMETIMES) {
+    ui_builder = gtk_builder_new_from_string (sometimes_pad_ui_description, -1);
+//    item_class->whats_this = gst_editor_pad_sometimes_whats_this;
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUEST) {
+    ui_builder = gtk_builder_new_from_string (request_pad_ui_description, -1);
+//    item_class->whats_this = gst_editor_pad_request_whats_this;
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUESTED) {
+    ui_builder = gtk_builder_new_from_string (requested_pad_ui_description, -1);
+//    item_class->whats_this = gst_editor_pad_requested_whats_this;
+  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_GHOST) {
+    ui_builder = gtk_builder_new_from_string (ghost_pad_ui_description, -1);
+//    item_class->whats_this = gst_editor_pad_ghost_whats_this;
+  }
+
+  g_menu_prepend_section (item_class->gmenu, NULL,
+      G_MENU_MODEL (gtk_builder_get_object (ui_builder, "padSection")));
+
+  g_object_unref (ui_builder);
+}
+
+static void
 gst_editor_pad_class_init (GstEditorPadClass * klass)
 {
-  GError * error = NULL;
-  GstEditorItemClass *item_class;
-
-  item_class = GST_EDITOR_ITEM_CLASS (klass);
+  GstEditorItemClass *item_class = GST_EDITOR_ITEM_CLASS (klass);
 
   parent_class = g_type_class_ref (gst_editor_item_get_type ());
 
 #if 0
   citem_class->realize = gst_editor_pad_realize;
-  
 #endif
 //  citem_class->event = gst_editor_pad_event;
-      item_class->resize = gst_editor_pad_resize;
+  item_class->resize = gst_editor_pad_resize;
   item_class->repack = gst_editor_pad_repack;
   item_class->object_changed = gst_editor_pad_object_changed;
-  GST_EDITOR_ITEM_CLASS_PREPEND_ACTION_ENTRIES (item_class, action_entries, 6);
-  
-#ifdef POPUP_MENU
-      if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_ALWAYS) {
-    GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class, always_pad_menu_items,
-        3);
-//    item_class->whats_this = gst_editor_pad_always_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_SOMETIMES) {
-    GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class,
-        sometimes_pad_menu_items, 2);
-//    item_class->whats_this = gst_editor_pad_sometimes_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUEST) {
-    GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class,
-        request_pad_menu_items, 2);
-//    item_class->whats_this = gst_editor_pad_request_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUESTED) {
-    GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class,
-        requested_pad_menu_items, 4);
-//    item_class->whats_this = gst_editor_pad_requested_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_GHOST) {
-    GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class, ghost_pad_menu_items,
-        4);
-//    item_class->whats_this = gst_editor_pad_ghost_whats_this;
-  }
-  
-#endif
-  if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_ALWAYS) {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
-        always_pad_ui_description, -1, &error);
-//    item_class->whats_this = gst_editor_pad_always_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_SOMETIMES) {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
-        sometimes_pad_ui_description, -1, &error);
-//    item_class->whats_this = gst_editor_pad_sometimes_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUEST) {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
-        request_pad_ui_description, -1, &error);
-//    item_class->whats_this = gst_editor_pad_request_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_REQUESTED) {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
-        requested_pad_ui_description, -1, &error);
-//    item_class->whats_this = gst_editor_pad_requested_whats_this;
-  } else if (G_TYPE_FROM_CLASS (klass) == GST_TYPE_EDITOR_PAD_GHOST) {
-    gtk_ui_manager_add_ui_from_string (item_class->ui_manager,
-        ghost_pad_ui_description, -1, &error);
-//    item_class->whats_this = gst_editor_pad_ghost_whats_this;
-  }
-
-  gtk_ui_manager_ensure_update (item_class->ui_manager);
 }
 
 static void
@@ -449,6 +421,9 @@ gst_editor_pad_init (GstEditorPad * pad)
 {
   GType type;
   GstEditorItem *item = GST_EDITOR_ITEM (pad);
+
+  g_action_map_add_action_entries (G_ACTION_MAP (item->action_group),
+      action_entries, G_N_ELEMENTS (action_entries), pad);
 
   type = G_OBJECT_TYPE (pad);
 
@@ -1165,20 +1140,21 @@ gst_editor_pad_link_drag (GstEditorPad * pad, gdouble wx, gdouble wy)
 }
 
 static void
-on_pad_status (GtkWidget * unused, GstEditorPadAlways * pad)
+on_pad_status (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
-  g_return_if_fail (GST_IS_EDITOR_PAD_ALWAYS (pad));
+  //GstEditorPadAlways *pad = GST_EDITOR_PAD_ALWAYS (user_data);
 
   g_print ("pad status\n");
 }
 
 static void
-on_derequest_pad (GtkWidget * unused, GstEditorPadAlways * pad)
+on_derequest_pad (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
+  GstEditorPadRequested *pad = GST_EDITOR_PAD_REQUESTED (user_data);
   GstPad *rpad = NULL;
   GstElement *element = NULL;
-
-  g_return_if_fail (GST_IS_EDITOR_PAD_REQUESTED (pad));
 
   g_print ("derequest pad\n");
 
@@ -1194,11 +1170,11 @@ on_derequest_pad (GtkWidget * unused, GstEditorPadAlways * pad)
 }
 
 static void
-on_remove_ghost_pad (GtkWidget * unused, GstEditorPadAlways * pad)
+on_remove_ghost_pad (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
+  GstEditorPadGhost *pad = GST_EDITOR_PAD_GHOST (user_data);
   GstPad *rpad = NULL;
-
-  g_return_if_fail (GST_IS_EDITOR_PAD_GHOST (pad));
 
   g_print ("deghost pad\n");
 
@@ -1207,17 +1183,19 @@ on_remove_ghost_pad (GtkWidget * unused, GstEditorPadAlways * pad)
 }
 
 static void
-on_request_pad (GtkWidget * unused, GstEditorPadRequest * pad)
+on_request_pad (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
-  g_return_if_fail (GST_IS_EDITOR_PAD_REQUEST (pad));
+  //GstEditorPadRequest *pad = GST_EDITOR_PAD_REQUEST (user_data);
 
   g_print ("request pad\n");
 }
 
 static void
-on_frobate (GtkWidget * unused, GstEditorPadSometimes * pad)
+on_frobate (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
-  g_return_if_fail (GST_IS_EDITOR_PAD_SOMETIMES (pad));
+  //GstEditorPadSometimes *pad = GST_EDITOR_PAD_SOMETIMES (user_data);
 }
 
 static void 
@@ -1235,12 +1213,12 @@ _gst_element_add_ghost_pad (GstElement * element, GstPad * pad,
 }
 
 static void
-on_ghost (GtkWidget * unused, GstEditorPadAlways * pad)
+on_ghost (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
+  GstEditorPadAlways *pad = GST_EDITOR_PAD_ALWAYS (user_data);
   GstElement *bin;
   GstPad *p;
-
-  g_return_if_fail (GST_IS_EDITOR_PAD_ALWAYS (pad));
 
   p = GST_PAD (GST_EDITOR_ITEM (pad)->object);
 

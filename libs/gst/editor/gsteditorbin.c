@@ -21,6 +21,7 @@
 #include <math.h>
 #include <string.h>
 
+#include <gio/gio.h>
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 
@@ -40,6 +41,7 @@ static gboolean gst_editor_bin_button_press_event (GooCanvasItem * citem,
     GooCanvasItem * target, GdkEventButton * event);
 #endif
 /* class methods */
+static void gst_editor_bin_base_init (GstEditorBinClass * klass);
 static void gst_editor_bin_class_init (GstEditorBinClass * klass);
 static void gst_editor_bin_init (GstEditorBin * bin);
 static void gst_editor_bin_set_property (GObject * object, guint prop_id,
@@ -57,10 +59,12 @@ static void gst_editor_bin_element_added (GstObject * bin, GstObject * child,
 /* callback on the gstbin */
 static void gst_editor_bin_element_added_cb (GstObject * bin, GstObject * child,
     GstEditorBin * editorbin);
-/* popup callbacks */
-static void on_add_element (GtkMenuItem * unused, GstEditorElement * bin);
-static void on_paste (GtkWidget * unused, GstEditorElement * element);
 
+/* popup callbacks */
+static void on_add_element (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_paste (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
 
 enum
 {
@@ -70,31 +74,29 @@ enum
 
 static GstEditorElementClass *parent_class = NULL;
 
-#ifdef POPUP_MENU
-static GnomeUIInfo menu_items[] = {
-  GNOMEUIINFO_ITEM_STOCK ("Add element...", "Add an element to this bin",
-      on_add_element, "gtk-add"),
-  GNOMEUIINFO_MENU_PASTE_ITEM (on_paste, NULL),
-  GNOMEUIINFO_SEPARATOR,
-  GNOMEUIINFO_END
-};
-#endif
-
-static const GtkActionEntry action_entries[] = {
-  {"paste", "gtk-paste", NULL, NULL, NULL, G_CALLBACK (on_paste)},
-  {"add", "gtk-add", "Add element...", NULL, "Add an element to this bin",
-        G_CALLBACK (on_add_element)},
+static const GActionEntry action_entries[] = {
+      {"paste", on_paste, NULL, NULL, NULL},
+      {"add", on_add_element, NULL, NULL, NULL}
 };
 
 static const char *ui_description =
-    "<ui>"
-    "  <popup name='itemMenu'>"
-    "    <separator position='top' />"
-    "    <menuitem name='paste' position='top' action='paste'/>"
-    "    <menuitem name='add' position='top' action='add'/>"
-    "  </popup>" "</ui>";
-
-
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section id='binSection'>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Add element...</attribute>"
+            "<attribute name='tooltip' translatable='yes'>Add an element to this bin</attribute>"
+            "<attribute name='icon'>list-add</attribute>"
+            "<attribute name='action'>local.add</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>_Paste</attribute>"
+            "<attribute name='icon'>edit-paste</attribute>"
+            "<attribute name='action'>local.paste</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
 GType
 gst_editor_bin_get_type (void)
@@ -104,7 +106,7 @@ gst_editor_bin_get_type (void)
   if (!bin_type) {
     static const GTypeInfo bin_info = {
       sizeof (GstEditorBinClass),
-      (GBaseInitFunc) NULL,
+      (GBaseInitFunc) gst_editor_bin_base_init,
       (GBaseFinalizeFunc) NULL,
       (GClassInitFunc) gst_editor_bin_class_init,
       NULL,
@@ -131,9 +133,20 @@ gst_editor_bin_get_type (void)
 }
 
 static void
+gst_editor_bin_base_init (GstEditorBinClass * klass)
+{
+  GstEditorItemClass *item_class = GST_EDITOR_ITEM_CLASS (klass);
+  GtkBuilder *ui_builder = gtk_builder_new_from_string (ui_description, -1);
+
+  g_menu_prepend_section (item_class->gmenu, NULL,
+      G_MENU_MODEL (gtk_builder_get_object (ui_builder, "binSection")));
+
+  g_object_unref (ui_builder);
+}
+
+static void
 gst_editor_bin_class_init (GstEditorBinClass * klass)
 {
-  GError *error = NULL;
   GObjectClass *object_class;
   GstEditorItemClass *item_class;
 
@@ -157,13 +170,6 @@ gst_editor_bin_class_init (GstEditorBinClass * klass)
   item_class->repack = gst_editor_bin_repack;
   item_class->object_changed = gst_editor_bin_object_changed;
 
-#ifdef POPUP_MENU
-  GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class, menu_items, 3);
-#endif
-  GST_EDITOR_ITEM_CLASS_PREPEND_ACTION_ENTRIES (item_class, action_entries, 2);
-  gtk_ui_manager_add_ui_from_string (item_class->ui_manager, ui_description, -1,
-      &error);
-
   GST_DEBUG_CATEGORY_INIT (gste_bin_debug, "GSTE_BIN", 0,
       "GStreamer Editor Bin");
 }
@@ -171,9 +177,10 @@ gst_editor_bin_class_init (GstEditorBinClass * klass)
 static void
 gst_editor_bin_init (GstEditorBin * bin)
 {
-  GstEditorItem *item;
+  GstEditorItem *item = GST_EDITOR_ITEM (bin);
 
-  item = GST_EDITOR_ITEM (bin);
+  g_action_map_add_action_entries (G_ACTION_MAP (item->action_group),
+      action_entries, G_N_ELEMENTS (action_entries), bin);
 
   /* set these directly here, things will get repacked when the item is
    * realized */
@@ -546,8 +553,10 @@ g_print("In editorbin, gotten Transformation x: %f y:%f Scale %f Rotation %f and
  **********************************************************************/
 
 static void
-on_add_element (GtkMenuItem * unused, GstEditorElement * bin)
+on_add_element (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
+  GstEditorItem *item = GST_EDITOR_ITEM (user_data);
   GstElementFactory *factory;
   GstElement *element;
 
@@ -558,14 +567,17 @@ on_add_element (GtkMenuItem * unused, GstEditorElement * bin)
       return;
     }
     /* the element_added signal takes care of drawing the gui */
-    gst_bin_add (GST_BIN (GST_EDITOR_ITEM (bin)->object), element);
+    gst_bin_add (GST_BIN (item->object), element);
   }
 }
 
 static void
-on_paste (GtkWidget * unused, GstEditorElement * element)
+on_paste (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
-  gst_editor_bin_paste (GST_EDITOR_BIN (element));
+  GstEditorBin *bin = GST_EDITOR_BIN (user_data);
+
+  gst_editor_bin_paste (bin);
 }
 
 /**********************************************************************

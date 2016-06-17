@@ -17,6 +17,7 @@
  * Boston, MA 02111-1307, USA.
  */
 
+#include <gio/gio.h>
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 
@@ -35,6 +36,8 @@ static gboolean gst_editor_item_button_press_event (GooCanvasItem * citem,
     GooCanvasItem * target_item, GdkEventButton * event);
 
 /* class methods */
+static void gst_editor_item_base_init (GstEditorItemClass * klass);
+static void gst_editor_item_base_finalize (GstEditorItemClass * klass);
 static void gst_editor_item_class_init (GstEditorItemClass * klass);
 static void gst_editor_item_init (GstEditorItem * item);
 static void gst_editor_item_dispose (GObject * object);
@@ -59,11 +62,9 @@ static void on_parent_item_position_changed (GstEditorItem * parent,
 static void on_object_saved (GstObject * object, xmlNodePtr parent,
     GstEditorItem * item);
 
-
-
 /* popup callbacks */
-/*static*/ void on_whats_this (GtkWidget * unused, GstEditorItem * item);
-
+static void on_whats_this (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
 
 enum
 {
@@ -82,31 +83,26 @@ static GObjectClass *parent_class;
 static guint gst_editor_item_signals[LAST_SIGNAL] = { 0 };
 static GHashTable *editor_items = NULL;
 
-
-#ifdef POPUP_MENU
-static GnomeUIInfo menu_items[] = {
-  GNOMEUIINFO_ITEM_STOCK ("What's this?",
-      "Give information on the currently selected item",
-      on_whats_this, "gtk-dialog-info"),
-  GNOMEUIINFO_END
-};
-#endif
-
-static const GtkActionEntry action_entries[] = { 
-      {"whats_this", "gtk-dialog-info", "What's this?", NULL,
-        "Give information on the currently selected item",
-        G_CALLBACK (on_whats_this)}, 
+static const GActionEntry action_entries[] = {
+      {"whats_this", on_whats_this, NULL, NULL, NULL}
 };
 
 static const char *ui_description =
-  "<ui>" 
-    "  <popup name='itemMenu'>" 
-    "    <menuitem name='whats_this' position='bot' action='whats_this'  />" 
-    "  </popup>" 
- "</ui>";
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>What's this?</attribute>"
+            "<attribute name='icon'>dialog-information</attribute>"
+            "<attribute name='tooltip'>Give information on the currently selected item</attribute>"
+            "<attribute name='action'>local.whats_this</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
 /* helper functions */
-    static void
+static void
 gst_editor_item_update_title (GstEditorItem * item)
 {
   if (item->title_text)
@@ -141,8 +137,8 @@ gst_editor_item_get_type (void)
   if (item_type == 0) {
     static const GTypeInfo item_info = {
       sizeof (GstEditorItemClass),
-      (GBaseInitFunc) NULL,
-      (GBaseFinalizeFunc) NULL,
+      (GBaseInitFunc) gst_editor_item_base_init,
+      (GBaseFinalizeFunc) gst_editor_item_base_finalize,
       (GClassInitFunc) gst_editor_item_class_init,
       NULL,
       NULL,
@@ -166,11 +162,23 @@ gst_editor_item_get_type (void)
 }
 
 static void
+gst_editor_item_base_init (GstEditorItemClass * klass)
+{
+  GtkBuilder *ui_builder = gtk_builder_new_from_string (ui_description, -1);
+  klass->gmenu = G_MENU (gtk_builder_get_object (ui_builder, "itemMenu"));
+  g_object_unref (ui_builder);
+}
+
+static void
+gst_editor_item_base_finalize (GstEditorItemClass * klass)
+{
+  g_object_unref (klass->gmenu);
+}
+
+static void
 gst_editor_item_class_init (GstEditorItemClass * klass)
 {
   GObjectClass *object_class;
-
-  GError * error = NULL;
 
   object_class = G_OBJECT_CLASS (klass);
   parent_class = g_type_class_ref (goo_canvas_group_get_type ());
@@ -203,21 +211,12 @@ gst_editor_item_class_init (GstEditorItemClass * klass)
       g_param_spec_pointer ("globallock", "globallock", "globallock",
           G_PARAM_WRITABLE));
 #if 0
-      citem_class->realize = gst_editor_item_realize;
-  
+  citem_class->realize = gst_editor_item_realize;
 #endif
-      klass->repack = gst_editor_item_repack_real;
+  klass->repack = gst_editor_item_repack_real;
   klass->resize = gst_editor_item_resize_real;
   klass->object_changed = gst_editor_item_object_changed;
   klass->whats_this = gst_editor_item_default_on_whats_this;
-
-#ifdef POPUP_MENU
-      GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (klass, menu_items, 1);
-#endif
-  GST_EDITOR_ITEM_CLASS_PREPEND_ACTION_ENTRIES (klass, action_entries, 1);
-  klass->ui_manager = gtk_ui_manager_new ();
-  gtk_ui_manager_add_ui_from_string (klass->ui_manager, ui_description, -1,
-      &error);
 
   GST_DEBUG_CATEGORY_INIT (gste_item_debug, "GSTE_ITEM", 0,
       "GStreamer Editor Item");
@@ -232,6 +231,10 @@ canvas_item_interface_init (GooCanvasItemIface * iface)
 static void
 gst_editor_item_init (GstEditorItem * item)
 {
+  item->action_group = G_ACTION_GROUP (g_simple_action_group_new ());
+  g_action_map_add_action_entries (G_ACTION_MAP (item->action_group),
+      action_entries, G_N_ELEMENTS (action_entries), item);
+
   item->fill_color = 0xffffffff;
   item->outline_color = 0x333333ff;
   item->title_text = g_strdup ("rename me");
@@ -257,12 +260,18 @@ gst_editor_item_dispose (GObject * object)
 
   EDITOR_LOG ("Disposing GstEditorItem %p\n", object);
 
+  g_clear_object ((GObject **)&item->action_group);
+  g_clear_object ((GObject **)&item->menu);
+
   if (item->object) {
-    if (GST_IS_ELEMENT(item->object)) g_print("Disposing GstEditorItem with object %s\n", GST_OBJECT_NAME(item->object));
-    gst_editor_item_hash_remove(item->object);
+    if (GST_IS_ELEMENT (item->object))
+      g_print ("Disposing GstEditorItem with object %s\n",
+          GST_OBJECT_NAME (item->object));
+    gst_editor_item_hash_remove (item->object);
     g_object_set (item, "object", NULL, NULL);
     item->object = NULL;
   }
+
   G_OBJECT_CLASS (parent_class)->dispose (object);
 }
 
@@ -302,7 +311,7 @@ gst_editor_item_set_property (GObject * object, guint prop_id,
         item->object = new_object;
 
         if (old_object)
-          g_object_unref (G_OBJECT (old_object));
+          g_object_unref (old_object);
 
         /* install new notify handler */
         if (new_object) {
@@ -480,81 +489,26 @@ gst_editor_item_object_changed (GstEditorItem * item, GstObject * object)
   }
 }
 
-
-#if 0
-static gint
-gst_editor_item_event (GnomeCanvasItem * citem, GdkEvent * event) 
-{
-  GstEditorItem *item;
-
-  item = GST_EDITOR_ITEM (citem);
-
-  switch (event->type) {
-    case GDK_BUTTON_PRESS:
-      if (event->button.button == 3) {
-        GstEditorItemClass *itemclass =
-            GST_EDITOR_ITEM_CLASS (G_OBJECT_GET_CLASS (citem));
-
-        /* although we don't actually show a menu, stop the event propagation */
-        if (itemclass->menu_items == 0)
-          return TRUE;
-
-        if (!itemclass->menu)
-          itemclass->menu = gnome_popup_menu_new (itemclass->menu_items);
-
-        gnome_popup_menu_do_popup (itemclass->menu, NULL, NULL, &event->button,
-            item, NULL);
-      }
-      break;
-    default:
-      break;
-  }
-
-  /* we don't want the click falling through to the parent canvas item */
-  return TRUE;
-}
-#endif
-
 static gint 
 gst_editor_item_button_press_event (GooCanvasItem * citem,
     GooCanvasItem * target_item, GdkEventButton * event) 
 {
-  GstEditorItem * item;
-  item = GST_EDITOR_ITEM (citem);
-  if (event->button == 3 && event->type == GDK_BUTTON_PRESS) {
-    GstEditorItemClass * itemclass =
-        GST_EDITOR_ITEM_CLASS (G_OBJECT_GET_CLASS (citem));
+  GstEditorItem * item = GST_EDITOR_ITEM (citem);
+  GstEditorItemClass * itemclass = GST_EDITOR_ITEM_GET_CLASS (citem);
 
-#ifdef POPUP_MENU
-    /* although we don't actually show a menu, stop the event propagation */ 
-    if (itemclass->menu_items == 0)
-      return TRUE;
-    if (!itemclass->menu)
-      itemclass->menu = gnome_popup_menu_new (itemclass->menu_items);
-    gnome_popup_menu_do_popup (itemclass->menu, NULL, NULL, &event->button,
-        item, NULL);
-#endif
-    /* although we don't actually show a menu, stop the event propagation */ 
-    if (itemclass->num_action_entries == 0)
-      return TRUE;
+  if (event->button != 3 || event->type != GDK_BUTTON_PRESS)
+    return TRUE;
 
-    {
-      GtkActionGroup * action_group;
-      action_group = gtk_action_group_new ("PopupActions");
-      gtk_action_group_add_actions (action_group, itemclass->action_entries,
-          itemclass->num_action_entries, item);
-      gtk_ui_manager_insert_action_group (itemclass->ui_manager, action_group,
-          0);
-      g_object_unref (G_OBJECT (action_group));
-      if (!itemclass->menu)
-        itemclass->menu =
-            gtk_ui_manager_get_widget (itemclass->ui_manager, "/itemMenu");
-      gtk_menu_popup (GTK_MENU (itemclass->menu), NULL, NULL, NULL, NULL,
-          (event ? event->button : 0),
-          (event ? event->time : gtk_get_current_event_time ()));
-    }
+  if (!item->menu) {
+    item->menu = gtk_menu_new_from_model (G_MENU_MODEL (itemclass->gmenu));
+    g_object_ref_sink (item->menu);
+    gtk_widget_insert_action_group (item->menu,
+        "local", item->action_group);
   }
-  
+
+  gtk_menu_popup (GTK_MENU (item->menu), NULL, NULL, NULL, NULL,
+      event->button, event->time);
+
   /* we don't want the click falling through to the parent canvas item */ 
   return TRUE;
 }
@@ -648,9 +602,10 @@ on_parent_item_position_changed (GstEditorItem * parent, GstEditorItem * item)
  * Popup menu callbacks
  **********************************************************************/
 
-/*static*/ void
-on_whats_this (GtkWidget * unused, GstEditorItem * item)
+static void
+on_whats_this (GSimpleAction * action, GVariant * parameter, gpointer user_data)
 {
+  GstEditorItem *item = GST_EDITOR_ITEM (user_data);
   GstEditorItemClass *klass = GST_EDITOR_ITEM_CLASS (G_OBJECT_GET_CLASS (item));
 
   g_return_if_fail (klass->whats_this != NULL);

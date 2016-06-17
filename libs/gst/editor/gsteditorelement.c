@@ -20,6 +20,7 @@
 
 #include <gtk/gtk.h>
 
+#include <gio/gio.h>
 #include <gst/gst.h>
 #include <gst/gstutils.h>
 
@@ -44,6 +45,7 @@ static gboolean gst_editor_element_button_release_event (GooCanvasItem * citem,
     GooCanvasItem * target, GdkEventButton * event);
 
 /* class methods */
+static void gst_editor_element_base_init (GstEditorElementClass * klass);
 static void gst_editor_element_class_init (GstEditorElementClass * klass);
 static void gst_editor_element_init (GstEditorElement * element);
 static void gst_editor_element_dispose (GObject * object);
@@ -114,10 +116,12 @@ static gboolean gst_editor_element_set_state_cb (GstEditorElement * element);
 /*static gboolean gst_editor_element_sync_state (GstEditorElement * element);*/
 
 /* callbacks for the popup menu */
-static void on_copy (GtkWidget * unused, GstEditorElement * element);
-static void on_cut (GtkWidget * unused, GstEditorElement * element);
-static void on_remove (GtkWidget * unused, GstEditorElement * element);
-
+static void on_copy (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_cut (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
+static void on_remove (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data);
 
 static GstState _gst_element_states[] = {
   GST_STATE_NULL,
@@ -145,32 +149,34 @@ static GObjectClass *parent_class;
 
 static guint gst_editor_element_signals[LAST_SIGNAL] = { 0 };
 
-#ifdef POPUP_MENU
-static GnomeUIInfo menu_items[] = {
-  GNOMEUIINFO_MENU_COPY_ITEM (on_copy, NULL),
-  GNOMEUIINFO_MENU_CUT_ITEM (on_cut, NULL),
-  GNOMEUIINFO_ITEM_STOCK ("_Remove element", "Remove element from bin",
-      on_remove, "gtk-remove"),
-  GNOMEUIINFO_SEPARATOR,
-  GNOMEUIINFO_END
-};
-#endif
-
-static const GtkActionEntry action_entries[] = {
-  {"copy", "gtk-copy", NULL, NULL, NULL, G_CALLBACK (on_copy)},
-  {"cut", "gtk-cut", NULL, NULL, NULL, G_CALLBACK (on_cut)},
-  {"remove", "gtk-remove", "_Remove element", NULL, "Remove element from bin",
-        G_CALLBACK (on_remove)},
+static const GActionEntry action_entries[] = {
+      {"copy", on_copy, NULL, NULL, NULL},
+      {"cut", on_cut, NULL, NULL, NULL},
+      {"remove", on_remove, NULL, NULL, NULL}
 };
 
 static const char *ui_description =
-    "<ui>"
-    "  <popup name='itemMenu'>"
-    "    <separator position='top' />"
-    "    <menuitem name='remove' position='top' action='remove'/>"
-    "    <menuitem name='cut' position='top' action='cut'/>"
-    "    <menuitem name='copy' position='top' action='copy' />"
-    "  </popup>" "</ui>";
+    "<interface>"
+      "<menu id='itemMenu'>"
+        "<section id='elementSection'>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>_Copy</attribute>"
+            "<attribute name='icon'>edit-copy</attribute>"
+            "<attribute name='action'>local.copy</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>Cu_t</attribute>"
+            "<attribute name='icon'>edit-cut</attribute>"
+            "<attribute name='action'>local.cut</attribute>"
+          "</item>"
+          "<item>"
+            "<attribute name='label' translatable='yes'>_Remove element</attribute>"
+            "<attribute name='icon'>list-remove</attribute>"
+            "<attribute name='action'>local.remove</attribute>"
+          "</item>"
+        "</section>"
+      "</menu>"
+    "</interface>";
 
 GType
 gst_editor_element_get_type (void)
@@ -180,7 +186,7 @@ gst_editor_element_get_type (void)
   if (element_type == 0) {
     static const GTypeInfo element_info = {
       sizeof (GstEditorElementClass),
-      (GBaseInitFunc) NULL,
+      (GBaseInitFunc) gst_editor_element_base_init,
       (GBaseFinalizeFunc) NULL,
       (GClassInitFunc) gst_editor_element_class_init,
       NULL,
@@ -207,12 +213,22 @@ gst_editor_element_get_type (void)
 }
 
 static void
+gst_editor_element_base_init (GstEditorElementClass * klass)
+{
+  GstEditorItemClass *item_class = GST_EDITOR_ITEM_CLASS (klass);
+  GtkBuilder *ui_builder = gtk_builder_new_from_string (ui_description, -1);
+
+  g_menu_prepend_section (item_class->gmenu, NULL,
+      G_MENU_MODEL (gtk_builder_get_object (ui_builder, "elementSection")));
+
+  g_object_unref (ui_builder);
+}
+
+static void
 gst_editor_element_class_init (GstEditorElementClass * klass)
 {
-  GError *error = NULL;
   GObjectClass *object_class;
   GstEditorItemClass *item_class;
-
 
   object_class = G_OBJECT_CLASS (klass);
   item_class = GST_EDITOR_ITEM_CLASS (klass);
@@ -245,13 +261,6 @@ gst_editor_element_class_init (GstEditorElementClass * klass)
   item_class->repack = gst_editor_element_repack;
   item_class->object_changed = gst_editor_element_object_changed;
 
-#ifdef POPUP_MENU
-  GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS (item_class, menu_items, 4);
-#endif
-  GST_EDITOR_ITEM_CLASS_PREPEND_ACTION_ENTRIES (item_class, action_entries, 3);
-  gtk_ui_manager_add_ui_from_string (item_class->ui_manager, ui_description, -1,
-      &error);
-
   GST_DEBUG_CATEGORY_INIT (gste_element_debug, "GSTE_ELEMENT", 0,
       "GStreamer Editor Element Model");
 }
@@ -269,6 +278,9 @@ static void
 gst_editor_element_init (GstEditorElement * element)
 {
   GstEditorItem *item = GST_EDITOR_ITEM (element);
+
+  g_action_map_add_action_entries (G_ACTION_MAP (item->action_group),
+      action_entries, G_N_ELEMENTS (action_entries), element);
 
   item->fill_color = 0xffffffff;
   item->outline_color = 0x333333ff;
@@ -1175,7 +1187,7 @@ on_parent_unset (GstElement * element, GstBin * parent,
   goo_canvas_item_remove(GOO_CANVAS_ITEM(editor_element));
   g_rw_lock_writer_unlock (&editor_element->rwlock); 
   g_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);
-  g_object_unref (G_OBJECT (editor_element));
+  g_object_unref (editor_element);
   g_print("Survived removing this item:%s %p Pointer of GstEditorElement %p\n",GST_OBJECT_NAME(element),element,editor_element);
 }
 
@@ -1453,25 +1465,28 @@ gst_editor_element_sync_state (GstEditorElement * element)
  **********************************************************************/
 
 static void
-on_copy (GtkWidget * unused, GstEditorElement * element)
+on_copy (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
-  g_return_if_fail (GST_IS_EDITOR_ELEMENT (element));
+  GstEditorElement * element = GST_EDITOR_ELEMENT (user_data);
 
   gst_editor_element_copy (element);
 }
 
 static void
-on_cut (GtkWidget * unused, GstEditorElement * element)
+on_cut (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
-  g_return_if_fail (GST_IS_EDITOR_ELEMENT (element));
+  GstEditorElement * element = GST_EDITOR_ELEMENT (user_data);
 
   gst_editor_element_cut (element);
 }
 
 static void
-on_remove (GtkWidget * unused, GstEditorElement * element)
+on_remove (GSimpleAction * action,
+    GVariant * parameter, gpointer user_data)
 {
-  g_return_if_fail (GST_IS_EDITOR_ELEMENT (element));
+  GstEditorElement * element = GST_EDITOR_ELEMENT (user_data);
 
   gst_editor_element_remove (element);
 }

@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include <goocanvas.h>
+#include <gio/gio.h>
 #include <gst/gst.h>
 #include <gst/editor/editor.h>
 
@@ -79,6 +80,13 @@ struct _GstEditorItem
 {
   GooCanvasGroup group;
 
+  /*
+   * Every item needs its own popup action group,
+   * so we can 'link' the actions to this instance.
+   */
+  GActionGroup *action_group;
+  GtkWidget *menu;
+
   /* we are a 'view' of this object */
   GstObject *object;
 
@@ -117,16 +125,7 @@ struct _GstEditorItemClass
   /* virtual method, does not chain up */
   void (*whats_this) (GstEditorItem * item);
 
-  GtkWidget *menu;
-
-#ifdef MENU_POPUP
-  gint num_menu_items;
-  GnomeUIInfo *menu_items;
-//GtkActionEntry *menu_items;
-#endif
-  gint num_action_entries;
-  GtkActionEntry *action_entries;
-  GtkUIManager *ui_manager;
+  GMenu *gmenu;
 };
 
 /* struct to keep positional info on EditorItem around before it lives */
@@ -151,41 +150,5 @@ void gst_editor_item_hash_remove (GstObject * object);
  * (it's not even used in the GstEditorItem class).
  */
 void gst_editor_item_realize (GooCanvasItem * citem);
-
-#ifdef POPUP_MENU
-#define GST_EDITOR_ITEM_CLASS_PREPEND_MENU_ITEMS(item_class, menuitems, nitems)         \
-G_STMT_START{                                                                           \
-  GnomeUIInfo *info = g_new0 (GnomeUIInfo, item_class->num_menu_items + nitems + 1);    \
-  memcpy (info, menuitems, sizeof (GnomeUIInfo) * nitems + 1);                          \
-  if (item_class->num_menu_items)                                                       \
-    memcpy (&info[nitems], item_class->menu_items,                                      \
-            sizeof (GnomeUIInfo) * item_class->num_menu_items + 1);                     \
-  item_class->menu_items = info;                                                        \
-  item_class->num_menu_items += nitems;                                                 \
-}G_STMT_END
-
-#define GST_EDITOR_ITEM_CLASS_APPEND_MENU_ITEMS(item_class, menuitems, nitems)          \
-G_STMT_START{                                                                           \
-  GnomeUIInfo *info = g_new0 (GnomeUIInfo, item_class->num_menu_items + nitems + 1);    \
-  if (item_class->num_menu_items)                                                       \
-    memcpy (info, item_class->menu_items,                                               \
-            sizeof (GnomeUIInfo) * item_class->num_menu_items);                         \
-  memcpy (&info[item_class->num_menu_items], menuitems,                                 \
-          sizeof (GnomeUIInfo) * nitems + 1);                                           \
-  item_class->menu_items = info;                                                        \
-  item_class->num_menu_items += nitems;                                                 \
-}G_STMT_END
-#endif
-
-#define GST_EDITOR_ITEM_CLASS_PREPEND_ACTION_ENTRIES(item_class, actionentries, nentries)            \
-   G_STMT_START{                                                                                     \
-  GtkActionEntry *entries = g_new0 (GtkActionEntry, item_class->num_action_entries + nentries + 1);  \
-  memcpy (entries, actionentries, sizeof (GtkActionEntry) * nentries /*+ 1*/);                           \
-  if (item_class->num_action_entries)                                                                \
-    memcpy (&entries[nentries], item_class->action_entries,                                          \
-            sizeof (GtkActionEntry) * item_class->num_action_entries /*+ 1*/);                           \
-  item_class->action_entries = entries;                                                              \
-  item_class->num_action_entries += nentries;                                                        \
-}G_STMT_END
 
 #endif /* __GST_EDITOR_ITEM_H__ */
