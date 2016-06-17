@@ -315,7 +315,7 @@ main (int argc, char *argv[])
                   /***** set up the GUI *****/
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   g_signal_connect (window, "delete-event", G_CALLBACK (quit_live), NULL);
-  vbox = gtk_vbox_new (FALSE, 0);
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
   gtk_container_add (GTK_CONTAINER (window), vbox);
   gtk_window_set_default_size (GTK_WINDOW (window), 500, 300);
 
@@ -327,7 +327,7 @@ main (int argc, char *argv[])
     g_warning ("Icon file %s not found", PIXMAP_DIR "gst-launch.png");
   }
 
-  parse_line = gtk_hbox_new (FALSE, 3);
+  parse_line = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 3);
   gtk_box_pack_start (GTK_BOX (vbox), parse_line, FALSE, FALSE, 0);
 
   pipe_combo = gtk_combo_box_text_new_with_entry ();
@@ -367,7 +367,7 @@ main (int argc, char *argv[])
   column = gtk_tree_view_get_column (view, 0);
   gtk_tree_view_column_set_clickable (column, TRUE);
 
-  prop_box = gtk_vbox_new (FALSE, 0);
+  prop_box = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
 
   /* dparam_box = gtk_vbox_new(FALSE, 0); */
 
@@ -394,7 +394,7 @@ main (int argc, char *argv[])
   gtk_scrolled_window_set_policy (GTK_SCROLLED_WINDOW (page_scroll),
       GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
 
-  pane = gtk_hpaned_new ();
+  pane = gtk_paned_new (GTK_ORIENTATION_HORIZONTAL);
   gtk_paned_pack1 (GTK_PANED (pane), page_scroll, TRUE, TRUE);
   gtk_paned_pack2 (GTK_PANED (pane), notebook, TRUE, TRUE);
 
