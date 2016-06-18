@@ -30,6 +30,10 @@
 GST_DEBUG_CATEGORY (gste_item_debug);
 #define GST_CAT_DEFAULT gste_item_debug
 
+#if GST_VERSION_MAJOR < 1 && !defined(GST_DISABLE_DEPRECATED)
+#define GST_XML_SUPPORTED
+#endif
+
 /* interface methods */ 
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
 static gboolean gst_editor_item_button_press_event (GooCanvasItem * citem,
@@ -58,9 +62,11 @@ static void gst_editor_item_default_on_whats_this (GstEditorItem * item);
 static void on_parent_item_position_changed (GstEditorItem * parent,
     GstEditorItem * item);
 
+#ifdef GST_XML_SUPPORTED
 /* callbacks on the editor item */
 static void on_object_saved (GstObject * object, xmlNodePtr parent,
     GstEditorItem * item);
+#endif
 
 /* popup callbacks */
 static void on_whats_this (GSimpleAction * action,
@@ -478,6 +484,7 @@ gst_editor_item_object_changed (GstEditorItem * item, GstObject * object)
   /* doesn't handle removals yet */
   g_hash_table_insert (editor_items, object, item);
 
+#ifdef GST_XML_SUPPORTED
   if (item->object) {
     g_signal_handlers_disconnect_by_func (G_OBJECT (item->object),
         on_object_saved, item);
@@ -487,6 +494,7 @@ gst_editor_item_object_changed (GstEditorItem * item, GstObject * object)
     g_signal_connect (G_OBJECT (object), "object-saved",
         G_CALLBACK (on_object_saved), item);
   }
+#endif
 }
 
 static gint 
@@ -533,6 +541,8 @@ gst_editor_item_default_on_whats_this (GstEditorItem * item)
 /**********************************************************************
  * Callbacks on the editor item
  **********************************************************************/
+#ifdef GST_XML_SUPPORTED
+
 static void
 on_object_saved (GstObject * object, xmlNodePtr parent, GstEditorItem * item)
 {
@@ -584,6 +594,8 @@ on_object_saved (GstObject * object, xmlNodePtr parent, GstEditorItem * item)
   xmlNewChild (child, ns, BAD_CAST "h", BAD_CAST value);
   g_free (value);
 }
+
+#endif /* GST_XML_SUPPORTED */
 
 /**********************************************************************
  * Callbacks on the parent editor item

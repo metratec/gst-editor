@@ -42,6 +42,10 @@
 
 #define GST_CAT_DEFAULT gste_debug_cat
 
+#if GST_VERSION_MAJOR < 1 && !defined(GST_DISABLE_DEPRECATED)
+#define GST_XML_SUPPORTED
+#endif
+
 static void gst_editor_class_init (GstEditorClass * klass);
 static void gst_editor_init (GstEditor * project_editor);
 static void gst_editor_get_property (GObject * object, guint prop_id,
@@ -54,15 +58,20 @@ static void gst_editor_connect_func (GtkBuilder * builder, GObject * object,
     const gchar * signal_name, const gchar * handler_name,
     GObject * connect_object, GConnectFlags flags, gpointer user_data);
 
+static gboolean do_save (GstEditor * editor);
+
 static gint on_delete_event (GtkWidget * widget,
     GdkEvent * event, GstEditor * editor);
 static void on_canvas_notify (GObject * object,
     GParamSpec * param, GstEditor * ui);
-static void on_xml_loaded (GstXML * xml, GstObject * object, xmlNodePtr self,
-    GData ** datalistp);
 static void
 on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data);
+
+#ifdef GST_XML_SUPPORTED
+static void on_xml_loaded (GstXML * xml, GstObject * object, xmlNodePtr self,
+    GData ** datalistp);
+#endif
 
 enum
 {
@@ -515,33 +524,6 @@ gst_editor_new (GstElement * element)
   return ret;
 }
 
-static gboolean
-do_save (GstEditor * editor)
-{
-  GstElement *element;
-
-#if 1
-  FILE *file;
-
-  if (!(file = fopen (editor->filename, "w"))) {
-    g_warning ("%s could not be saved...", editor->filename);
-    return FALSE;
-  }
-#endif
-  g_object_get (editor->canvas, "bin", &element, NULL);
-#if 1
-  if (gst_xml_write_file (element, file) < 0)
-    g_warning ("error saving xml");
-  fclose (file);
-#else
-  if (gst_xml_write_filename (element, editor->filename) < 0)
-    g_warning ("error saving xml");
-#endif
-  gst_editor_statusbar_message ("Pipeline saved to %s.", editor->filename);
-
-  return TRUE;
-}
-
 void
 gst_editor_on_save_as (GtkWidget * widget, GstEditor * editor)
 {
@@ -577,6 +559,28 @@ gst_editor_on_save (GtkWidget * widget, GstEditor * editor)
   }
 
   do_save (editor);
+}
+
+#ifdef GST_XML_SUPPORTED
+
+static gboolean
+do_save (GstEditor * editor)
+{
+  GstElement *element;
+
+  FILE *file;
+
+  if (!(file = fopen (editor->filename, "w"))) {
+    g_warning ("%s could not be saved...", editor->filename);
+    return FALSE;
+  }
+  g_object_get (editor->canvas, "bin", &element, NULL);
+  if (gst_xml_write_file (element, file) < 0)
+    g_warning ("error saving xml");
+  fclose (file);
+  gst_editor_statusbar_message ("Pipeline saved to %s.", editor->filename);
+
+  return TRUE;
 }
 
 void
@@ -646,6 +650,60 @@ gst_editor_load (GstEditor * editor, const gchar * file_name)
   gst_editor_statusbar_message ("Pipeline loaded from %s.", editor->filename);
   gst_editor_element_connect (editor, pipeline);
 }
+
+static void
+on_xml_loaded (GstXML * xml, GstObject * object, xmlNodePtr self,
+    GData ** datalistp)
+{
+  xmlNodePtr children = self->xmlChildrenNode;
+  GstEditorItemAttr *attr = NULL;       /* GUI attributes in editor canvas */
+
+  attr = g_malloc (sizeof (GstEditorItemAttr));
+  //g_print("xml for object %s with pointer %p loaded, getting attrs",GST_OBJECT_NAME(object),(gpointer)object);
+  GST_DEBUG_OBJECT (object, "xml for object %s with pointer %p loaded, getting attrs",GST_OBJECT_NAME(object),(gpointer)object);
+  while (children) {
+    if (!g_ascii_strcasecmp ((gchar *) children->name, "item")) {
+      xmlNodePtr nodes = children->xmlChildrenNode;
+
+      while (nodes) {
+        if (!g_ascii_strcasecmp ((gchar *) nodes->name, "x")) {
+          attr->x = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
+        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "y")) {
+          attr->y = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
+        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "w")) {
+          attr->w = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
+        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "h")) {
+          attr->h = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
+        }
+        nodes = nodes->next;
+      }
+      GST_DEBUG_OBJECT (object, "loaded with x: %f, y: %f, w: %f, h: %f",
+          attr->x, attr->y, attr->w, attr->h);
+    }
+    children = children->next;
+  }
+
+  /* save this in the datalist with the object's name as key */
+  GST_DEBUG_OBJECT (object, "adding to datalistp %p", datalistp);
+  g_datalist_set_data (datalistp, GST_OBJECT_NAME (object), attr);
+}
+
+#else /* !GST_XML_SUPPORTED */
+
+static gboolean
+do_save (GstEditor * editor)
+{
+  g_warning ("%s could not be saved: missing GstXML support", editor->filename);
+  return FALSE;
+}
+
+void
+gst_editor_load (GstEditor * editor, const gchar * file_name)
+{
+  g_warning ("gst_editor_load() not supported - missing GstXML support");
+}
+
+#endif
 
 void
 gst_editor_on_open (GtkWidget * widget, GstEditor * editor)
@@ -1070,43 +1128,6 @@ on_canvas_notify (GObject * object, GParamSpec * param, GstEditor * editor)
     gst_editor_statusbar_message (status);
     g_free (status);
   }
-}
-
-static void
-on_xml_loaded (GstXML * xml, GstObject * object, xmlNodePtr self,
-    GData ** datalistp)
-{
-  xmlNodePtr children = self->xmlChildrenNode;
-  GstEditorItemAttr *attr = NULL;       /* GUI attributes in editor canvas */
-
-  attr = g_malloc (sizeof (GstEditorItemAttr));
-  //g_print("xml for object %s with pointer %p loaded, getting attrs",GST_OBJECT_NAME(object),(gpointer)object);
-  GST_DEBUG_OBJECT (object, "xml for object %s with pointer %p loaded, getting attrs",GST_OBJECT_NAME(object),(gpointer)object);
-  while (children) {
-    if (!g_ascii_strcasecmp ((gchar *) children->name, "item")) {
-      xmlNodePtr nodes = children->xmlChildrenNode;
-
-      while (nodes) {
-        if (!g_ascii_strcasecmp ((gchar *) nodes->name, "x")) {
-          attr->x = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "y")) {
-          attr->y = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "w")) {
-          attr->w = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "h")) {
-          attr->h = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        }
-        nodes = nodes->next;
-      }
-      GST_DEBUG_OBJECT (object, "loaded with x: %f, y: %f, w: %f, h: %f",
-          attr->x, attr->y, attr->w, attr->h);
-    }
-    children = children->next;
-  }
-
-  /* save this in the datalist with the object's name as key */
-  GST_DEBUG_OBJECT (object, "adding to datalistp %p", datalistp);
-  g_datalist_set_data (datalistp, GST_OBJECT_NAME (object), attr);
 }
 
 static void

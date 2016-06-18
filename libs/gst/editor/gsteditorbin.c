@@ -34,6 +34,10 @@
 GST_DEBUG_CATEGORY (gste_bin_debug);
 #define GST_CAT_DEFAULT gste_bin_debug
 
+#if GST_VERSION_MAJOR < 1 && !defined(GST_DISABLE_DEPRECATED)
+#define GST_XML_SUPPORTED
+#endif
+
 /* interface methods */
 #if 0
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
@@ -727,6 +731,8 @@ gst_editor_bin_sort (GstEditorBin * bin, gdouble step)
   return ret;
 }
 
+#ifdef GST_XML_SUPPORTED
+
 void
 gst_editor_bin_paste (GstEditorBin * bin)
 {
@@ -760,6 +766,16 @@ gst_editor_bin_paste (GstEditorBin * bin)
   for (l = gst_xml_get_topelements (xml); l; l = l->next)
     gst_bin_add (gstbin, GST_ELEMENT (l->data));
 }
+
+#else /* !GST_XML_SUPPORTED */
+
+void
+gst_editor_bin_paste (GstEditorBin * bin)
+{
+  g_warning ("gst_editor_bin_paste() not supported: missing GstXML support");
+}
+
+#endif
 
 void
 gst_editor_bin_debug_output (GstEditorBin * bin){
