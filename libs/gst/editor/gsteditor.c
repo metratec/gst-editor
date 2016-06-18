@@ -739,12 +739,6 @@ gst_editor_on_new_from_pipeline_description (GtkWidget * widget,
 //  GtkWidget *entry;
 
   if (!request) {
-//    request = gnome_request_dialog (FALSE,
-//        "Please enter in a pipeline description. "
-//        "See the gst-launch man page for help on the syntax.",
-//        "fakesrc ! fakesink",
-//        0, have_pipeline_description, editor, GTK_WINDOW (editor->window));
-//    gnome_dialog_close_hides (GNOME_DIALOG (request), TRUE);
     request = gtk_dialog_new_with_buttons ("Gst-Editor",
         GTK_WINDOW (editor->window),
         GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -879,7 +873,6 @@ gst_editor_show_utility_palette (GtkWidget * widget, GstEditor * editor)
 void
 gst_editor_on_help_contents (GtkWidget * widget, GstEditor * editor)
 {
-//  gnome_help_display ("gst-editor-manual", NULL, NULL);
   GtkWidget *dialog = gtk_message_dialog_new (GTK_WINDOW (editor->window),
       GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
       GTK_MESSAGE_WARNING,

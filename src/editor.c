@@ -39,10 +39,6 @@ main (int argc, char * argv[])
 {
   GstEditor * editor;
 
-#if 0
-  GnomeProgram * p;
-#endif
-
   gboolean launch = FALSE;
   const gchar ** remaining_args = NULL;
 
@@ -72,14 +68,6 @@ main (int argc, char * argv[])
     g_print ("Error initializing: %s\n", err->message);
     exit (1);
   }
-
-#if 0
-  if (!(p =
-          gnome_program_init (PACKAGE, VERSION, LIBGNOMEUI_MODULE, argc, argv,
-              GNOME_PARAM_GOPTION_CONTEXT, ctx, GNOME_PARAM_APP_DATADIR,
-              DATADIR, "app-datadir", GST_EDITOR_DATA_DIR, NULL)))
-    g_error ("gnome_progam_init() failed, aborting...");
-#endif
 
   gste_init ();
   if (remaining_args != NULL) {

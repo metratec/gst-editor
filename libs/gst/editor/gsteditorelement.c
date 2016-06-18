@@ -392,10 +392,6 @@ gst_editor_element_realize (GooCanvasItem * citem)
   g_return_if_fail (GST_IS_EDITOR_ELEMENT (element));//if it has been deleted we dont touch it...
 
   gst_editor_item_realize (citem);
-#if 0
-  if (GNOME_CANVAS_ITEM_CLASS (parent_class)->realize)
-    GNOME_CANVAS_ITEM_CLASS (parent_class)->realize (citem);
-#endif
 
   /* the resize box */
   element->resizebox = goo_canvas_rect_new (GOO_CANVAS_ITEM (citem),
@@ -533,13 +529,10 @@ gst_editor_element_repack (GstEditorItem * item)
   element = GST_EDITOR_ELEMENT (item);
 
   /* the resize box */
-//  gnome_canvas_item_set (element->resizebox,
-//      "x1", item->width - 4.0,
-//      "y1", item->height - 4.0, "x2", item->width, "y2", item->height, NULL);
   g_object_set (element->resizebox, "x", item->width - 4.0, "y",
       item->height - 4.0, "width", 4.0, "height", 4.0, NULL);
 
-  /* make sure args to gnome_canvas_item_set are doubles */
+  /* make sure args to goo_canvas_item_set are doubles */
   x1 = 0.0;
   //y1 = 0.0;
   x2 = item->width;
@@ -665,7 +658,6 @@ gst_editor_element_button_release_event (GooCanvasItem * citem,
 
   if (element->dragging /*&& event->button == 1 */ ) {
     element->dragging = FALSE;
-//     gnome_canvas_item_ungrab (citem, event->time);
     goo_canvas_pointer_ungrab (goo_canvas_item_get_canvas (citem),
         citem, event->time);
     return TRUE;
@@ -734,7 +726,6 @@ gst_editor_element_resizebox_event (GooCanvasItem * citem,
   /* calculate coords relative to the group, not the box */
   item_x = event->button.x;
   item_y = event->button.y;
-//  gnome_canvas_item_w2i (citem->parent, &item_x, &item_y);
   goo_canvas_convert_to_item_space (goo_canvas_item_get_canvas (citem),
       goo_canvas_item_get_parent (citem), &item_x, &item_y);
 
@@ -863,7 +854,6 @@ gst_editor_element_resizebox_motion_notify_event (GooCanvasItem * citem,
 //   /* calculate coords relative to the group, not the box */
   item_x = event->x;
   item_y = event->y;
-//  gnome_canvas_item_w2i (citem->parent, &item_x, &item_y);
 //   goo_canvas_convert_to_item_space(goo_canvas_item_get_canvas (citem),
 //      goo_canvas_item_get_parent(citem), &item_x, &item_y);
 
@@ -903,7 +893,6 @@ static gboolean
 gst_editor_element_state_leave_notify_event (GooCanvasItem * citem,
     GooCanvasItem * target_item, GdkEventCrossing * event, gpointer user_data)
 {
-  //      gnome_canvas_item_ungrab (citem, event->button.time);
   goo_canvas_pointer_ungrab (goo_canvas_item_get_canvas (citem),
       citem, event->time);
 
@@ -968,7 +957,6 @@ gst_editor_element_state_button_release_event (GooCanvasItem * citem,
     /* Release the mouse grab. This is a hack to avoid the editor locking up on state change, which it 
      * does a lot at the moment.
      */
-//        gnome_canvas_item_ungrab (citem, event->button.time);
     goo_canvas_pointer_ungrab (goo_canvas_item_get_canvas (citem),
         citem, event->time);
   } else
@@ -1216,8 +1204,6 @@ gst_editor_element_add_pad (GstEditorElement * element, GstPad * pad)
     pad_type = gst_editor_pad_always_get_type ();
 
   editor_pad =
-//      GST_EDITOR_ITEM (gnome_canvas_item_new (GNOME_CANVAS_GROUP (element),
-//          pad_type, "object", G_OBJECT (pad), NULL));
       GST_EDITOR_ITEM (goo_canvas_item_new (GOO_CANVAS_ITEM (element),
           pad_type, "object", G_OBJECT (pad),"globallock",(GST_EDITOR_ITEM(element))->globallock, NULL));
   gst_editor_pad_realize (GOO_CANVAS_ITEM (editor_pad));
@@ -1358,8 +1344,6 @@ gst_editor_element_add_pads (GstEditorElement * element)
     }
 
     editor_pad =
-        //        GST_EDITOR_ITEM (gnome_canvas_item_new (GNOME_CANVAS_GROUP (element),
-        //            type, "object", G_OBJECT (pad_template), NULL));
         GST_EDITOR_ITEM (goo_canvas_item_new (GOO_CANVAS_ITEM (element),
             type, "object", G_OBJECT (pad_template), NULL));
     gst_editor_pad_realize (GOO_CANVAS_ITEM (editor_pad));
@@ -1442,7 +1426,7 @@ gst_editor_element_sync_state (GstEditorElement * element)
   }
   state = GST_STATE (GST_ELEMENT (item->object));
 
-  /* make sure args to gnome_canvas_item_set are doubles */
+  /* make sure args to g_object_set are doubles */
   x1 = 0.0;
   //y1 = 0.0;
   //x2 = item->width;
@@ -1450,10 +1434,6 @@ gst_editor_element_sync_state (GstEditorElement * element)
 
   for (id = 0; id < 4; id++) {
     if (_gst_element_states[id] == state) {
-//      gnome_canvas_item_set (element->statebox,
-//          "x1", x1 + (element->statewidth * id),
-//          "y1", y2 - element->stateheight,
-//          "x2", x1 + (element->statewidth * (id + 1)), "y2", y2, NULL);
       g_object_set (element->statebox,
           "x", x1 + (element->statewidth * id),
           "y", y2 - element->stateheight,

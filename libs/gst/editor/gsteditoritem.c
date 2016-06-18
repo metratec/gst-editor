@@ -368,12 +368,6 @@ gst_editor_item_realize (GooCanvasItem * citem)
   GstEditorItem *item = GST_EDITOR_ITEM (citem);
   GooCanvasItem *cparent;
 
-  
-#if 0
-  if (GNOME_CANVAS_ITEM_CLASS (parent_class)->realize)
-    GNOME_CANVAS_ITEM_CLASS (parent_class)->realize (citem);
-#endif
-
   item->border =
       goo_canvas_rect_new (citem, 0., 0., 0., 0.,
       "line-width", 1., "fill-color-rgba", item->fill_color,
@@ -454,24 +448,15 @@ gst_editor_item_resize_real (GstEditorItem * item)
 static void
 gst_editor_item_repack_real (GstEditorItem * item)
 {
-//  gdouble x1, y1, x2, y2;
-
   if (!item->realized)
     return;
 
-//  x1 = 0;
-//  y1 = 0;
-//  x2 = x1 + item->width;
-//  y2 = y1 + item->height;
-
   /* resize the bordering box */
-//  gnome_canvas_item_set (item->border,
-//      "x1", x1, "y1", y1, "x2", x2, "y2", y2, NULL);
   g_object_set (G_OBJECT (item->border), "x", 0., "y", 0., "width",
       item->width, "height", item->height, NULL);
 
   /* move the text to the right place */ 
-      g_object_set (G_OBJECT (item->title), "x", item->textx, "y", item->texty,
+  g_object_set (G_OBJECT (item->title), "x", item->textx, "y", item->texty,
       "anchor", item->textanchor, NULL);
 }
 

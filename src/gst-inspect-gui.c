@@ -45,13 +45,6 @@ main (int argc, char * argv[])
   gst_init (&argc, &argv);
   gtk_init (&argc, &argv);
 
-#if 0
-  if (!gnome_program_init ("GStreamer Plugin Inspector", VERSION,
-      LIBGNOMEUI_MODULE, argc, argv, GNOME_PARAM_GOPTION_CONTEXT, ctx,
-      NULL))
-    g_error ("cannot gnome_progam_init(), aborting...");
-#endif
-
   gste_init ();
 
   chosen = (GstElementFactory *)gst_element_browser_pick_modal ();

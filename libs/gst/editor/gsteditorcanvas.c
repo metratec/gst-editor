@@ -155,10 +155,6 @@ gst_editor_canvas_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
       x = bounds.x1;
       y = bounds.y1;
 
-      //    gnome_canvas_set_scroll_region (GNOME_CANVAS (canvas), x - 4, y - 4,
-      //        x + width - 4, y + height - 4);
-      //       goo_canvas_set_bounds (GOO_CANVAS (canvas), x - 4, y - 4,
-      //       x + width - 4, y + height - 4);
       goo_canvas_set_bounds (
           GOO_CANVAS (canvas), x - 4, y - 4, x + width - 5, y + height - 5);
       gst_editor_on_spinbutton ((GtkSpinButton *)NULL, canvas->parent);

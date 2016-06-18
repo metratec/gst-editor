@@ -135,11 +135,6 @@ gst_editor_link_class_init (GstEditorLinkClass * klass)
   g_object_class_install_property (object_class, PROP_GHOST,
       g_param_spec_boolean ("ghost", "ghost", "ghost",
           FALSE, G_PARAM_READWRITE));
-  
-#if 0
-      GNOME_CANVAS_ITEM_CLASS (klass)->realize = gst_editor_link_realize;
-  
-#endif
 }
 
 static void
@@ -265,12 +260,6 @@ gst_editor_link_get_property (GObject * object, guint prop_id, GValue * value,
 
     case PROP_X1:
       if (link->srcpad) {
-        // FIXME
-        //         g_object_get (link->srcpad, "x", &d, NULL);
-        //         d += link->srcpad->width;
-        //         gnome_canvas_item_i2w (GNOME_CANVAS_ITEM
-        //         (link->srcpad)->parent, &d,
-        //                  &blah);
         d = link->srcpad->width;
         canvas = goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (link->srcpad));
         goo_canvas_convert_from_item_space (
@@ -292,11 +281,6 @@ gst_editor_link_get_property (GObject * object, guint prop_id, GValue * value,
 
     case PROP_X2:
       if (link->sinkpad) {
-        // FIXME
-        //         g_object_get (link->sinkpad, "x", &d, NULL);
-        //         gnome_canvas_item_i2w (GNOME_CANVAS_ITEM
-        //         (link->sinkpad)->parent, &d,
-        //          &blah);
         d = 0;
         canvas = goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (link->sinkpad));
         // g_print("Canvas:%p, Pixels d: %f, blah: %f\n",canvas, d,blah);
@@ -325,13 +309,6 @@ gst_editor_link_get_property (GObject * object, guint prop_id, GValue * value,
 
     case PROP_Y1:
       if (link->srcpad) {
-        // FIXME
-        //            g_object_get (link->srcpad, "y", &d, NULL);
-        //       d += link->srcpad->height / 2;
-        //            gnome_canvas_item_i2w (GNOME_CANVAS_ITEM
-        //            (link->srcpad)->parent, &blah,
-        //                &d);
-
         d = link->srcpad->height / 2;
         canvas = goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (link->srcpad));
         goo_canvas_convert_from_item_space (
@@ -353,12 +330,6 @@ gst_editor_link_get_property (GObject * object, guint prop_id, GValue * value,
 
     case PROP_Y2:
       if (link->sinkpad) {
-        // FIXME
-        //            g_object_get (link->sinkpad, "y", &d, NULL);
-        //            d += link->sinkpad->height / 2;
-        //            gnome_canvas_item_i2w (GNOME_CANVAS_ITEM
-        //            (link->sinkpad)->parent, &blah,
-        //               &d);
         d = link->sinkpad->height / 2;
         canvas = goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (link->sinkpad));
         goo_canvas_convert_from_item_space (
@@ -405,13 +376,9 @@ gst_editor_link_realize (GooCanvasItem * citem)
   link->points->coords[3] = 0.0;
 
 /* we need to be realized before setting properties */
-#if 0
-  if (GNOME_CANVAS_ITEM_CLASS (parent_class)->realize)
-    GNOME_CANVAS_ITEM_CLASS (parent_class)->realize (citem);
-#endif
   dash = goo_canvas_line_dash_new (2, 5.0, 5.0);
 
-  /* see gnome-canvas-line.h for the docs */
+  /* see goo-canvas-line.h for the docs */
   g_object_set (G_OBJECT (citem), "points", link->points, "line-width", 2.0,
       "line-dash", dash, "start-arrow", TRUE, NULL);
   goo_canvas_line_dash_unref (dash);
@@ -428,8 +395,6 @@ gst_editor_link_resize (GstEditorLink * link)
   GooCanvas * canvas;
 
   g_object_get (link, "x1", &x1, "y1", &y1, "x2", &x2, "y2", &y2, NULL);
-  //  gnome_canvas_item_w2i (GNOME_CANVAS_ITEM (link)->parent, &x1, &y1);
-  //  gnome_canvas_item_w2i (GNOME_CANVAS_ITEM (link)->parent, &x2, &y2);
   canvas = goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (link));
   if (!canvas) {
     g_print ("Warning: gst_editor_link_resize canvas null\n");

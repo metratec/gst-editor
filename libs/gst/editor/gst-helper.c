@@ -106,7 +106,7 @@ goo_canvas_item_simple_hide (GooCanvasItemSimple * item)
  * Creates a new canvas item with @parent as its parent group.  The item is
  * created at the top of its parent's stack, and starts up as visible.  The item
  * is of the specified @type, for example, it can be
- * gnome_canvas_rect_get_type().  The list of object arguments/value pairs is
+ * goo_canvas_rect_get_type().  The list of object arguments/value pairs is
  * used to configure the item.
  *
  * Return value: The newly-created item.

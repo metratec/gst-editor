@@ -400,7 +400,6 @@ gst_editor_pad_class_init (GstEditorPadClass * klass)
 #if 0
   citem_class->realize = gst_editor_pad_realize;
 #endif
-//  citem_class->event = gst_editor_pad_event;
   item_class->resize = gst_editor_pad_resize;
   item_class->repack = gst_editor_pad_repack;
   item_class->object_changed = gst_editor_pad_object_changed;
@@ -470,13 +469,9 @@ gst_editor_pad_realize (GooCanvasItem * citem)
    * should work for both kinds of object. */
 
   g_return_if_fail (item->object != NULL);
-  if (!item->realized)
+  if (!item->realized) {
     gst_editor_item_realize (citem);
-#if 0
-  if (GNOME_CANVAS_ITEM_CLASS (parent_class)->realize)
-    GNOME_CANVAS_ITEM_CLASS (parent_class)->realize (citem);
-#endif
-  else {  // check if links are still valid
+  } else {  // check if links are still valid
     gboolean fail = FALSE;
     if (pad->ghostlink) {
       GstPad *suggestedpeer;
@@ -721,17 +716,12 @@ gst_editor_pad_repack (GstEditorItem * item)
     return;
 
   if (pad->srcbox) {
-//    gnome_canvas_item_set (pad->srcbox,
-//      "x1", item->width - 2.0,
-//      "y1", item->height - 2.0, "x2", item->width, "y2", 2.0, NULL);
     g_object_set (pad->srcbox, "x", item->width - 2.0, "y", /*item->height - */
         2.0, 
         "width", 2.0, "height", item->height - 4.0, NULL);
   }
 
   if (pad->sinkbox) {
-//    gnome_canvas_item_set (pad->sinkbox,
-//      "x1", 0.0, "y1", item->height - 2.0, "x2", 2.0, "y2", 2.0, NULL);
     g_object_set (pad->sinkbox, "x", 0.0, "y", /*item->height - */ 2.0, 
         "width", 2.0, "height", item->height - 4.0, NULL);
   }
@@ -760,88 +750,6 @@ gst_editor_pad_object_changed (GstEditorItem * item, GstObject * object)
   }
   parent_class->object_changed (item, object);
 }
-
-
-#if 0
-static gint
-gst_editor_pad_event (GnomeCanvasItem * citem, GdkEvent * event)
-{
-  GstEditorPad *pad;
-  GstEditorItem *item;
-  GstEditorLink *link;
-
-  item = GST_EDITOR_ITEM (citem);
-  pad = GST_EDITOR_PAD (citem);
-
-  g_return_val_if_fail (GST_IS_EDITOR_PAD (item), FALSE);
-
-  switch (event->type) {
-    case GDK_ENTER_NOTIFY:
-      gnome_canvas_item_set (GNOME_CANVAS_ITEM (item->border),
-          "fill_color_rgba", 0xBBDDBBff /*0xBBDDBB00 */ , NULL);
-      break;
-    case GDK_LEAVE_NOTIFY:
-      gnome_canvas_item_set (GNOME_CANVAS_ITEM (item->border),
-          "fill_color_rgba", item->fill_color, NULL);
-      if (pad->unlinking) {
-        GstEditorPad *otherpad;
-
-        otherpad =
-            (GstEditorPad *) ((pad ==
-                (GstEditorPad *) pad->link->srcpad) ? pad->link->sinkpad : pad->
-            link->srcpad);
-
-        gst_editor_link_unlink (pad->link);
-        gst_editor_pad_link_start (otherpad);
-      }
-      pad->unlinking = FALSE;
-      break;
-    case GDK_BUTTON_PRESS:
-      if (event->button.button == 1) {
-        if (!pad->link)
-          gst_editor_pad_link_start (pad);
-        else
-          pad->unlinking = TRUE;
-        return TRUE;
-      }
-      break;
-    case GDK_BUTTON_RELEASE:
-      if (event->button.button == 1) {
-        pad->unlinking = FALSE;
-        if (pad->linking) {
-          g_assert (pad->link != NULL);
-
-          gnome_canvas_item_ungrab (citem, event->button.time);
-          link = pad->link;
-          if (!gst_editor_link_link (link)) {
-            /* for some reason, this is segfaulting. let's go with a temporary workaround...
-               g_object_unref (G_OBJECT (bin->link)); */
-            gnome_canvas_item_hide (GNOME_CANVAS_ITEM (link));
-          }
-          pad->linking = FALSE;
-          return TRUE;
-        }
-      }
-      break;
-    case GDK_MOTION_NOTIFY:
-      if (pad->linking) {
-        gdouble x, y;
-
-        x = event->button.x;
-        y = event->button.y;
-        gst_editor_pad_link_drag (pad, x, y);
-        return TRUE;
-      }
-      break;
-    default:
-      break;
-  }
-
-  if (GNOME_CANVAS_ITEM_CLASS (parent_class)->event)
-    return GNOME_CANVAS_ITEM_CLASS (parent_class)->event (citem, event);
-  return FALSE;
-}
-#endif
 
 static gboolean 
 gst_editor_pad_enter_notify_event (GooCanvasItem * citem,
