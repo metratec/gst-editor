@@ -19,8 +19,9 @@ Makefile
 Makefile.in
 stamp-*
 
-/gst-editor-libs-uninstalled.pc
-/gst-editor-libs.pc
+/*.pc
+/*.spec
+/*.desktop
 
 /src/gst-editor
 /src/gst-inspect-gui
