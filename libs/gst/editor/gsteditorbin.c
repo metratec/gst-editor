@@ -21,6 +21,7 @@
 #include <math.h>
 #include <string.h>
 
+#include <glib.h>
 #include <gio/gio.h>
 #include <gtk/gtk.h>
 #include <gst/gst.h>
@@ -670,8 +671,8 @@ calculate_element_repulsion_forces (element * e, gint num_children)
       y2 = e[j].y + e[j].h * 0.5;
 
       /* x distance more important than y distance */
-      fx = (0.5 * (e[i].w + e[j].w) + 15 - abs (x2 - x1)) * 1.5;
-      fy = (0.5 * (e[i].h + e[j].h) + 5 - abs (y2 - y1)) * 1.5;
+      fx = (0.5 * (e[i].w + e[j].w) + 15 - ABS (x2 - x1)) * 1.5;
+      fy = (0.5 * (e[i].h + e[j].h) + 5 - ABS (y2 - y1)) * 1.5;
 
       if (fx > 0 && fy > 0) {
         e[i].fx += fx * ((x1 > x2) ? 1.0 : -1.0);
@@ -720,7 +721,7 @@ gst_editor_bin_sort (GstEditorBin * bin, gdouble step)
     gst_editor_element_move (e[i].element, e[i].fx * step, e[i].fy * step);
     g_object_set_data (G_OBJECT (e[i].element), "sort-data", NULL);
 
-    ret += abs (e[i].fx) * step + abs (e[i].fy) * step;
+    ret += ABS (e[i].fx) * step + ABS (e[i].fy) * step;
 
     if (GST_IS_EDITOR_BIN (e[i].element))
       ret += gst_editor_bin_sort ((GstEditorBin *) e[i].element, step);
