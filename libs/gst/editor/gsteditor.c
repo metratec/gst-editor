@@ -388,19 +388,6 @@ gst_editor_dialog_gerror (GtkWindow * window, GstMessage* message)
   gtk_widget_destroy (error_dialog);
 }
 
-#if 0
-/* show an error dialog given just an error string (for internal use) */
-static void
-gst_editor_dialog_error (GtkWindow * window, const gchar * message)
-{
-  GError *error;
-
-  error = g_error_new (GST_EDITOR_ERROR, 0, message);
-  gst_editor_dialog_gerror (window, error, NULL);
-  g_error_free (error);
-}
-#endif
-
 /* GStreamer callbacks */
 static void
 gst_editor_pipeline_deep_notify (GstObject * object, GstObject * orig,
@@ -408,23 +395,6 @@ gst_editor_pipeline_deep_notify (GstObject * object, GstObject * orig,
 {
 }
 
-#ifdef SIGNAL_ERROR             // gstreamer < 0.10
-static void
-gst_editor_pipeline_error (GObject * object, GstObject * source,
-    GError * error, gchar * debug, GstEditor * editor)
-{
-  gchar *name = gst_object_get_path_string (source);
-  GError *my_error;
-
-  my_error = g_error_copy (error);
-  g_free (my_error->message);
-  my_error->message = g_strdup_printf ("%s: %s", name, error->message);
-
-  gst_editor_dialog_gerror (GTK_WINDOW (editor->window), my_error, debug);
-  g_error_free (my_error);
-  g_free (name);
-}
-#else
 static gboolean
 gst_editor_pipeline_message (GstBus * bus, GstMessage * message, gpointer data)
 {
@@ -468,7 +438,6 @@ gst_editor_pipeline_message (GstBus * bus, GstMessage * message, gpointer data)
   /* remove message from the queue */
   return TRUE;
 }
-#endif
 
 /* connect useful GStreamer signals to pipeline */
 static void
@@ -478,13 +447,8 @@ gst_editor_element_connect (GstEditor * editor, GstElement * pipeline)
 
   g_signal_connect (pipeline, "deep_notify",
       G_CALLBACK (gst_editor_pipeline_deep_notify), editor);
-#ifdef SIGNAL_ERROR             // gstreamer < 0.10
-  g_signal_connect (pipeline, "error",
-      G_CALLBACK (gst_editor_pipeline_error), editor);
-#else
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
   gst_bus_add_watch (bus, &gst_editor_pipeline_message, editor);
-#endif
 }
 
 /* we need more control here so... */
