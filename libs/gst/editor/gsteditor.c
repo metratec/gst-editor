@@ -945,14 +945,15 @@ cb_output (GstPad    *pad,
   gettimeofday(&now, NULL);
   time=((now.tv_sec*1000000000ULL)+(now.tv_usec*1000ULL));
   g_mutex_lock(&editor->outputmutex);
-  if (GST_STATE(GST_OBJECT(pad)->parent)==GST_STATE_PLAYING){
-    fprintf (stderr,
-        "%s %" G_GUINT64_FORMAT " %" G_GUINT64_FORMAT " %u "
-        "%" G_GUINT64_FORMAT " %ld %d %lu %s \n",
-        GST_OBJECT(pad)->parent->name, buffer->timestamp, time,
-        buffer->size, buffer->offset, clock(), getpid(), pthread_self(),
-        GST_OBJECT(pad->peer)->parent->name);
-    //Element Name, timestamp, timenow, jiffies now,Prozessnr, threadnr,Peer Element Name
+  if (GST_STATE (GST_OBJECT (pad)->parent) == GST_STATE_PLAYING) {
+    fprintf (stderr, "%s %" G_GUINT64_FORMAT " %" G_GUINT64_FORMAT " "
+                     "%" G_GSIZE_FORMAT " "
+                     "%" G_GUINT64_FORMAT " %ld %d %lu %s\n",
+        GST_OBJECT (pad)->parent->name, GST_BUFFER_PTS (buffer), time,
+        gst_buffer_get_size (buffer), GST_BUFFER_OFFSET (buffer), clock (),
+        getpid (), pthread_self (), GST_OBJECT (pad->peer)->parent->name);
+    // Element Name, timestamp, timenow, jiffies now,Prozessnr, threadnr,Peer
+    // Element Name
   }
   g_mutex_unlock(&editor->outputmutex);
   return TRUE;
