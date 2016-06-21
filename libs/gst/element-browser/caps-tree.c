@@ -209,12 +209,13 @@ update_caps_tree (GstElementBrowserCapsTree * ct)
         case GST_ITERATOR_OK:
         {
           GstPad *pad = GST_PAD (g_value_get_object (&item));
-          GstCaps *caps = gst_pad_get_caps (pad);
+          GstCaps *caps;
 
+          caps = gst_pad_query_caps (pad, NULL);
           gtk_tree_store_append (store, &iter, NULL);
-
           /* Add a sub-tree of caps entries */
           add_caps_to_tree (caps, store, &iter);
+          gst_caps_unref (caps);
 
           gtk_tree_store_set (store, &iter,
               NAME_COLUMN,
