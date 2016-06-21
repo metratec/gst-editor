@@ -25,12 +25,13 @@ gsth_element_unlink_all (GstElement * element)
 {
   gboolean done = FALSE;
   GstIterator * it;
+  GValue item = G_VALUE_INIT;
   it = gst_element_iterate_pads (element);
+
   while (!done) {
-    gpointer item;
     switch (gst_iterator_next (it, &item)) {
       case GST_ITERATOR_OK: {
-        GstPad * pad = GST_PAD (item);
+        GstPad * pad = GST_PAD (g_value_get_object (&item));
         GstPad * peer = GST_PAD_PEER (pad);
         if (peer) {
           if (GST_PAD_IS_SRC (pad))
@@ -39,15 +40,14 @@ gsth_element_unlink_all (GstElement * element)
             gst_pad_unlink (peer, pad);
         }
         gst_object_unref (pad);
+        g_value_reset (&item);
         break;
       }
       case GST_ITERATOR_RESYNC:
-
         //...rollback changes to items...
         gst_iterator_resync (it);
         break;
       case GST_ITERATOR_ERROR:
-
       //...wrong parameter were given...
       case GST_ITERATOR_DONE:
       default:
@@ -55,6 +55,8 @@ gsth_element_unlink_all (GstElement * element)
         break;
     }
   }
+
+  g_value_unset (&item);
   gst_iterator_free (it);
 }
 

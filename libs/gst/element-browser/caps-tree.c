@@ -200,17 +200,15 @@ update_caps_tree (GstElementBrowserCapsTree * ct)
   gtk_tree_store_clear (store);
 
   if (ct->element) {
-    GstIterator *it;
+    GstIterator *it = gst_element_iterate_pads (ct->element);
+    GValue item = G_VALUE_INIT;
     gboolean done = FALSE;
 
-    it = gst_element_iterate_pads (ct->element);
     while (!done) {
-      gpointer item;
-
       switch (gst_iterator_next (it, &item)) {
         case GST_ITERATOR_OK:
         {
-          GstPad *pad = GST_PAD (item);
+          GstPad *pad = GST_PAD (g_value_get_object (&item));
           GstCaps *caps = gst_pad_get_caps (pad);
 
           gtk_tree_store_append (store, &iter, NULL);
@@ -219,15 +217,17 @@ update_caps_tree (GstElementBrowserCapsTree * ct)
           add_caps_to_tree (caps, store, &iter);
 
           gtk_tree_store_set (store, &iter,
-              NAME_COLUMN, g_strdup (gst_pad_get_name (pad)),
+              NAME_COLUMN,
+              GST_OBJECT_NAME (pad),
               INFO_COLUMN,
-              g_strdup (GST_PAD_IS_SINK (&pad) ? "Sink" :
-                  GST_PAD_IS_SRC (&pad) ? "Source" : "Unknown pad direction"),
+              GST_PAD_IS_SINK (&pad) ? "Sink" :
+                  (GST_PAD_IS_SRC (&pad) ? "Source" : "Unknown pad direction"),
               -1);
           path = gtk_tree_model_get_path (GTK_TREE_MODEL (store), &iter);
           gtk_tree_view_expand_row (GTK_TREE_VIEW (ct->treeview), path, FALSE);
           gtk_tree_path_free (path);
           gst_object_unref (pad);
+          g_value_reset (&item);
           break;
         }
         case GST_ITERATOR_RESYNC:
@@ -240,9 +240,9 @@ update_caps_tree (GstElementBrowserCapsTree * ct)
         default:
           done = TRUE;
           break;
-
       }
     }
+    g_value_unset (&item);
     gst_iterator_free (it);
   }
 

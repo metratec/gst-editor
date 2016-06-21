@@ -49,7 +49,7 @@ struct _GstElementUIPropView
   GtkAdjustment *adjustment;
   GtkWidget *combobox;
   gint *enum_values;
-  gpointer *enum_pointer;
+  GstPad **enum_pointer;
   GtkWidget *label_lower;
   GtkWidget *spinbutton;
   GtkWidget *toggle_on;

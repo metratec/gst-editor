@@ -118,6 +118,7 @@ static void gst_editor_element_set_state (GstEditorElement * element,
 static gboolean gst_editor_element_set_state_cb (GstEditorElement * element);
 
 /*static gboolean gst_editor_element_sync_state (GstEditorElement * element);*/
+static void gst_editor_element_add_pads (GstEditorElement * element);
 
 /* callbacks for the popup menu */
 static void on_copy (GSimpleAction * action,
@@ -1221,8 +1222,9 @@ gst_editor_element_add_pad (GstEditorElement * element, GstPad * pad)
 }
 
 static GstIteratorItem
-iterate_pad (GstIterator * it, GstPad * pad)
+iterate_pad (GstIterator * it, const GValue * item)
 {
+  GstPad *pad = GST_PAD (g_value_get_object (item));
   gst_object_ref (pad);
   return GST_ITERATOR_ITEM_PASS;
 }
@@ -1239,47 +1241,46 @@ gst_element_iterate_pad_list (GstElement * element, GList ** padlist)
       GST_OBJECT_GET_LOCK (element),
       &element->pads_cookie,
       padlist,
-      element,
-      (GstIteratorItemFunction) iterate_pad,
-      (GstIteratorDisposeFunction) gst_object_unref);
+      G_OBJECT (element),
+      (GstIteratorItemFunction) iterate_pad);
   GST_OBJECT_UNLOCK (element);
 
   return result;
 }
 
 
-//TODO: declare static again...
-void
+static void
 gst_editor_element_add_pads (GstEditorElement * element)
 {
-  GstPad *pad;
   GstPadTemplate *pad_template;
   GList *pad_templates, *l, *w, *reversed;
-  GstEditorItem *item = (GstEditorItem *) element, *editor_pad;
-  GstElement *e;
+  GstEditorItem *item = GST_EDITOR_ITEM (element), *editor_pad;
+  GstElement *e = GST_ELEMENT (item->object);
 
   gboolean done = FALSE;
   GstIterator *pads;
+  GValue gitem = G_VALUE_INIT;
 
-  e = GST_ELEMENT (item->object);
-  pad_templates =
-      g_list_copy (gst_element_class_get_pad_template_list
-      (GST_ELEMENT_GET_CLASS (e)));
-  reversed=g_list_reverse(g_list_copy(e->pads));
-  pads=gst_element_iterate_pad_list (e, &reversed);//to make it the right order
-  //pads = gst_element_iterate_pads (e);
+  /*
+   * This ensures that the pads are iterated in reverse order.
+   */
+  pad_templates = g_list_copy (
+      gst_element_class_get_pad_template_list (GST_ELEMENT_GET_CLASS (e)));
+  reversed = g_list_reverse (g_list_copy (e->pads));
+  pads = gst_element_iterate_pad_list (e, &reversed);
+
   while (!done) {
-    gpointer item;
+    GstPad *pad;
 
-    switch (gst_iterator_next (pads, &item)) {
+    switch (gst_iterator_next (pads, &gitem)) {
       case GST_ITERATOR_OK:
-        pad = GST_PAD (item);
+        pad = GST_PAD (g_value_get_object (&gitem));
         pad_template = gst_pad_get_pad_template (pad);
         /* 
          * Go through the pad_templates list and remove the pad_template for
          * this pad, rather than show both the pad and pad_template.
-	 * Comment of Hannes: Why should we do this!?!?! We maybe want to edit the graph!!!
-	 * TODO: rewrite it instead of just commenting out the code
+         * Comment of Hannes: Why should we do this!?!?! We maybe want to edit the graph!!!
+         * TODO: rewrite it instead of just commenting out the code
          */
         if (pad_template) {
           w = pad_templates;
@@ -1300,12 +1301,12 @@ gst_editor_element_add_pads (GstEditorElement * element)
               g_type_name (G_OBJECT_TYPE (e)), GST_OBJECT_NAME (pad));
         }
 
-
         EDITOR_DEBUG ("adding pad %s to element %s",
             GST_OBJECT_NAME (pad), gst_element_get_name (e));
         gst_editor_element_add_pad (element, pad);
 
         gst_object_unref (pad);
+        g_value_reset (&gitem);
         break;
       case GST_ITERATOR_RESYNC:
         //...rollback changes to items...
@@ -1319,9 +1320,10 @@ gst_editor_element_add_pads (GstEditorElement * element)
         break;
     }
   }
+
+  g_value_unset (&gitem);
   gst_iterator_free (pads);
   g_list_free (reversed);
-
 
   for (l = g_list_last(pad_templates); l; l = l->prev) {
     GType type = 0;

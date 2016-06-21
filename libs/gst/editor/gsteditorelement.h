@@ -103,7 +103,6 @@ void gst_editor_element_remove (GstEditorElement * element);
 void gst_editor_element_stop_child (GstEditorElement * child);
 
 gboolean gst_editor_element_sync_state (GstEditorElement * element);
-void gst_editor_element_add_pads (GstEditorElement * element);
 
 /*
  * FIXME: This is not used in the GstEditorElement class but only

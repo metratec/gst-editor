@@ -916,14 +916,14 @@ on_pad_linked (GstPad * pad, GstPad * peer, GstEditorItem * item)
       // gst_editor_element_add_pads(bin);
       // find the pad that is connected to us...
       GstIterator * pads;
+      GValue item = G_VALUE_INIT;
       GstPad * _refreshpad;
       gboolean done = FALSE;
       pads = gst_element_iterate_pads (GST_ELEMENT (bin->object));
       while (!done) {
-        gpointer item;
         switch (gst_iterator_next (pads, &item)) {
           case GST_ITERATOR_OK:
-            _refreshpad = GST_PAD (item);
+            _refreshpad = GST_PAD (g_value_get_object (&item));
             if (GST_IS_GHOST_PAD (_refreshpad)) {
               g_print ("Ghoastpad found that could be ours: %p\n", _refreshpad);
               GstEditorItem *refreshpad = gst_editor_item_get (GST_OBJECT (_refreshpad));
@@ -952,6 +952,8 @@ on_pad_linked (GstPad * pad, GstPad * peer, GstEditorItem * item)
               // else g_print("Oh, that am I not: %p!!\n",target);
               // gst_editor_pad_realize ((GooCanvasItem*)refreshpad);
             }
+            gst_object_unref (_refreshpad);
+            g_value_reset (&item);
             break;
           case GST_ITERATOR_RESYNC:
             g_print (
@@ -968,6 +970,8 @@ on_pad_linked (GstPad * pad, GstPad * peer, GstEditorItem * item)
             break;
         }
       }
+      g_value_unset (&item);
+      gst_iterator_free (pads);
     }
   }
   gst_editor_pad_realize (GOO_CANVAS_ITEM (item));

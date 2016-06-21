@@ -434,11 +434,14 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
       }
       else if (!strcmp("GstPad",g_type_name (pview->param->value_type))){
         gint i = 0;
-        GstPad* val = (GstPad*)g_value_get_object (pview->value);
+        GstPad* val = (GstPad *)g_value_get_object (pview->value);
         while (pview->enum_pointer[i] != val) {
           //g_print("Keep on searching for %p,Round %d\n",val,i);
           i++;
         }
+        /*
+         * If val is unknown or NULL, i will point to the "NULL" entry.
+         */
         gtk_combo_box_set_active (GTK_COMBO_BOX (pview->combobox), i);
       }
       else {
@@ -595,51 +598,59 @@ pview_param_changed (GstElementUIPropView * pview)
       } else if (!strcmp("GstPad",g_type_name (pview->param->value_type))){
         //guess which of the Pads are Request pads, or take all
         //
-        gint i=0;//iterator
-        gchar *str;
-        //GEnumClass *class = G_ENUM_CLASS (g_type_class_ref (param->value_type));
 
         combobox_clear (GTK_COMBO_BOX (pview->combobox));
 
+        /*
+         * FIXME: enum_pointer is just a crude way to map GstPad
+         * pointers to ComboBox positions.
+         * That's why we don't keep a reference for these
+         * pointers - they are only used for comparisions.
+         * It should be replaced with a custom combo box model.
+         */
         if (pview->enum_pointer)
           g_free (pview->enum_pointer);
+        pview->enum_pointer = g_new0 (GstPad *, 1+element->numpads);
 
-        pview->enum_pointer = g_new0 (gpointer, 1+element->numpads);//save gpointers inside the elements
-        GstIterator* padit=gst_element_iterate_pads (element);
-        gboolean done=FALSE;
-        gpointer item;
+        GstIterator* padit = gst_element_iterate_pads (element);
+        gboolean done = FALSE;
+        GValue item = G_VALUE_INIT;
+        GstPad *pad;
+        gint i = 0;//iterator
+
         while (!done) {
-          switch (gst_iterator_next (padit, (gpointer*)&item)) {
+          switch (gst_iterator_next (padit, &item)) {
           case GST_ITERATOR_OK:
-                pview->enum_pointer[i++]=item;
-                str = g_strdup (gst_pad_get_name((GstPad*)item));
-                //g_print("Adding pad pointer %p, Name %s\n",item,str);
-                gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (pview->combobox),
-                    str);
-                g_free (str);
-                gst_object_unref (item);
-                break;
+            pad = GST_PAD (g_value_get_object (&item));
+            pview->enum_pointer[i++] = pad;
+            gtk_combo_box_text_append_text (
+                GTK_COMBO_BOX_TEXT (pview->combobox),
+                GST_OBJECT_NAME (pad));
+            gst_object_unref (pad);
+            g_value_reset (&item);
+            break;
           case GST_ITERATOR_RESYNC:
-                gst_iterator_free (padit);
-                padit=gst_element_iterate_pads (element);
-                i=0;
-                break;
+            i = 0;
+            gst_iterator_resync (padit);
+            break;
           case GST_ITERATOR_ERROR:
-                //g_print("GstIterator Returning Unexpected Error");
-                done = TRUE;
-                break;
+            // g_print("GstIterator Returning Unexpected Error");
+            done = TRUE;
+            break;
           case GST_ITERATOR_DONE:
-                //g_print("GstIterator Done");
-                done = TRUE;
-                break;
+            // g_print("GstIterator Done");
+            done = TRUE;
+            break;
           default:
-                //g_print("GstIterator Returning Unexpected Error"); 
-                done = TRUE;
-                break;
+            // g_print("GstIterator Returning Unexpected Error");
+            done = TRUE;
+            break;
           }
         }
+        g_value_unset (&item);
         gst_iterator_free (padit);
 
+        /* for unknown/NULL pads */
         gtk_combo_box_text_append_text (GTK_COMBO_BOX_TEXT (pview->combobox),
             "NULL");
 
