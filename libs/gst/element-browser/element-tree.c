@@ -446,10 +446,12 @@ filter_subtree (GstElementBrowserElementTree * tree, GtkTreeIter * iter)
       /* Add the matching row to the filtered list */
       gtk_list_store_append (tree->filter_store, &new_iter);
       gtk_list_store_set (tree->filter_store, &new_iter,
-          NAME_COLUMN, gst_plugin_feature_get_name (GST_PLUGIN_FEATURE
-(factory)),
-          DESCRIPTION_COLUMN, factory->details.description,
-          FACTORY_COLUMN, factory, -1);
+          NAME_COLUMN,
+          gst_plugin_feature_get_name (GST_PLUGIN_FEATURE (factory)),
+          DESCRIPTION_COLUMN,
+          gst_element_factory_get_metadata (factory, GST_ELEMENT_METADATA_DESCRIPTION),
+          FACTORY_COLUMN,
+          factory, -1);
     }
 
     if (gtk_tree_model_iter_children (GTK_TREE_MODEL (tree->store), &child_iter,
@@ -584,14 +586,17 @@ elements = node =
       gst_registry_get_feature_list (gst_registry_get_default (),
       GST_TYPE_ELEMENT_FACTORY);
   while (node) {
-    element = (GstElementFactory *) (node->data);
+    const gchar *klass;
+
+    element = GST_ELEMENT_FACTORY (node->data);
+    klass = gst_element_factory_get_metadata (element, GST_ELEMENT_METADATA_KLASS);
 
     /* if the class is "None", we just ignore it */
-    if (strncmp ("None", element->details.klass, 4) == 0)
+    if (strncmp ("None", klass, 4) == 0)
       goto loop;
 
     /* split up the factory's class */
-    classes = g_strsplit (element->details.klass, "/", 0);
+    classes = g_strsplit (klass, "/", 0);
     class = classes;
     curlist = &classtree;
     /* walk down the class tree to find where to place this element

@@ -215,10 +215,12 @@ on_tree_selection_changed (GObject * object, GstElementBrowser * browser)
 
   g_return_if_fail (factory != NULL);
 
-  gtk_label_set_text (GTK_LABEL (browser->longname), factory->details.longname);
+  gtk_label_set_text (GTK_LABEL (browser->longname),
+      gst_element_factory_get_metadata (factory, GST_ELEMENT_METADATA_LONGNAME));
   gtk_label_set_text (GTK_LABEL (browser->description),
-      factory->details.description);
-  gtk_label_set_text (GTK_LABEL (browser->author), factory->details.author);
+      gst_element_factory_get_metadata (factory, GST_ELEMENT_METADATA_DESCRIPTION));
+  gtk_label_set_text (GTK_LABEL (browser->author),
+      gst_element_factory_get_metadata (factory, GST_ELEMENT_METADATA_AUTHOR));
 
   g_object_set (G_OBJECT (browser->padtemplates), "element-factory",
       browser->selected, NULL);

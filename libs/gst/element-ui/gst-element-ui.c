@@ -225,6 +225,8 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
   GstElementUI *ui;
   guint i = 0, j = 0, nprops;
   GParamSpec **params;
+  GstElementFactory *factory;
+  gchar *str;
 
   ui = GST_ELEMENT_UI (object);
 
@@ -302,8 +304,6 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
         ui->pviews = g_new0 (GstElementUIPropView *, ui->nprops);
         ui->plabels = g_new0 (GtkWidget *, ui->nprops);
         for (i = 0; i < ui->nprops; i++) {
-          gchar *str;
-
           ui->pviews[i] = g_object_new (gst_element_ui_prop_view_get_type (),
               "element", ui->element, "param", ui->params[i], NULL);
           gtk_grid_attach (GTK_GRID (ui), GTK_WIDGET (ui->pviews[i]),
@@ -333,15 +333,14 @@ gst_element_ui_set_property (GObject * object, guint prop_id,
         gtk_grid_attach (GTK_GRID (ui), ui->message,
             0, 2, 2, 1);
       }
-      //debug as it crashes here
-      /* FIXME: Memory leaks below */
-      if (gst_element_get_factory (ui->element)) gtk_label_set_text (GTK_LABEL (ui->name),
-          g_strdup_printf ("%s: %s",
-              gst_element_get_factory (ui->element)->details.longname,
-              gst_object_get_name (GST_OBJECT (ui->element))));
-      else gtk_label_set_text (GTK_LABEL (ui->name),
-          g_strdup_printf ("Factory=NULL: %s",
-              gst_object_get_name (GST_OBJECT (ui->element))));
+
+      factory = gst_element_get_factory (ui->element);
+      str = g_strconcat (
+          gst_element_factory_get_metadata (factory, GST_ELEMENT_METADATA_LONGNAME),
+          ": ",
+          gst_object_get_name (GST_OBJECT (ui->element)), NULL);
+      gtk_label_set_text (GTK_LABEL (ui->name), str);
+      g_free (str);
 
       g_object_weak_ref (G_OBJECT (ui->element),
           (GWeakNotify) gst_element_ui_on_element_dispose, ui);
