@@ -54,7 +54,7 @@ static void gst_editor_pad_object_changed (GstEditorItem * item,
 /* callbacks on GstPad */
 
 static void on_pad_linked (GstPad  *pad,GstPad  *peer,GstEditorItem * item);
-static void on_pad_parent_unset (GstObject * object, GstObject * parent,
+static void on_pad_parent_notify (GstObject * object, GParamSpec * pspec,
     GstEditorItem * item);
 
 /* utility functions */
@@ -736,14 +736,14 @@ gst_editor_pad_object_changed (GstEditorItem * item, GstObject * object)
   GstObject *old = item->object;
 
   if (old){
-    g_signal_handlers_disconnect_by_func (old, G_CALLBACK (on_pad_parent_unset),
+    g_signal_handlers_disconnect_by_func (old, G_CALLBACK (on_pad_parent_notify),
         item);
     g_signal_handlers_disconnect_by_func (old, G_CALLBACK (on_pad_linked),
         item);
   }
   if (object){
     g_print("GST_editor_Pad: Connecting signals!!");
-    g_signal_connect (object, "parent-unset", G_CALLBACK (on_pad_parent_unset),
+    g_signal_connect (object, "notify::parent", G_CALLBACK (on_pad_parent_notify),
         item);
     g_signal_connect (object, "linked", G_CALLBACK (on_pad_linked),
         item);
@@ -979,9 +979,12 @@ on_pad_linked (GstPad * pad, GstPad * peer, GstEditorItem * item)
 }
 
 static void
-on_pad_parent_unset (GstObject * object, GstObject * parent,
+on_pad_parent_notify (GstObject * object, GParamSpec * pspec,
     GstEditorItem * item)
 {
+  if (GST_OBJECT_PARENT (object) != NULL)
+    return;
+
   g_rw_lock_writer_lock (GST_EDITOR_ITEM(item)->globallock);
   g_object_set (item, "object", NULL, NULL);
 

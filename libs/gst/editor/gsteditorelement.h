@@ -46,6 +46,13 @@ struct _GstEditorElement
 {
   GstEditorItem item;
 
+  /*
+   * The parent of the GstElement associated with this
+   * GstEditorElement.
+   * We need to track this so we can handle parent unsetting.
+   */
+  GstObject *parent_object;
+
   GooCanvasItem *resizebox;	/* easy ones */
   GooCanvasItem *statebox;	/* the box around the selected
 				   state */
