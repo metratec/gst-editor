@@ -305,11 +305,15 @@ add_field_to_tree (GQuark field_id, const GValue * value, gpointer userdata)
 {
   CapsTreeTarget *target = (CapsTreeTarget *) userdata;
   GtkTreeIter iter;
+  gchar *str;
 
   gtk_tree_store_append (target->store, &iter, target->parent);
+  str = print_value (value);
   gtk_tree_store_set (target->store, &iter,
       NAME_COLUMN, g_quark_to_string (field_id),
-      INFO_COLUMN, print_value (value), -1);
+      INFO_COLUMN, str, -1);
+  g_free (str);
+
   return TRUE;
 }
 
@@ -365,32 +369,27 @@ print_value (const GValue * value)
         min = gst_value_get_double_range_min (value);
         max = gst_value_get_double_range_max (value);
         return g_strdup_printf ("Double range: %g - %g", min, max);
-      } else if (type == GST_TYPE_FOURCC) {
-        guint32 val;
-
-        val = gst_value_get_fourcc (value);
-        return g_strdup_printf ("FourCC: '%c%c%c%c'",
-            (gchar) (val & 0xff),
-            (gchar) ((val >> 8) & 0xff),
-            (gchar) ((val >> 16) & 0xff), (gchar) ((val >> 24) & 0xff));
       } else if (type == GST_TYPE_LIST) {
         GArray *array;
-        GValue *list_value;
-        gchar *ret;
-        guint count = 0;
+        gchar **list_string;
+        gchar *ret, *str;
 
         array = (GArray *) g_value_peek_pointer (value);
-        ret = g_strdup_printf ("List: ");
-        for (count = 0; count < array->len; count++) {
-          gchar *s;
-
-          list_value = &g_array_index (array, GValue, count);
-          s = print_value (list_value);
-          ret = g_strconcat (ret, count ? ", " : "", s, NULL);
-          g_free (s);
+        list_string = g_new0 (gchar *, array->len+1);
+        for (guint i = 0; i < array->len; i++) {
+          GValue *list_value = &g_array_index (array, GValue, i);
+          list_string[i] = print_value (list_value);
         }
+
+        str = g_strjoinv (", ", list_string);
+        g_strfreev (list_string);
+        ret = g_strconcat ("List: ", str, NULL);
+        g_free (str);
+
         return ret;
       }
-      return g_strdup_printf ("unknown caps field type %s", g_type_name (type));
+      break;
   }
+
+  return g_strdup_printf ("unknown caps field type %s", g_type_name (type));
 }
