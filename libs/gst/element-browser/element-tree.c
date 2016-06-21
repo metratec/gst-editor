@@ -582,9 +582,9 @@ get_class_tree (void)
   /* first create a sorted (by class) tree of all the factories */
   classtree = NULL;
   
-elements = node =
-      gst_registry_get_feature_list (gst_registry_get_default (),
-      GST_TYPE_ELEMENT_FACTORY);
+  elements = node =
+      gst_registry_get_feature_list (gst_registry_get (),
+          GST_TYPE_ELEMENT_FACTORY);
   while (node) {
     const gchar *klass;
 
