@@ -932,19 +932,19 @@ sort (GstEditor * editor)
 #endif
 
 //callback that generates an output message to stderr
-static gboolean
-cb_output (GstPad    *pad,
-	      GstBuffer *buffer,
-	      gpointer   u_data)
+static GstPadProbeReturn
+cb_output (GstPad * pad, GstPadProbeInfo * info, gpointer user_data)
 {
-  
-  GstEditor * editor=GST_EDITOR(u_data);
+  GstBuffer * buffer = GST_PAD_PROBE_INFO_BUFFER (info);
+  GstEditor * editor = GST_EDITOR (user_data);
   guint64 time;
   //fprintf(stderr,"Buffer:)");
   struct timeval now;
-  gettimeofday(&now, NULL);
-  time=((now.tv_sec*1000000000ULL)+(now.tv_usec*1000ULL));
-  g_mutex_lock(&editor->outputmutex);
+
+  gettimeofday (&now, NULL);
+  time = ((now.tv_sec*1000000000ULL)+(now.tv_usec*1000ULL));
+
+  g_mutex_lock (&editor->outputmutex);
   if (GST_STATE (GST_OBJECT (pad)->parent) == GST_STATE_PLAYING) {
     fprintf (stderr, "%s %" G_GUINT64_FORMAT " %" G_GUINT64_FORMAT " "
                      "%" G_GSIZE_FORMAT " "
@@ -955,34 +955,43 @@ cb_output (GstPad    *pad,
     // Element Name, timestamp, timenow, jiffies now,Prozessnr, threadnr,Peer
     // Element Name
   }
-  g_mutex_unlock(&editor->outputmutex);
-  return TRUE;
+  g_mutex_unlock (&editor->outputmutex);
+
+  return GST_PAD_PROBE_OK;
 }
 
 
 void
 gst_editor_on_sort_toggled (GtkToggleButton * toggle, GstEditor * editor)
 {
-  GList *elements,*srcpads;
+  GList *elements, *srcpads;
     
     //gst_editor_statusbar_message ("Doing debug output...");
     //gst_editor_bin_debug_output(editor->canvas->selection);
 
   gst_editor_statusbar_message ("Doing debug output...");
-  GstBin *top=(GstBin *)(GST_EDITOR_ITEM(editor->canvas->bin)->object);
-  elements = g_list_last(GST_BIN_CHILDREN (top));
-  g_print("Getting Gstreamer Children, Total %d\n", g_list_length(GST_BIN_CHILDREN (GST_BIN (top))));
+  GstBin *top = GST_BIN (GST_EDITOR_ITEM(editor->canvas->bin)->object);
+  elements = g_list_last (GST_BIN_CHILDREN (top));
+  g_print("Getting Gstreamer Children, Total %d\n",
+      g_list_length (GST_BIN_CHILDREN (top)));
+
   while (elements) {
-    if (GST_IS_ELEMENT(elements->data)){
-      g_print("Found Gstreamer Element:%s\n",GST_OBJECT_NAME(elements->data) );
-      srcpads=g_list_last(GST_ELEMENT(elements->data)->srcpads);
-      while (srcpads) {
-	if (42) gst_pad_add_buffer_probe ((GstPad*)srcpads->data, G_CALLBACK (cb_output), (gpointer)editor);
-	//else  g_print("Removing buffer probes not implemented:)");//gst_pad_remove_buffer_probe (pad, G_CALLBACK (cb_output), NULL);
-	srcpads = g_list_previous (srcpads);
+    if (GST_IS_ELEMENT (elements->data)) {
+      g_print ("Found Gstreamer Element:%s\n",
+          GST_OBJECT_NAME (elements->data));
+      for (srcpads = g_list_last (GST_ELEMENT (elements->data)->srcpads);
+           srcpads != NULL;
+           srcpads = g_list_previous (srcpads)) {
+        /*
+         * FIXME: This leaks buffer probes.
+         * Use gst_pad_remove_probe().
+         */
+        gst_pad_add_probe (GST_PAD (srcpads->data),
+            GST_PAD_PROBE_TYPE_BUFFER, cb_output, editor, NULL);
       }
+    } else {
+      g_print ("unknown child type \n");
     }
-    else g_print("unknown child type \n");
     elements = g_list_previous (elements);
   }
 }
