@@ -13,4 +13,11 @@ to release binary codecs for Linux, until such time as they get a clue and
 release the source.
 
 The goal of this fork is to port gst-editor to Gtk+ 3 and GStreamer 1.0.
-So far, gst-editor builds with Gtk+ 3 but still depends on GStreamer 0.10.
+Currently, gst-editor will build with Gtk+ 3.10.8 or later and
+GStreamer 1.2.4 or later.
+
+Bugs
+====
+
+* Loading and saving pipelines is currently disabled until
+  a replacement for `GstXML` has been found or written.
