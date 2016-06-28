@@ -35,8 +35,6 @@ main (int argc, char * argv[])
   // const struct poptOption *gst_table;
   GOptionContext * ctx;
 
-  //  glade_init ();
-
   // gst_table = gst_init_get_popt_table ();
   ctx = g_option_context_new (PACKAGE);
   // g_option_context_add_main_entries (ctx, options, GETTEXT_PACKAGE);

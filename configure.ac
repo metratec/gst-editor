@@ -44,9 +44,9 @@ AM_PROG_LIBTOOL
 
 AC_PROG_INTLTOOL
 
-dnl uninstalled glade ui dir
-AC_DEFINE_UNQUOTED(GLADEUI_UNINSTALLED_DIR,"`pwd`/src",[path to glade ui dir])
-AC_SUBST(GLADEUI_UNINSTALLED_DIR)
+dnl uninstalled GtkBuilder ui dir
+AC_DEFINE_UNQUOTED(GTKBUILDER_UNINSTALLED_DIR,"`pwd`/src",[path to GtkBuilder ui dir])
+AC_SUBST(GTKBUILDER_UNINSTALLED_DIR)
 
 dnl Add parameters for aclocal
 dnl (This must come after AM_INIT_AUTOMAKE, since it modifies ACLOCAL)

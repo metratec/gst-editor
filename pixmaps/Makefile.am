@@ -1,8 +1,7 @@
 pixmapdir = $(datadir)/pixmaps
-pixmap_DATA = gst-editor.png gst-inspect.png gst-launch.png
+dist_pixmap_DATA = gst-editor.png gst-inspect.png gst-launch.png
 
-gladedir = $(datadir)/gsteditor
-glade_DATA = gst-editor.png 
+dist_pkgdata_DATA = gst-editor.png
 
 noinst_PROGRAMS = gdk-pixbuf-csource
 
@@ -12,7 +11,7 @@ gdk_pixbuf_csource_LDADD = $(GDK_PIXBUF_LIBS) $(GTK_LIBS)
 
 PIXMAPS = gst-editor.png off.png on.png pause.png play.png
 
-EXTRA_DIST = $(PIXMAPS) pixmaps.h copyright.txt $(pixmap_DATA) $(glade_DATA)
+EXTRA_DIST = $(PIXMAPS) pixmaps.h copyright.txt
 
 noinst_HEADERS = pixmaps.h
 BUILT_SOURCES = pixmaps.h

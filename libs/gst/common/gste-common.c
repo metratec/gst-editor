@@ -50,7 +50,7 @@ gste_get_ui_file (const char *filename)
   char *path;
 
   /* looking for glade file in uninstalled dir */
-  path = g_build_filename (GLADEUI_UNINSTALLED_DIR, filename, NULL);
+  path = g_build_filename (GTKBUILDER_UNINSTALLED_DIR, filename, NULL);
   if (g_file_test (path, G_FILE_TEST_IS_REGULAR))
     return path;
   g_free (path);
