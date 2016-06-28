@@ -99,9 +99,11 @@ dnl check for appropriate GStreamer libs.
 GSTREAMER_REQ="1.2.4"
 AC_SUBST(GSTREAMER_REQ)
 
-GSTREAMER_MAJORMINOR="1.0"
-PKG_CHECK_MODULES(GST, gstreamer-$GSTREAMER_MAJORMINOR >= $GSTREAMER_REQ,,
-                  [AC_MSG_ERROR([GStreamer $GSTREAMER_MAJORMINOR required but not found])])
+GST_API_VERSION="1.0"
+AC_SUBST(GST_API_VERSION)
+
+PKG_CHECK_MODULES(GST, gstreamer-$GST_API_VERSION >= $GSTREAMER_REQ,,
+                  [AC_MSG_ERROR([GStreamer $GST_API_VERSION required but not found])])
 
 PKG_CHECK_MODULES(GOOCANVAS, goocanvas-2.0 >= 2.0,,
    [AC_MSG_ERROR([GOOCANVAS 2.0 required but not found])])

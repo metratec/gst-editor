@@ -1,11 +1,12 @@
 prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
-includedir=@includedir@
+includedir=@includedir@/@PACKAGE@-@VERSION@
 
 Name: GStreamer Editor Libraries
 Description: Helper libraries for GStreamer's glade-like editor
-Requires: gstreamer = @VERSION@
 Version: @VERSION@
-Libs: 
+Requires: gstreamer-@GST_API_VERSION@ >= @GSTREAMER_REQ@, \
+ goocanvas-2.0 >= 2.0, gdk-pixbuf-2.0, gtk+-3.0 >= 3.10.8
+Libs: -L${libdir} -lgstdebugui -lgsteditor -lgstelementui -lgstelementbrowser
 Cflags: -I${includedir}

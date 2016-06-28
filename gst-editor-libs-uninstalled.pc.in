@@ -1,7 +1,11 @@
 Name: GStreamer Editor Libraries, Uninstalled
 Description: Helper libraries for GStreamer's glade-like editor, uninstalled
 Version: @VERSION@
-Requires: gstreamer = @VERSION@
-Libs: ${pcfiledir}/libs/gst/element-ui/libgstelementui.la ${pcfiledir}/libs/gst/element-browser/libgstelementbrowser.la
+Requires: gstreamer-@GST_API_VERSION@ >= @GSTREAMER_REQ@, \
+ goocanvas-2.0 >= 2.0, gdk-pixbuf-2.0, gtk+-3.0 >= 3.10.8
+Libs: ${pcfiledir}/libs/gst/debug-ui/libgstdebugui.la \
+ ${pcfiledir}/libs/gst/editor/libgsteditor.la \
+ ${pcfiledir}/libs/gst/element-ui/libgstelementui.la \
+ ${pcfiledir}/libs/gst/element-browser/libgstelementbrowser.la
 Cflags: -I${pcfiledir}/libs
 

@@ -18,6 +18,9 @@ DESKTOP_FILES = $(DESKTOP_IN_FILES:.desktop.in=.desktop)
 MMdir = $(datadir)/applications
 MM_DATA = $(DESKTOP_FILES)
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = gst-editor-libs.pc
+
 EXTRA_DIST = \
 	mkinstalldirs \
 	intltool-extract.in     \
