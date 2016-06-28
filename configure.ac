@@ -71,7 +71,7 @@ AC_CHECK_PROG(HAVE_SCROLLKEEPER, [scrollkeeper-preinstall], true, false)
 `$HAVE_SCROLLKEEPER` || AC_MSG_NOTICE([Scrollkeeper not found, not installing help files.])
 
 dnl get the pixbuf source creation script
-dnl This is installed from GTK+ 2.0's gdk-pixbuf
+dnl This is installed from GTK+'s gdk-pixbuf
 AC_PATH_PROG(GDK_PIXBUF_CSOURCE, gdk-pixbuf-csource)
 test -z "$GDK_PIXBUF_CSOURCE" && AC_MSG_ERROR([
 *** You need the gdk-pixbuf-csource tool which is installed
