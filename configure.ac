@@ -161,7 +161,6 @@ libs/gst/debug-ui/Makefile
 libs/gst/element-browser/Makefile 
 src/Makefile
 pixmaps/Makefile
-gst-editor.spec
 gst-editor-libs.pc
 gst-editor-libs-uninstalled.pc
 po/Makefile.in

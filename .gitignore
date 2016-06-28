@@ -20,7 +20,6 @@ Makefile.in
 stamp-*
 
 /*.pc
-/*.spec
 /*.desktop
 
 /src/gst-editor

@@ -19,7 +19,7 @@ MMdir = $(datadir)/applications
 MM_DATA = $(DESKTOP_FILES)
 
 EXTRA_DIST = \
-	mkinstalldirs gst-editor.spec \
+	mkinstalldirs \
 	intltool-extract.in     \
 	intltool-merge.in       \
 	intltool-update.in      \
@@ -48,9 +48,5 @@ release: dist
 	md5sum $< > $@
                                                                                 
 dist-hook:
-	cp gst-editor.spec $(distdir)
 	cp -r ./common $(distdir)
 	rm -rf `find $(distdir)/common -name CVS`
-                                                                                
-rpm: dist
-	rpm -ta $(distdir).tar.gz
