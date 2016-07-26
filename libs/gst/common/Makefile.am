@@ -5,7 +5,8 @@ built_source_make = gste-marshal.c
 
 libgste_common_la_SOURCES = \
     gste-debug.c \
-    gste-common.c
+    gste-common.c \
+    gste-serialize.c
 nodist_libgste_common_la_SOURCES = $(built_source_make)
 
 libgste_common_la_CFLAGS = -DDATADIR="\"$(pkgdatadir)/\"" $(GST_EDITOR_CFLAGS)
@@ -13,7 +14,8 @@ libgste_common_la_LDFLAGS = $(GST_EDITOR_LIBS)
 
 noinst_HEADERS = \
   gste-debug.h gste-dnd.h gste-dock.h \
-  gste-common-priv.h gste-common.h
+  gste-common-priv.h gste-common.h \
+  gste-serialize.h
 
 BUILT_SOURCES = $(built_source_make) $(built_header_make)
 CLEANFILES = $(built_source_make) $(built_header_make)

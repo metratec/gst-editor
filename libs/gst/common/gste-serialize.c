@@ -1,0 +1,718 @@
+/* gst-editor
+ * Copyright (C) <2016> Robin Haberkorn <haberkorn@metratec.com>
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Library General Public
+ * License as published by the Free Software Foundation; either
+ * version 2 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * Library General Public License for more details.
+ *
+ * You should have received a copy of the GNU Library General Public
+ * License along with this library; if not, write to the
+ * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
+ * Boston, MA 02111-1307, USA.
+ *
+ * Serialization of Gstreamer elements and pipelines into a format
+ * compatible with GstParse.
+ */
+
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+
+#include <glib.h>
+#include <glib/gprintf.h>
+
+#include <gst/gst.h>
+
+#include "gste-serialize.h"
+
+typedef struct _GsteSerializeCallbacks {
+  GsteSerializeAppendCallback append;
+  GsteSerializeObjectSavedCallback object_saved;
+  gpointer user_data;
+
+  GsteSerializeFlags flags;
+  guint recursion_depth;
+} GsteSerializeCallbacks;
+
+static guint gst_element_count_pads (GstElement * element, GstPadDirection direction);
+
+static void gst_object_save_thyself (GstObject * object,
+    GstElement * last_element, GstElement * next_element, GsteSerializeCallbacks * cb);
+
+static inline void
+append_space (GsteSerializeCallbacks * cb)
+{
+  /*
+   * The first space is omitted.
+   */
+  if (cb->flags & GSTE_SERIALIZE_NEED_SPACE)
+    cb->append (" ", cb->user_data);
+  cb->flags |= GSTE_SERIALIZE_NEED_SPACE;
+}
+
+static inline gboolean
+gst_is_capsfilter (GstObject * object, GsteSerializeCallbacks * cb)
+{
+  /*
+   * GstCapsFilter has no public header, so we identify it using
+   * its class name.
+   */
+  return !(cb->flags & GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT) &&
+      !g_strcmp0 (G_OBJECT_TYPE_NAME (object), "GstCapsFilter");
+}
+
+static GstPad *
+gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallbacks * cb)
+{
+  GstPad *peer = gst_pad_get_peer (pad);
+
+  /*
+   * If the special GstCapsFilter syntax is allowed,
+   * we return all capabilities of capsfilters between
+   * `pad` and the last capsfilter's peer.
+   */
+  while (peer && GST_OBJECT_PARENT (peer) &&
+      gst_is_capsfilter (GST_OBJECT_PARENT (peer), cb)) {
+    GstCaps *caps;
+    GstPad *caps_srcpad;
+
+    /*
+     * We assume that capsfilters always have the "caps" property.
+     * The alternative would be to use g_object_get_property() and
+     * gst_value_serialize().
+     * It may theoretically not contain any capabilities though.
+     * We simply ignore those capsfilters.
+     */
+    g_object_get (GST_OBJECT_PARENT (peer), "caps", &caps, NULL);
+    if (caps)
+      /* transfer ownership of caps to caps_list */
+      *caps_list = g_list_append (*caps_list, caps);
+
+    /*
+     * We can assert that all GstCapsFilter elements have a
+     * src pad.
+     */
+    caps_srcpad = gst_element_get_static_pad (GST_ELEMENT (GST_OBJECT_PARENT (peer)),
+        "src");
+    g_assert (caps_srcpad != NULL);
+    gst_object_unref (peer);
+    peer = gst_pad_get_peer (caps_srcpad);
+    gst_object_unref (caps_srcpad);
+  }
+
+  return peer;
+}
+
+static void
+gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next_element,
+    GsteSerializeCallbacks * cb)
+{
+  GstPadDirection direction = gst_pad_get_direction (pad);
+  GstObject *parent = GST_OBJECT_PARENT (pad);
+  GstPad *peer;
+  GstPadDirection peer_direction;
+  GstObject *peer_parent;
+
+  /* list of GstCaps that we own */
+  GList *caps_list = NULL;
+
+  gboolean have_dot;
+
+  /*
+   * If we are serializing as part of an element, there is no
+   * need to serialize both source and sink pads since each
+   * link only needs to appear once in the pipeline and in general
+   * we want to serialize from source to sink pads (as the number of
+   * fully-qualified peer names can be reduced).
+   */
+  if (last_element && direction == GST_PAD_SINK)
+    return;
+
+  peer = gst_pad_get_peer_with_caps (pad, &caps_list, cb);
+  if (!peer) {
+    /* no need to serialize an unlinked pad */
+    g_list_free_full (caps_list, (GDestroyNotify)gst_caps_unref);
+    return;
+  }
+  peer_direction = gst_pad_get_direction (peer);
+
+  peer_parent = GST_OBJECT_PARENT (peer);
+  if (!peer_parent) {
+    /* no need to serialize a pad not linked to an element */
+    g_list_free_full (caps_list, (GDestroyNotify)gst_caps_unref);
+    gst_object_unref (peer);
+    return;
+  }
+
+  /*
+   * For pads serialized as part of an element, the link's source
+   * element can be omitted.
+   */
+  have_dot = FALSE;
+  if (parent &&
+      (cb->flags & GSTE_SERIALIZE_VERBOSE || parent != GST_OBJECT_CAST (last_element))) {
+    append_space (cb);
+    /*
+     * This assumes that the peer's parent already has an unique name.
+     * FIXME: Guarantee that.
+     */
+    cb->append (GST_OBJECT_NAME (parent), cb->user_data);
+    cb->append (".", cb->user_data);
+    have_dot = TRUE;
+  }
+  /*
+   * The pad name can be omitted if there is only one
+   * pad of the same type in the object.
+   */
+  if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
+      !parent || gst_element_count_pads (GST_ELEMENT (parent), direction) > 1) {
+    if (!have_dot) {
+      append_space (cb);
+      cb->append (".", cb->user_data);
+    }
+    cb->append (GST_OBJECT_NAME (pad), cb->user_data);
+  }
+
+  /*
+   * Serialize all capability filters.
+   * This list is empty if GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT is given.
+   *
+   * NOTE: We could iterate the capsfilters here, leaving peer/peer_parent
+   * at the last non-GstCapsFilter element, but this way we can completely
+   * ignore unlinked capsfilters (which may not be correct...)
+   */
+  if (caps_list != NULL) {
+    /*
+     * We do not have to qualify the link to the capsfilter
+     * element since it is guaranteed to be serialized immediately
+     * following the link (and we cannot specify its "name" anyway).
+     * GstCapsFilter elements only have one static "sink" and "src" pad.
+     */
+    append_space (cb);
+    cb->append ("!", cb->user_data);
+
+    append_space (cb);
+    /*
+     * NOTE: Why the gst-launch manpage claims that capsfilters can
+     * be escaped; this actually only refers to the POSIX shell escaping.
+     * When parsing with gst_parse_launch() is used for parsing, we do not
+     * actually need the quotes and they will result in parsing errors.
+     */
+    //cb->append ("'", cb->user_data);
+
+    for (GList *cur = caps_list; cur != NULL; cur = g_list_next (cur)) {
+      gchar *contents = gst_caps_to_string (GST_CAPS_CAST (cur->data));
+      cb->append (contents, cb->user_data);
+      g_free (contents);
+
+      if (g_list_next (cur))
+        cb->append (":", cb->user_data);
+    }
+
+    //cb->append ("'", cb->user_data);
+  }
+
+  g_list_free_full (caps_list, (GDestroyNotify)gst_caps_unref);
+
+  append_space (cb);
+  cb->append ("!", cb->user_data);
+
+  /*
+   * For pads serialized as part of a bin, the link's sink
+   * element can be omitted since often it will refer to the
+   * next element in the bin.
+   */
+  have_dot = FALSE;
+  if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
+      peer_parent != GST_OBJECT_CAST (next_element)) {
+    append_space (cb);
+    /*
+     * This assumes that the peer's parent already has a unique name.
+     * FIXME: Guarantee that.
+     */
+    cb->append (GST_OBJECT_NAME (peer_parent), cb->user_data);
+    cb->append (".", cb->user_data);
+    have_dot = TRUE;
+  }
+  /*
+   * The pad name can be omitted if there is only one
+   * pad of the same type in the object.
+   */
+  if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
+      gst_element_count_pads (GST_ELEMENT (peer_parent), peer_direction) > 1) {
+    if (!have_dot) {
+      append_space (cb);
+      cb->append (".", cb->user_data);
+    }
+    cb->append (GST_OBJECT_NAME (peer), cb->user_data);
+  }
+
+  gst_object_unref (peer);
+}
+
+static void
+gst_object_save_properties (GstObject * object, GsteSerializeCallbacks * cb)
+{
+  GObjectClass *klass = G_OBJECT_GET_CLASS (object);
+  GParamSpec **specs;
+  guint nspecs;
+
+  /*
+   * Iterate all properties of the object's class.
+   */
+  specs = g_object_class_list_properties (klass, &nspecs);
+  for (guint i = 0; i < nspecs; i++) {
+    GParamSpec *spec = specs[i];
+    GValue value = G_VALUE_INIT;
+    gchar *contents;
+
+    if (!(spec->flags & G_PARAM_READABLE))
+      continue;
+
+    /*
+     * It makes no sense to serialize properties that GstParse cannot
+     * deserialize anyway.
+     * This is not even done in VERBOSE mode, as the resulting pipeline
+     * may produce parsing errors.
+     */
+    if (!(spec->flags & (G_PARAM_WRITABLE | G_PARAM_CONSTRUCT | G_PARAM_CONSTRUCT_ONLY)))
+      continue;
+
+    /*
+     * Omit the "parent" property: It is implicit by the hierarachy
+     * of elements.
+     * NOTE: If the first element passed into the save call (recursion = 1)
+     * has a "parent" property, it may be a good idea to output the "parent"
+     * property. On the other hand, when deserializing a stand-alone element
+     * again, the "parent" may not refer to an existing element.
+     */
+    if (!strcmp (spec->name, "parent"))
+      continue;
+
+    g_value_init (&value, spec->value_type);
+    g_object_get_property (G_OBJECT (object), spec->name, &value);
+
+    if (!(cb->flags & GSTE_SERIALIZE_VERBOSE) && g_param_value_defaults (spec, &value)) {
+      /*
+       * To make output more readable, properties with their default values can
+       * be skipped since GstParse will initialize them with the same value
+       * anyway.
+       * The default value is not logged since we cannot easily
+       * serialize it without risking critical messages.
+       */
+      g_debug ("Skipping property \"%s\" in class %s with default value",
+               spec->name, G_OBJECT_CLASS_NAME (klass));
+    } else if (GST_VALUE_HOLDS_STRUCTURE (&value) && !gst_value_get_structure (&value)) {
+      /*
+       * NOTE: Apparently at least for some versions of GStreamer, we need
+       * a workaround for NULL GstStructure properties since otherwise,
+       * gst_value_serialize() will log a critical message.
+       */
+      append_space (cb);
+      cb->append (spec->name, cb->user_data);
+      cb->append ("=\"\"", cb->user_data);
+    } else {
+      /*
+       * This is a workaround for GstCaps properties.
+       * They are serialized by gst_value_serialize() without
+       * quotes, even though gst_caps_to_string() will frequently
+       * include spaces.
+       */
+      gboolean needs_quotes = GST_VALUE_HOLDS_CAPS (&value);
+
+      /*
+       * The GstParse deserialization (see gst_parse_element_set() in grammar.y)
+       * uses gst_value_deserialize(), so this should produce the desired output.
+       * There is also g_strdup_value_contents() but it should only be used
+       * for debug output.
+       * The element name is a property of GstObject and should thus be
+       * serialized automatically.
+       */
+      contents = gst_value_serialize (&value);
+      if (contents) {
+        append_space (cb);
+        cb->append (spec->name, cb->user_data);
+        cb->append ("=", cb->user_data);
+        if (needs_quotes)
+          cb->append ("\"", cb->user_data);
+        cb->append (contents, cb->user_data);
+        if (needs_quotes)
+          cb->append ("\"", cb->user_data);
+        g_free (contents);
+      } else {
+        /*
+         * This is more or less expected for certain properties with opaque
+         * element-specific types (e.g. an opaque C pointer).
+         * But there may also be less exotic properties that must be handled
+         * separately.
+         * Since GstParse can only deserialize with gst_value_deserialize(),
+         * this should not be worth warning, though.
+         */
+        g_debug ("Cannot serialize property \"%s\" of type %s in class %s",
+            spec->name, g_type_name (spec->value_type), G_OBJECT_CLASS_NAME (klass));
+      }
+    }
+
+    g_value_unset (&value);
+  }
+  g_free (specs);
+}
+
+static guint
+gst_element_count_pads (GstElement * element, GstPadDirection direction)
+{
+  guint ret = 0;
+
+  for (GList *pads = g_list_last (GST_ELEMENT_PADS (element));
+       pads; pads = g_list_previous (pads)) {
+    GstPad *pad = GST_PAD_CAST (pads->data);
+
+    if (gst_pad_get_direction (pad) == direction)
+      ret++;
+  }
+
+  return ret;
+}
+
+static void
+gst_element_save_pads (GstElement * element, GstElement * next_element,
+    GsteSerializeCallbacks * cb)
+{
+  /*
+   * When serializing a single element from a larger pipeline,
+   * it does not make sense to output its pads/links since the elements
+   * might not be available when they are deserialized.
+   */
+  if (cb->recursion_depth == 0)
+    return;
+
+  for (GList *pads = g_list_last (GST_ELEMENT_PADS (element));
+      pads != NULL; pads = g_list_previous (pads)) {
+    GstPad *pad = GST_PAD_CAST (pads->data);
+
+    /*
+     * Only serialize direct pads.
+     * This uses the generic gst_object_save_thyself(), so
+     * the object_saved callback gets called.
+     */
+    if (GST_ELEMENT_CAST (GST_OBJECT_PARENT (pad)) == element)
+      gst_object_save_thyself (GST_OBJECT (pad), element, next_element, cb);
+  }
+}
+
+static void
+gst_element_save_thyself (GstElement * element, GstElement * next_element,
+    GsteSerializeCallbacks * cb)
+{
+  GstElementFactory *factory = gst_element_get_factory (element);
+
+  /*
+   * The GstParse syntax expects the name of the element's
+   * factory instead of its GType name.
+   */
+  append_space (cb);
+  cb->append (GST_OBJECT_NAME (factory), cb->user_data);
+
+  /*
+   * Serialize all properties of the element.
+   * A space will be output after every property.
+   */
+  gst_object_save_properties (GST_OBJECT (element), cb);
+
+  /*
+   * This outputs links following the element serialization.
+   */
+  gst_element_save_pads (element, next_element, cb);
+}
+
+static void
+gst_bin_save_children (GstBin * bin, GsteSerializeCallbacks * cb)
+{
+  GList *children = g_list_last (GST_BIN_CHILDREN (bin));
+
+  cb->recursion_depth++;
+
+  /*
+   * All elements of the bin are serialized in reverse order
+   * (ie. the order thay have been added to the bin).
+   * NOTE: By using the reverse of gst_bin_iterate_sorted()
+   * the number of named links may be minimized.
+   * Both iteration orders have their advantages:
+   *  - The natural order might reflect what was in the pipeline
+   *    read via GstParse. Using this order ensures output,
+   *    similar to the GstParse input.
+   *  - The sorted order might be better for pipelines created
+   *    with GstEditor.
+   * Thus, this should probably be a setting of GsteSerialize.
+   */
+  while (children) {
+    GstElement *child = GST_ELEMENT_CAST (children->data);
+    GstElement *next_element = NULL;
+
+    children = g_list_previous (children);
+    if (children)
+      next_element = GST_ELEMENT_CAST (children->data);
+
+    /*
+     * Usually, we can ignore GstCapsFilter elements since
+     * they serialized as part of the pad links.
+     */
+    if (!gst_is_capsfilter (GST_OBJECT (child), cb))
+      /*
+       * The child might need special handling and we want
+       * the object_saved callback to be invoked.
+       */
+      gst_object_save_thyself (GST_OBJECT (child), NULL, next_element, cb);
+  }
+
+  cb->recursion_depth--;
+}
+
+static void
+gst_bin_save_thyself (GstBin * bin, GstElement * next_element,
+    GsteSerializeCallbacks * cb)
+{
+  append_space (cb);
+
+  /*
+   * For GstBin derivations, we should specify the GObject type
+   * of the bin -- GstParse will use that for constructing the
+   * instance.
+   * This is especially useful for GstPipelines serialized
+   * as bins.
+   */
+  if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
+      G_OBJECT_TYPE (bin) != GST_TYPE_BIN) {
+    GstElementFactory *factory = gst_element_get_factory (GST_ELEMENT (bin));
+
+    cb->append (GST_OBJECT_NAME (factory), cb->user_data);
+    cb->append (".", cb->user_data);
+  }
+
+  cb->append ("(", cb->user_data);
+
+  /*
+   * Serialize all properties and children of the bin.
+   * A space will be output after every property.
+   * NOTE: We could very well supress the next space for the
+   * sake of beauty. But to work around a GstParse bug, we must
+   * output a space before the closing bracket, so we keep the
+   * space after the opening brace for symmetry.
+   */
+  //cb->flags &= ~GSTE_SERIALIZE_NEED_SPACE;
+  gst_object_save_properties (GST_OBJECT (bin), cb);
+  gst_bin_save_children (bin, cb);
+
+  /*
+   * NOTE: The space in front of the bracket is necessary because
+   * GstParse will otherwise fail to parse immediately preceding quotes.
+   * This is apparently a bug in GstParse.
+   */
+  append_space (cb);
+  cb->append (")", cb->user_data);
+
+  /*
+   * This outputs links following the element serialization.
+   */
+  gst_element_save_pads (GST_ELEMENT (bin), next_element, cb);
+}
+
+/*
+ * This is used for serializing pipelines by default.
+ * Pipeline properties are ignored.
+ * Since they are sometimes important, it is possibly to force the
+ * the GstBin syntax for GstPipelines using the
+ * GSTE_SERIALIZE_PIPELINES_AS_BINS flag: pipeline.( ... )
+ */
+static void
+gst_pipeline_save_thyself (GstPipeline * pipeline, GsteSerializeCallbacks * cb)
+{
+  gst_bin_save_children (GST_BIN (pipeline), cb);
+}
+
+#if 0
+static xmlNodePtr
+gst_proxy_pad_save_thyself (GstObject * object, xmlNodePtr parent)
+{
+  xmlNodePtr self;
+  GstProxyPad *proxypad;
+  GstPad *pad;
+  GstPad *peer;
+
+  g_return_val_if_fail (GST_IS_PROXY_PAD (object), NULL);
+
+  self = xmlNewChild (parent, NULL, (xmlChar *) "ghostpad", NULL);
+  xmlNewChild (self, NULL, (xmlChar *) "name",
+      (xmlChar *) GST_OBJECT_NAME (object));
+  xmlNewChild (self, NULL, (xmlChar *) "parent",
+      (xmlChar *) GST_OBJECT_NAME (GST_OBJECT_PARENT (object)));
+
+  proxypad = GST_PROXY_PAD_CAST (object);
+  pad = GST_PAD_CAST (proxypad);
+  peer = GST_PAD_CAST (pad->peer);
+
+  if (GST_IS_PAD (pad)) {
+    if (GST_PAD_IS_SRC (pad))
+      xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "source");
+    else if (GST_PAD_IS_SINK (pad))
+      xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "sink");
+    else
+      xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "unknown");
+  } else {
+    xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "unknown");
+  }
+  if (GST_IS_PAD (peer)) {
+    gchar *content = g_strdup_printf ("%s.%s",
+        GST_OBJECT_NAME (GST_PAD_PARENT (peer)), GST_PAD_NAME (peer));
+
+    xmlNewChild (self, NULL, (xmlChar *) "peer", (xmlChar *) content);
+    g_free (content);
+  } else {
+    xmlNewChild (self, NULL, (xmlChar *) "peer", NULL);
+  }
+
+  return self;
+}
+#endif
+
+static void
+gst_object_save_thyself (GstObject * object,
+    GstElement * last_element, GstElement * next_element, GsteSerializeCallbacks * cb)
+{
+  GType type = G_OBJECT_TYPE (object);
+
+  /*
+   * The optional object_saved callback serves a similar
+   * purpose than the GStreamer 0.10 "object-saved" signal
+   * and allows applications to add meta-data to a container
+   * format.
+   * Since the only way to associate meta-data with the object
+   * as represented in the serialization is via its name and
+   * GstObjects may be nameless, the callback is invoked before
+   * the serialization takes place.
+   * Users may then call gst_object_set_name (obj, NULL) to
+   * assign an unique name in the callback if necessary.
+   * NOTE: It would also be possible to add one callback per
+   * GstObject type.
+   */
+  if (cb->object_saved)
+    cb->object_saved (object, cb->user_data);
+
+  /*
+   * Recursively handle the different object types.
+   * NOTE: Normally GstBin derivations are not serialized with the
+   * brace syntax since they are usually factory-constructable elements.
+   * This can be disabled with GSTE_SERIALIZE_ALL_BINS.
+   * GstCapsFilters are also serialized like ordinary elements,
+   * but are ignored in GstBins by default, resulting in the special
+   * filtered-link syntax to be serialized
+   */
+  if (GST_IS_PIPELINE (object)) {
+    /*
+     * Top-level pipelines are normally not serialized to produce
+     * a familiar gst-launch-like output.
+     * Pipelines embedded in pipelines must be serialized like GstBins
+     * though since they would otherwise be lost.
+     */
+    if (cb->recursion_depth > 0 || cb->flags & GSTE_SERIALIZE_PIPELINES_AS_BINS)
+      gst_bin_save_thyself (GST_BIN (object), next_element, cb);
+    else
+      gst_pipeline_save_thyself (GST_PIPELINE (object), cb);
+  } else if (type == GST_TYPE_BIN ||
+      ((cb->flags & GSTE_SERIALIZE_ALL_BINS) && GST_IS_BIN (object))) {
+    gst_bin_save_thyself (GST_BIN (object), next_element, cb);
+  } else if (GST_IS_ELEMENT (object)) {
+    gst_element_save_thyself (GST_ELEMENT (object), next_element, cb);
+  } else if (GST_IS_PAD (object)) {
+    gst_pad_save_thyself (GST_PAD (object), last_element, next_element, cb);
+  } else {
+    g_warning ("Cannot serialize GstObject with type %s",
+        g_type_name (type));
+  }
+}
+
+void
+gste_serialize_save (GstObject * object, GsteSerializeFlags flags,
+    GsteSerializeAppendCallback append,
+    GsteSerializeObjectSavedCallback object_saved,
+    gpointer user_data)
+{
+  GsteSerializeCallbacks cb = {
+      .append = append,
+      .object_saved = object_saved,
+      .user_data = user_data,
+      .flags = flags,
+      .recursion_depth = 0
+  };
+
+  gst_object_save_thyself (object, NULL, NULL, &cb);
+}
+
+/*
+ * Test program. Compile with:
+ * gcc -g -O0 -Wall -std=c99 -o gste-serialize gste-serialize.c -DGSTE_SERIALIZE_TEST \
+ *     `pkg-config --cflags --libs gstreamer-1.0`
+ */
+#ifdef GSTE_SERIALIZE_TEST
+
+static void
+append_stdio_cb (const gchar * str, gpointer user_data)
+{
+  FILE *stream = user_data;
+  fputs(str, stream);
+}
+
+int
+main (int argc, char **argv)
+{
+  GError *error = NULL;
+  GOptionContext *optctx;
+  GsteSerializeFlags flags;
+  const gchar *element_name;
+  GstElement *pipeline, *element;
+
+  g_log_set_always_fatal (G_LOG_LEVEL_ERROR |
+      G_LOG_LEVEL_CRITICAL | G_LOG_LEVEL_WARNING);
+  g_log_set_handler (NULL,
+      G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION,
+      g_log_default_handler, NULL);
+
+  optctx = g_option_context_new ("<launch line>");
+  /* NOTE: gst_init() not required */
+  g_option_context_add_group (optctx, gst_init_get_option_group ());
+
+  if (!g_option_context_parse (optctx, &argc, &argv, &error))
+    g_error ("Option parsing failed: %s", error->message);
+
+  g_option_context_free (optctx);
+
+  flags = atoi (g_getenv ("GSTE_SERIALIZE_FLAGS") ? : "0");
+  element_name = g_getenv ("GSTE_SERIALIZE_ELEMENT");
+
+  element = pipeline = gst_parse_launchv ((const gchar **)argv+1, &error);
+  if (error)
+    g_error ("Pipeline parsing error: %s", error->message);
+  if (element_name)
+    element = gst_bin_get_by_name (GST_BIN (pipeline), element_name);
+  if (!element)
+    g_error ("Element not found!");
+
+  g_printf ("Serialized pipeline:\n\"");
+  gste_serialize_save (GST_OBJECT (element), flags,
+      append_stdio_cb, NULL, stdout);
+  g_printf ("\"\n");
+
+  return 0;
+}
+
+#endif
