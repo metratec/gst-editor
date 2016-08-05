@@ -16,14 +16,14 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-
 #ifndef __GST_EDITOR_CANVAS_H__
 #define __GST_EDITOR_CANVAS_H__
 
-
+#include <gst/gst.h>
 #include <gtk/gtk.h>
 #include <goocanvas.h>
+
+#include <gst/editor/gsteditoritem.h>
 #include <gst/editor/gsteditorbin.h>
 #include "gsteditor.h"
 
@@ -34,8 +34,14 @@
 #define GST_IS_EDITOR_CANVAS_CLASS(obj) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_EDITOR_CANVAS))
 #define GST_EDITOR_CANVAS_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_EDITOR_CANVAS, GstEditorCanvasClass))
 
+#define GST_EDITOR_CANVAS_ERROR \
+    g_quark_from_static_string("gst-editor-canvas-error-quark")
 
-struct _GstEditorCanvas
+enum GstEditorCanvasError {
+  GST_EDITOR_CANVAS_ERROR_FAILED
+};
+
+typedef struct _GstEditorCanvas
 {
   GooCanvas canvas;
   GstEditor* parent;
@@ -44,19 +50,27 @@ struct _GstEditorCanvas
   GtkWidget *property_window;
   GtkWidget *palette;
   gchar *status;
-  GData **attributes;		/* list of name -> GstEditorItemAttr mappings */
+  GData *attributes;    /* list of name -> GstEditorItemAttr mappings */
   GRWLock globallock;
   gboolean autosize;
-  gdouble widthbackup,heightbackup;
-};
+  gdouble widthbackup, heightbackup;
+} GstEditorCanvas;
 
-struct _GstEditorCanvasClass
+typedef struct _GstEditorCanvasClass
 {
    GooCanvasClass parent_class;
-};
-
+} GstEditorCanvasClass;
 
 GType gst_editor_canvas_get_type (void);
 
+static inline GstElement *
+gst_editor_canvas_get_pipeline (GstEditorCanvas * canvas)
+{
+  return canvas->bin ? GST_ELEMENT_CAST (GST_EDITOR_ITEM (canvas->bin)->object)
+                     : NULL;
+}
+
+gboolean gst_editor_canvas_load_with_metadata (GstEditorCanvas * canvas,
+    GKeyFile * key_file, GError ** error);
 
 #endif /* __GST_EDITOR_CANVAS_H__ */

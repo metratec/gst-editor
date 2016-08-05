@@ -16,15 +16,13 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-
 #ifndef __GST_EDITOR_H__
 #define __GST_EDITOR_H__
 
-
 #include <gst/gst.h>
-#include <gst/editor/editor.h>
 #include <gtk/gtk.h>
+
+#include <gst/editor/editor.h>
 
 #define GST_TYPE_EDITOR (gst_editor_get_type())
 #define GST_EDITOR(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR, GstEditor))
@@ -33,10 +31,8 @@
 #define GST_IS_EDITOR_CLASS(obj) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_EDITOR))
 #define GST_EDITOR_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_EDITOR, GstEditorClass))
 
-
 #define GST_EDITOR_SET_OBJECT(item,object) (g_object_set_data (G_OBJECT (item), "gsteditorobject", (object)))
 #define GST_EDITOR_GET_OBJECT(item) (g_object_get_data (G_OBJECT (item), "gsteditorobject"))
-
 
 struct _GstEditor
 {
@@ -54,7 +50,6 @@ struct _GstEditor
 
   GstEditorCanvas *canvas;
 
-  GData *attributes;//one global attributes location all other point to
   GMutex outputmutex;//only used for time measurement outputs
 };
 

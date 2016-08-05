@@ -16,7 +16,9 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <gtk/gtk.h>
 #include <gst/gst.h>
@@ -25,6 +27,8 @@
 #include <gst/common/gste-debug.h>
 #include "gsteditorproperty.h"
 #include "gsteditorpalette.h"
+#include "gsteditorelement.h"
+#include "gsteditoritem.h"
 #include "gst-helper.h"
 
 
@@ -62,6 +66,9 @@ static void on_property_destroyed (GstEditorCanvas * canvas,
     gpointer stale_pointer);
 static void on_palette_destroyed (GstEditorCanvas * canvas,
     gpointer stale_pointer);
+
+static void gst_editor_canvas_element_connect (GstEditorCanvas * canvas,
+    GstElement * pipeline);
 
 static GooCanvasClass *parent_class = NULL;
 
@@ -128,9 +135,11 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
 static void
 gst_editor_canvas_init (GstEditorCanvas * editorcanvas)
 {
-  g_signal_connect_after (editorcanvas, "realize", G_CALLBACK (on_realize),
-      NULL);
+  g_signal_connect_after (editorcanvas, "realize",
+      G_CALLBACK (on_realize), NULL);
   g_rw_lock_init (&editorcanvas->globallock);
+
+  g_datalist_init (&editorcanvas->attributes);
 }
 
 static void
@@ -186,7 +195,8 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
 
   switch (prop_id) {
     case PROP_ATTRIBUTES:
-      canvas->attributes = (GData **) g_value_get_pointer (value);
+      g_datalist_clear (&canvas->attributes);
+      canvas->attributes = (GData *) g_value_get_pointer (value);
       EDITOR_DEBUG ("canvas_set_prop: attributesp: %p", canvas->attributes);
       break;
     case PROP_BIN:
@@ -197,7 +207,7 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
             GOO_CANVAS_ITEM (goo_canvas_get_root_item (GOO_CANVAS (canvas))),
             gst_editor_bin_get_type (),
             "globallock", &canvas->globallock,
-            "attributes", canvas->attributes,
+            "attributes", &canvas->attributes,
             "width", (gdouble)allocation.width,
             "height", (gdouble)allocation.height,
             "object", g_value_get_object (value),
@@ -206,7 +216,15 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
         gst_editor_bin_realize (bin);
         canvas->bin = GST_EDITOR_BIN (bin);
       } else {
-        g_object_set (G_OBJECT (canvas->bin), "attributes", canvas->attributes,
+        GstElement *pipeline = gst_editor_canvas_get_pipeline (canvas);
+
+        /*
+         * Need to clean up the GstBus signal watch.
+         * See gst_editor_canvas_element_connect().
+         */
+        gst_bus_remove_signal_watch (gst_pipeline_get_bus (GST_PIPELINE (pipeline)));
+
+        g_object_set (G_OBJECT (canvas->bin), "attributes", &canvas->attributes,
             "object", g_value_get_object (value), NULL);
         EDITOR_DEBUG (
             "replaced object on existing bin canvas and updated attributes");
@@ -236,6 +254,9 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       goo_canvas_item_set_simple_transform (
           GOO_CANVAS_ITEM (canvas->bin), 0.5, 0.5, 1., 0.);
       g_object_set (canvas, "selection", canvas->bin, NULL);
+
+      gst_editor_canvas_element_connect (canvas,
+          gst_editor_canvas_get_pipeline (canvas));
       break;
 
     case PROP_SELECTION:
@@ -393,4 +414,203 @@ on_palette_destroyed (GstEditorCanvas * canvas, gpointer stale_pointer)
   canvas->palette = NULL;
 
   g_object_notify (G_OBJECT (canvas), "palette-visible");
+}
+
+static void
+gst_editor_canvas_pipeline_message (GstBus * bus, GstMessage * message, gpointer data)
+{
+  switch (GST_MESSAGE_TYPE (message)) {
+    case GST_MESSAGE_STATE_CHANGED:
+    {
+      GstObject *obj = GST_OBJECT (GST_MESSAGE_SRC (message));
+
+      if (GST_IS_ELEMENT (obj)) {
+        GstEditorItem *item = gst_editor_item_get (obj);
+        //g_print("adding idle function in main bus watcher");
+        g_idle_add ((GSourceFunc) gst_editor_element_sync_state,
+            item /*editor_element */ );
+      }
+      break;
+    }
+    case GST_MESSAGE_EOS:
+    {
+      //printf("EOS Message from %s\n",GST_OBJECT_NAME(GST_OBJECT (GST_MESSAGE_SRC (message))));
+      GstObject *obj = GST_OBJECT (GST_MESSAGE_SRC (message));
+
+      if (GST_IS_ELEMENT (obj)) {
+        gst_element_set_state (GST_ELEMENT_CAST (obj), GST_STATE_NULL);
+        GstEditorItem * item = gst_editor_item_get (obj);
+        // g_print("adding idle function in main bus watcher");
+        gst_editor_element_stop_child (GST_EDITOR_ELEMENT (item));
+        g_idle_add ((GSourceFunc)gst_editor_element_sync_state,
+            item /*editor_element */);
+      }
+    }
+    default:
+      /* unhandled message */
+      break;
+  }
+}
+
+/* connect useful GStreamer signals to pipeline */
+static void
+gst_editor_canvas_element_connect (GstEditorCanvas * canvas, GstElement * pipeline)
+{
+  GstBus *bus;
+
+  bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
+  /*
+   * NOTE: The signal watch is cleaned up in the "bin" property
+   * handler.
+   */
+  gst_bus_add_signal_watch (bus);
+  g_signal_connect (bus, "message",
+      G_CALLBACK (gst_editor_canvas_pipeline_message), canvas);
+  gst_object_unref (bus);
+}
+
+static gboolean
+parse_key_file_metadata (GKeyFile * key_file, GData ** datalistp, GError ** parent_error)
+{
+  GError *error = NULL;
+  gchar **group_names = g_key_file_get_groups (key_file, NULL);
+
+  for (gchar **group_name = group_names; *group_name; group_name++) {
+    const gchar *element_name;
+    GstEditorItemAttr *attr;
+
+    if (!g_str_has_prefix (*group_name, "Element:"))
+      continue;
+    element_name = *group_name + 8;
+
+    attr = g_new0 (GstEditorItemAttr, 1);
+
+    attr->x = g_key_file_get_double (key_file, *group_name, "X", &error);
+    if (error) {
+      g_free (attr);
+      goto propagate_error;
+    }
+    attr->y = g_key_file_get_double (key_file, *group_name, "Y", &error);
+    if (error) {
+      g_free (attr);
+      goto propagate_error;
+    }
+    attr->w = g_key_file_get_double (key_file, *group_name, "Width", &error);
+    if (error) {
+      g_free (attr);
+      goto propagate_error;
+    }
+    attr->h = g_key_file_get_double (key_file, *group_name, "Height", &error);
+    if (error) {
+      g_free (attr);
+      goto propagate_error;
+    }
+
+    g_debug ("loaded %s with x: %f, y: %f, w: %f, h: %f",
+        element_name, attr->x, attr->y, attr->w, attr->h);
+
+    /* save this in the datalist with the object's name as key */
+    g_datalist_set_data_full (datalistp, element_name, attr, g_free);
+  }
+
+  g_strfreev (group_names);
+  return TRUE;
+
+propagate_error:
+  g_propagate_error (parent_error, error);
+  g_strfreev (group_names);
+  return FALSE;
+}
+
+gboolean
+gst_editor_canvas_load_with_metadata (GstEditorCanvas * canvas,
+    GKeyFile * key_file, GError ** error)
+{
+  gchar *str;
+  GstElement *pipeline;
+  GstEditorItemAttr *attr;
+
+  /*
+   * Check the save file version.
+   * For the time being, we will only allow save files created with the
+   * exact same version of GstEditor.
+   */
+  str = g_key_file_get_string (key_file, PACKAGE_NAME, "Version", NULL);
+  if (g_strcmp0 (str, PACKAGE_VERSION) != 0) {
+    g_set_error (error, GST_EDITOR_CANVAS_ERROR, GST_EDITOR_CANVAS_ERROR_FAILED,
+        "Unsupported save file version %s", str);
+    g_free (str);
+    return FALSE;
+  }
+  g_free (str);
+
+  /*
+   * Parse the pipeline.
+   */
+  str = g_key_file_get_string (key_file, PACKAGE_NAME, "Pipeline", NULL);
+  if (!str) {
+    g_set_error (error, GST_EDITOR_CANVAS_ERROR, GST_EDITOR_CANVAS_ERROR_FAILED,
+        "Missing %s/Pipeline in save file", PACKAGE_NAME);
+    return FALSE;
+  }
+  /*
+   * We use strict parsing here, since the pipeline
+   * has been guaranteed to be programmatically written and
+   * GsteSerialize should never produce faulty pipelines.
+   * Otherwise GsteSerialize should be fixed instead.
+   */
+  pipeline = gst_parse_launch_full (str, NULL, GST_PARSE_FLAG_FATAL_ERRORS, error);
+  g_free (str);
+  if (!pipeline)
+    /* forward error */
+    return FALSE;
+
+  /*
+   * This properly frees all the elements.
+   */
+  g_datalist_clear (&canvas->attributes);
+
+  /*
+   * Parse the meta data into a GDatalist.
+   * FIXME: It would be nice to avoid this.
+   * At least it should be possible to use the data list that
+   * GObjects include anyway.
+   */
+  if (!parse_key_file_metadata (key_file, &canvas->attributes, error)) {
+    g_prefix_error (error, "Error parsing save file's metadata: ");
+    return FALSE;
+  }
+
+  //first unref all the old stuff
+  if (gst_editor_canvas_get_pipeline (canvas))
+    g_object_unref (gst_editor_canvas_get_pipeline (canvas));
+
+  EDITOR_DEBUG ("loaded: attributes: %p", canvas->attributes);
+
+  g_object_set (canvas, "bin", pipeline, NULL);
+
+  attr = g_datalist_get_data (&canvas->attributes, GST_ELEMENT_NAME (pipeline));
+  /* now decide */
+  if (attr) {
+    gdouble x, y, width, height;
+    GooCanvasBounds bounds;
+
+    canvas->widthbackup = attr->w;
+    canvas->heightbackup = attr->h;
+    g_object_set (canvas->bin,
+        "width", canvas->widthbackup,
+        "height", canvas->heightbackup, NULL);
+    if (canvas->bin)
+      g_object_get (canvas->bin, "width", &width, "height", &height, NULL);
+
+    goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (canvas->bin), &bounds);
+    x = bounds.x1;
+    y = bounds.y1;
+    goo_canvas_set_bounds (GOO_CANVAS (canvas),
+        x - 4, y - 4, x + width + 3, y + height + 3);
+  } else {
+    g_warning ("Element attributes for %s not found!", GST_ELEMENT_NAME (pipeline));
+  }
+
+  return TRUE;
 }

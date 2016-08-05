@@ -16,6 +16,9 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <gio/gio.h>
 #include <gtk/gtk.h>
@@ -24,15 +27,12 @@
 #include <gst/editor/editor.h>
 #include <gst/common/gste-marshal.h>
 #include <gst/common/gste-debug.h>
+#include <gst/common/gste-serialize.h>
 
 #include "gst-helper.h"
 
 GST_DEBUG_CATEGORY (gste_item_debug);
 #define GST_CAT_DEFAULT gste_item_debug
-
-#if GST_VERSION_MAJOR < 1 && !defined(GST_DISABLE_DEPRECATED)
-#define GST_XML_SUPPORTED
-#endif
 
 /* interface methods */ 
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
@@ -61,12 +61,6 @@ static void gst_editor_item_default_on_whats_this (GstEditorItem * item);
 /* callbacks on the parent item */
 static void on_parent_item_position_changed (GstEditorItem * parent,
     GstEditorItem * item);
-
-#ifdef GST_XML_SUPPORTED
-/* callbacks on the editor item */
-static void on_object_saved (GstObject * object, xmlNodePtr parent,
-    GstEditorItem * item);
-#endif
 
 /* popup callbacks */
 static void on_whats_this (GSimpleAction * action,
@@ -468,18 +462,6 @@ gst_editor_item_object_changed (GstEditorItem * item, GstObject * object)
 
   /* doesn't handle removals yet */
   g_hash_table_insert (editor_items, object, item);
-
-#ifdef GST_XML_SUPPORTED
-  if (item->object) {
-    g_signal_handlers_disconnect_by_func (G_OBJECT (item->object),
-        on_object_saved, item);
-  }
-
-  if (object) {
-    g_signal_connect (G_OBJECT (object), "object-saved",
-        G_CALLBACK (on_object_saved), item);
-  }
-#endif
 }
 
 static gint 
@@ -524,63 +506,94 @@ gst_editor_item_default_on_whats_this (GstEditorItem * item)
 
 
 /**********************************************************************
- * Callbacks on the editor item
+ * GstEditorItem Serialization
  **********************************************************************/
-#ifdef GST_XML_SUPPORTED
+
+typedef struct _SerializeCtx {
+  GString *pipeline;
+  GKeyFile *key_file;
+} SerializeCtx;
 
 static void
-on_object_saved (GstObject * object, xmlNodePtr parent, GstEditorItem * item)
+serialize_append_cb (const gchar * str, gpointer user_data)
 {
-  //GooCanvasBounds bounds;
-  xmlNsPtr ns;
-  xmlNodePtr child;
-  gchar *value;
-  gdouble x, y, width, height;
-
-  /* first see if the namespace is already known */
-  ns = xmlSearchNsByHref (parent->doc, parent,
-      BAD_CAST "http://gstreamer.net/gst-editor/1.0/");
-  if (ns == NULL) {
-    xmlNodePtr root = xmlDocGetRootElement (parent->doc);
-
-    /* add namespace to root node */
-    ns = xmlNewNs (root,
-        BAD_CAST "http://gstreamer.net/gst-editor/1.0/",
-        BAD_CAST "gst-editor");
-  }
-
-  child = xmlNewChild (parent, ns, BAD_CAST "item", NULL);
-//  g_object_get (G_OBJECT (item), "x", &x, "y", &y,
-//      "width", &width, "height", &height, NULL);
-/* goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (item), &bounds);
-  x = bounds.x1;
-  y = bounds.y1;
-  width = bounds.x2 - bounds.x1;
-  height = bounds.y2 - bounds.y1;
-*/
-  //this does not work, since links are included in the total size...
-  cairo_matrix_t matrix;
-  goo_canvas_item_get_transform(GOO_CANVAS_ITEM (item),&matrix);
-  x=matrix.x0;
-  y=matrix.y0;
-  g_object_get (G_OBJECT (item),"width", &width, "height", &height, NULL);
-  GST_DEBUG_OBJECT (object, "saving with position x: %f, y: %f, %fx%f",
-      GST_OBJECT_NAME (object), x, y, width, height);
-  value = g_strdup_printf ("%f", x);
-  xmlNewChild (child, ns, BAD_CAST "x", BAD_CAST value);
-  g_free (value);
-  value = g_strdup_printf ("%f", y);
-  xmlNewChild (child, ns, BAD_CAST "y", BAD_CAST value);
-  g_free (value);
-  value = g_strdup_printf ("%f", width);
-  xmlNewChild (child, ns, BAD_CAST "w", BAD_CAST value);
-  g_free (value);
-  value = g_strdup_printf ("%f", height);
-  xmlNewChild (child, ns, BAD_CAST "h", BAD_CAST value);
-  g_free (value);
+  SerializeCtx *ctx = user_data;
+  g_string_append (ctx->pipeline, str);
 }
 
-#endif /* GST_XML_SUPPORTED */
+static void
+serialize_object_saved_cb (GstObject * object, gpointer user_data)
+{
+  SerializeCtx *ctx = user_data;
+  GstEditorItem *item = gst_editor_item_get (object);
+
+  cairo_matrix_t matrix;
+  gdouble x, y, width, height;
+  gchar *group_name;
+
+  if (!item)
+    return;
+
+  goo_canvas_item_get_transform (GOO_CANVAS_ITEM (item), &matrix);
+  x = matrix.x0;
+  y = matrix.y0;
+  g_object_get (item, "width", &width, "height", &height, NULL);
+
+  GST_DEBUG_OBJECT (object, "saving %s with position x: %f, y: %f, %fx%f",
+      GST_OBJECT_NAME (object), x, y, width, height);
+
+  group_name = g_strconcat ("Element:", GST_OBJECT_NAME (object), NULL);
+  g_key_file_set_double (ctx->key_file, group_name, "X", x);
+  g_key_file_set_double (ctx->key_file, group_name, "Y", y);
+  g_key_file_set_double (ctx->key_file, group_name, "Width", width);
+  g_key_file_set_double (ctx->key_file, group_name, "Height", height);
+  g_free (group_name);
+}
+
+gchar *
+gst_editor_item_save (GstEditorItem * item, GsteSerializeFlags flags)
+{
+  SerializeCtx ctx;
+
+  ctx.pipeline = g_string_new ("");
+  gste_serialize_save (item->object, flags,
+      serialize_append_cb, NULL, &ctx);
+
+  return g_string_free (ctx.pipeline, FALSE);
+}
+
+void
+gst_editor_item_save_with_metadata (GstEditorItem * item, GKeyFile * key_file,
+    GsteSerializeFlags flags)
+{
+  SerializeCtx ctx;
+
+  /*
+   * Pipelines are written into a container format (Key file) with
+   * one section per element meta data.
+   * GstEditor/Version will contain the program version which may
+   * be used to check the save file for compatibility on loading.
+   */
+  ctx.pipeline = g_string_new ("");
+  /* we do not take over `key_file`'s ownership */
+  ctx.key_file = key_file;
+  g_key_file_set_string (key_file, PACKAGE_NAME,
+      "Version", PACKAGE_VERSION);
+
+  /*
+   * Since serialize_object_saved_cb() will also serialize the
+   * meta-data of the top-level pipeline, it MUST be serialized
+   * as a GstBin so the pipeline's name is preserved.
+   */
+  flags |= GSTE_SERIALIZE_PIPELINES_AS_BINS;
+
+  gste_serialize_save (item->object, flags,
+      serialize_append_cb, serialize_object_saved_cb, &ctx);
+  g_key_file_set_string (key_file, PACKAGE_NAME,
+      "Pipeline", ctx.pipeline->str);
+
+  g_string_free (ctx.pipeline, TRUE);
+}
 
 /**********************************************************************
  * Callbacks on the parent editor item

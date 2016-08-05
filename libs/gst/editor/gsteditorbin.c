@@ -35,10 +35,6 @@
 GST_DEBUG_CATEGORY (gste_bin_debug);
 #define GST_CAT_DEFAULT gste_bin_debug
 
-#if GST_VERSION_MAJOR < 1 && !defined(GST_DISABLE_DEPRECATED)
-#define GST_XML_SUPPORTED
-#endif
-
 /* interface methods */
 #if 0
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
@@ -473,7 +469,6 @@ gst_editor_bin_element_added (GstObject * bin, GstObject * child,
     width = attr->w;
     height = attr->h;
     g_datalist_remove_data (editorbin->attributes, child_name);
-    g_free (attr);
     GST_DEBUG_OBJECT (bin, "Got loaded attributes for %s", child_name);
   } else if (editorbin->element_x > 0) {
     /* first element to auto position */
@@ -732,51 +727,69 @@ gst_editor_bin_sort (GstEditorBin * bin, gdouble step)
   return ret;
 }
 
-#ifdef GST_XML_SUPPORTED
+gboolean
+gst_editor_bin_paste_from_string (GstEditorBin * bin, const gchar * str,
+    GError ** parent_error)
+{
+  GError *error = NULL;
+  GstElement *element;
+
+  /*
+   * gst_editor_element_copy() will only copy single-element
+   * pipelines into the clipboard.
+   * However, the user could have copied a multi-element
+   * pipeline from somewhere - in this case, it is pasted as
+   * a GstBin, so links can be preserved.
+   * NOTE: We do non-strict parsing here, so gst_parse_launch()
+   * can set `error` even if it returns an element.
+   */
+  element = gst_parse_launch_full (str, NULL,
+      GST_PARSE_FLAG_NO_SINGLE_ELEMENT_BINS, &error);
+  if (!element) {
+    g_propagate_error (parent_error, error);
+    g_prefix_error (parent_error, "Could not paste: ");
+    return FALSE;
+  }
+  if (error) {
+    g_warning ("Parsing issue during paste: %s", error->message);
+    g_clear_error (&error);
+  }
+
+  /* `element` has a floating reference */
+  gst_bin_add (GST_BIN (GST_EDITOR_ITEM (bin)->object), element);
+  return TRUE;
+}
 
 void
 gst_editor_bin_paste (GstEditorBin * bin)
 {
-  GtkClipboard *clipboard;
-  GstXML *xml;
-  GList *l;
-  GstBin *gstbin;
+  GtkClipboard *clipboard = gtk_clipboard_get (GDK_NONE);
   gchar *text;
+  GError *error = NULL;
 
   g_return_if_fail (GST_IS_EDITOR_BIN (bin));
-  gstbin = GST_BIN (GST_EDITOR_ITEM (bin)->object);
 
-  clipboard = gtk_clipboard_get (GDK_NONE);
-
+  /*
+   * GstEditorElements are saved as plain-text pipelines currently,
+   * See gst_editor_element_copy().
+   */
   text = gtk_clipboard_wait_for_text (clipboard);
-
   if (!text) {
     g_object_set (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (bin)), "status",
         "Could not paste: Empty clipboard.", NULL);
     return;
   }
 
-  xml = gst_xml_new ();
-
-  if (!gst_xml_parse_memory (xml, (xmlChar *) text, strlen (text), NULL)) {
+  if (!gst_editor_bin_paste_from_string (bin, text, &error)) {
+    g_free (text);
     g_object_set (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (bin)), "status",
-        "Could not paste: Clipboard contents not valid GStreamer XML.", NULL);
+        error->message, NULL);
+    g_error_free (error);
     return;
   }
 
-  for (l = gst_xml_get_topelements (xml); l; l = l->next)
-    gst_bin_add (gstbin, GST_ELEMENT (l->data));
+  g_free (text);
 }
-
-#else /* !GST_XML_SUPPORTED */
-
-void
-gst_editor_bin_paste (GstEditorBin * bin)
-{
-  g_warning ("gst_editor_bin_paste() not supported: missing GstXML support");
-}
-
-#endif
 
 void
 gst_editor_bin_debug_output (GstEditorBin * bin){

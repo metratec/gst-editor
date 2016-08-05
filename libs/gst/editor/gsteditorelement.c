@@ -30,14 +30,11 @@
 #include "gsteditoritem.h"
 #include <gst/common/gste-marshal.h>
 #include <gst/common/gste-debug.h>
+#include <gst/common/gste-serialize.h>
 #include "../../../pixmaps/pixmaps.h"
 
 GST_DEBUG_CATEGORY (gste_element_debug);
 #define GST_CAT_DEFAULT gste_element_debug
-
-#if GST_VERSION_MAJOR < 1 && !defined(GST_DISABLE_DEPRECATED)
-#define GST_XML_SUPPORTED
-#endif
 
 /* interface methods */
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
@@ -1573,41 +1570,30 @@ gst_editor_element_cut (GstEditorElement * element)
   gst_editor_element_remove (element);
 }
 
-#ifdef GST_XML_SUPPORTED
-
 void
 gst_editor_element_copy (GstEditorElement * element)
 {
-  xmlChar *mem;
-  gint size = 0;
-  GtkClipboard *clipboard;
-  GstElement *e;
+  GtkClipboard *clipboard = gtk_clipboard_get (GDK_NONE);
+  gchar *buffer;
 
-  xmlIndentTreeOutput = 1;
-
-  e = GST_ELEMENT (GST_EDITOR_ITEM (element)->object);
-
-  xmlDocDumpFormatMemory (gst_xml_write (e), &mem, &size, 1);
-
-  if (!size) {
-    g_warning ("copy failed");
-    return;
-  }
-
-  clipboard = gtk_clipboard_get (GDK_NONE);
-  /* should this be text/xml ? */
-  gtk_clipboard_set_text (clipboard, (gchar *) mem, size);
+  /*
+   * Currently, copied elements are saved without meta-data
+   * as plain text.
+   * However GtkClipboard also allows to store different types
+   * of data, so we could provide plain-text versions of the
+   * serialized element and GKeyFile versions with meta-data.
+   *
+   * NOTE: CapsFilters are serialized as elements to preserve
+   * as much information as possible -- even at the cost of readability.
+   * This should only matter when copying GstBins since single
+   * GstCapsFilter elements are always serialized as elements
+   * and single elements' pads are not serialized at all.
+   */
+  buffer = gst_editor_item_save (GST_EDITOR_ITEM (element),
+      GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT);
+  gtk_clipboard_set_text (clipboard, buffer, -1);
+  g_free (buffer);
 }
-
-#else /* !GST_XML_SUPPORTED */
-
-void
-gst_editor_element_copy (GstEditorElement * element)
-{
-  g_warning ("gst_editor_element_copy() not supported: missing GstXML support");
-}
-
-#endif
 
 void
 gst_editor_element_remove (GstEditorElement * element)

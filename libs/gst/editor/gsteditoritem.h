@@ -27,7 +27,7 @@
 #include <gio/gio.h>
 #include <gst/gst.h>
 #include <gst/editor/editor.h>
-
+#include <gst/common/gste-serialize.h>
 
 #define GST_TYPE_EDITOR_ITEM (gst_editor_item_get_type())
 #define GST_EDITOR_ITEM(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR_ITEM, GstEditorItem))
@@ -144,6 +144,10 @@ GstEditorItem *gst_editor_item_get (GstObject * object);
 void gst_editor_item_move (GstEditorItem * item, gdouble dx, gdouble dy);
 void gst_editor_item_disconnect (GstEditorItem * parent,GstEditorItem * child);
 void gst_editor_item_hash_remove (GstObject * object);
+
+gchar *gst_editor_item_save (GstEditorItem * item, GsteSerializeFlags flags);
+void gst_editor_item_save_with_metadata (GstEditorItem * item, GKeyFile * key_file,
+    GsteSerializeFlags flags);
 
 /*
  * FIXME: We should not have to export a realize callback

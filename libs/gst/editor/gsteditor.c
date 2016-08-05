@@ -25,26 +25,24 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-
 #include <glib/gi18n-lib.h>
 #include <gtk/gtk.h>
 #include <goocanvas.h>
 
 #include "gsteditor.h"
 #include "gsteditoritem.h"
+#include "gsteditorcanvas.h"
 #include "gsteditorelement.h"
 #include "gsteditorstatusbar.h"
 #include "namedicons.h"
+
 #include <gst/common/gste-common.h>
 #include <gst/common/gste-debug.h>
+#include <gst/common/gste-serialize.h>
 #include "../element-browser/browser.h"
 #include <gst/element-browser/element-tree.h>
 
 #define GST_CAT_DEFAULT gste_debug_cat
-
-#if GST_VERSION_MAJOR < 1 && !defined(GST_DISABLE_DEPRECATED)
-#define GST_XML_SUPPORTED
-#endif
 
 static void gst_editor_class_init (GstEditorClass * klass);
 static void gst_editor_init (GstEditor * project_editor);
@@ -64,14 +62,8 @@ static gint on_delete_event (GtkWidget * widget,
     GdkEvent * event, GstEditor * editor);
 static void on_canvas_notify (GObject * object,
     GParamSpec * param, GstEditor * ui);
-static void
-on_element_tree_select (GstElementBrowserElementTree * element_tree,
+static void on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data);
-
-#ifdef GST_XML_SUPPORTED
-static void on_xml_loaded (GstXML * xml, GstObject * object, xmlNodePtr self,
-    GData ** datalistp);
-#endif
 
 enum
 {
@@ -95,19 +87,6 @@ connect_struct;
 static GObjectClass *parent_class;
 
 static gint _num_editor_windows = 0;
-
-/* GST_EDITOR_ERROR quark - FIXME: maybe move this to a more generic part */
-#define GST_EDITOR_ERROR	(gst_editor_error_quark ())
-
-GQuark
-gst_editor_error_quark (void)
-{
-  static GQuark quark = 0;
-
-  if (quark == 0)
-    quark = g_quark_from_static_string ("gst-editor-error-quark");
-  return quark;
-}
 
 /* error dialog response - FIXME: we can use positive values since the
    GTK_RESPONSE ones are negative ? */
@@ -252,7 +231,7 @@ gst_editor_set_property (GObject * object, guint prop_id, const GValue * value,
         g_free (editor->filename);
       filename = g_value_get_string (value);
       if (!filename) {
-        editor->filename = g_strdup_printf ("untitled-%d.xml", count++);
+        editor->filename = g_strdup_printf ("untitled-%d.gep", count++);
         editor->need_name = TRUE;
       } else {
         editor->filename = g_strdup (filename);
@@ -389,54 +368,21 @@ gst_editor_dialog_gerror (GtkWindow * window, GstMessage* message)
 }
 
 /* GStreamer callbacks */
-static void
-gst_editor_pipeline_deep_notify (GstObject * object, GstObject * orig,
-    GParamSpec * pspec, gchar ** excluded_props)
-{
-}
 
-static gboolean
+static void
 gst_editor_pipeline_message (GstBus * bus, GstMessage * message, gpointer data)
 {
   GstEditor *editor = GST_EDITOR (data);
 
   switch (GST_MESSAGE_TYPE (message)) {
     case GST_MESSAGE_ERROR:
-    {
-      gst_editor_dialog_gerror (GTK_WINDOW (editor->window),message);
+      gst_editor_dialog_gerror (GTK_WINDOW (editor->window), message);
       break;
-    }
-    case GST_MESSAGE_STATE_CHANGED:
-    {
-      GstObject *obj = GST_OBJECT (GST_MESSAGE_SRC (message));
 
-      if (GST_IS_ELEMENT (obj)) {
-        GstEditorItem *item = gst_editor_item_get (obj);
-	//g_print("adding idle function in main bus watcher");
-        g_idle_add ((GSourceFunc) gst_editor_element_sync_state,
-            item /*editor_element */ );
-      }
-      break;
-    }
-    case GST_MESSAGE_EOS:
-    {
-      //printf("EOS Message from %s\n",GST_OBJECT_NAME(GST_OBJECT (GST_MESSAGE_SRC (message))));
-      GstObject *obj = GST_OBJECT (GST_MESSAGE_SRC (message));
-      if (GST_IS_ELEMENT (obj)){ 
-	gst_element_set_state((GstElement*)obj,GST_STATE_NULL);
-        GstEditorItem *item = gst_editor_item_get (obj);
-	//g_print("adding idle function in main bus watcher");
-        gst_editor_element_stop_child(GST_EDITOR_ELEMENT(item));
-        g_idle_add ((GSourceFunc) gst_editor_element_sync_state,
-            item /*editor_element */ );
-      }
-    }
     default:
       /* unhandled message */
       break;
   }
-  /* remove message from the queue */
-  return TRUE;
 }
 
 /* connect useful GStreamer signals to pipeline */
@@ -445,10 +391,14 @@ gst_editor_element_connect (GstEditor * editor, GstElement * pipeline)
 {
   GstBus *bus;
 
-  g_signal_connect (pipeline, "deep_notify",
-      G_CALLBACK (gst_editor_pipeline_deep_notify), editor);
   bus = gst_pipeline_get_bus (GST_PIPELINE (pipeline));
-  gst_bus_add_watch (bus, &gst_editor_pipeline_message, editor);
+  /*
+   * NOTE: The signal watch is cleaned up in gst_editor_load().
+   */
+  gst_bus_add_signal_watch (bus);
+  g_signal_connect (bus, "message",
+      G_CALLBACK (gst_editor_pipeline_message), editor);
+  gst_object_unref (bus);
 }
 
 /* we need more control here so... */
@@ -525,149 +475,67 @@ gst_editor_on_save (GtkWidget * widget, GstEditor * editor)
   do_save (editor);
 }
 
-#ifdef GST_XML_SUPPORTED
-
 static gboolean
 do_save (GstEditor * editor)
 {
-  GstElement *element;
+  GKeyFile *key_file = g_key_file_new ();
+  GError *error = NULL;
 
-  FILE *file;
+  /*
+   * GstCapsFilter elements are serialized as elements always
+   * since that preserves more information and the GKeyFiles are
+   * not meant to be read by humans anyway.
+   * FIXME: It may be a good idea to make this configurable
+   * in the save dialog.
+   */
+  gst_editor_item_save_with_metadata (GST_EDITOR_ITEM (editor->canvas->bin),
+      key_file, GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT);
 
-  if (!(file = fopen (editor->filename, "w"))) {
-    g_warning ("%s could not be saved...", editor->filename);
+  g_key_file_save_to_file (key_file, editor->filename, &error);
+  g_key_file_unref (key_file);
+  if (error) {
+    g_warning ("%s could not be saved: %s", editor->filename, error->message);
+    g_error_free (error);
     return FALSE;
   }
-  g_object_get (editor->canvas, "bin", &element, NULL);
-  if (gst_xml_write_file (element, file) < 0)
-    g_warning ("error saving xml");
-  fclose (file);
-  gst_editor_statusbar_message ("Pipeline saved to %s.", editor->filename);
 
+  gst_editor_statusbar_message ("Pipeline saved to %s.", editor->filename);
   return TRUE;
 }
 
 void
 gst_editor_load (GstEditor * editor, const gchar * file_name)
 {
-  gboolean err;
-  GList *l;
+  GError *error = NULL;
+  GKeyFile *key_file = g_key_file_new ();
   GstElement *pipeline;
-  GstXML *xml;
-  GstEditorItemAttr *attr = NULL;
-  gdouble x,y,width,height;//just for calculating some things
-  GooCanvasBounds bounds;
-  gulong handler;//to remove handler afterwards, fixes bug in GStreamer
-  xml = gst_xml_new ();
 
-  /* create a datalist to retrieve extra information from xml */
-  g_datalist_init (&editor->attributes);
-
-  handler=g_signal_connect (G_OBJECT (xml), "object_loaded",
-      G_CALLBACK (on_xml_loaded), &editor->attributes);
-//first unref all the old stuff
-  if ((editor->canvas)&&(editor->canvas->bin)&&(GST_EDITOR_ITEM(editor->canvas->bin)->object)){
-    g_object_unref(G_OBJECT(GST_EDITOR_ITEM(editor->canvas->bin)->object));
+  if (!g_key_file_load_from_file (key_file, file_name, G_KEY_FILE_NONE, &error)) {
+    g_warning ("Error parsing save file \"%s\": %s", file_name, error->message);
+    g_error_free (error);
+    goto cleanup;
   }
 
-  err = gst_xml_parse_file (xml, (xmlChar *) file_name, NULL);
+  pipeline = gst_editor_canvas_get_pipeline (editor->canvas);
+  if (pipeline)
+    gst_bus_remove_signal_watch (gst_pipeline_get_bus (GST_PIPELINE (pipeline)));
 
-  g_signal_handler_disconnect         (G_OBJECT (xml),handler);
-
-  if (err != TRUE) {
-    g_warning ("parse of xml file '%s' failed", file_name);
-    return;
+  if (!gst_editor_canvas_load_with_metadata (editor->canvas, key_file, &error)) {
+    g_warning ("Error loading key file: %s", error->message);
+    g_error_free (error);
+    goto cleanup;
   }
 
-  l = gst_xml_get_topelements (xml);
-  if (!l) {
-    g_warning ("no toplevel pipeline element in file '%s'", file_name);
-    return;
-  }
-
-  if (l->next)
-    g_warning ("only one toplevel element is supported at this time");
-
-  pipeline = GST_ELEMENT (l->data);
-
-  /* FIXME: through object properties ? */
-  EDITOR_DEBUG ("loaded: attributes: %p", editor->attributes);
-  /* FIXME: attributes needs to come first ! */
-  g_object_set (editor->canvas, "attributes", &editor->attributes, "bin", pipeline, NULL);
   g_object_set (editor, "filename", file_name, NULL);
 
-
-  attr = g_datalist_get_data (&editor->attributes, GST_ELEMENT_NAME (pipeline));
-  /* now decide */
-  if (attr) {
-    editor->canvas->widthbackup= attr->w;
-    editor->canvas->heightbackup= attr->h;
-    g_object_set(editor->canvas->bin, "width",editor->canvas->widthbackup,"height",editor->canvas->heightbackup,NULL);
-    if (editor->canvas->bin) g_object_get (editor->canvas->bin, "width", &width, "height", &height, NULL);
-    goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (editor->canvas->bin), &bounds);
-    x = bounds.x1;
-    y = bounds.y1;
-    goo_canvas_set_bounds (GOO_CANVAS (editor->canvas), x - 4, y - 4,
-        x + width +3, y + height +3);
-  }
-  else g_print("Element attributes for %s not found!\n",GST_ELEMENT_NAME(pipeline));
   gst_editor_statusbar_message ("Pipeline loaded from %s.", editor->filename);
+
+  pipeline = gst_editor_canvas_get_pipeline (editor->canvas);
   gst_editor_element_connect (editor, pipeline);
+
+cleanup:
+  g_key_file_unref (key_file);
 }
-
-static void
-on_xml_loaded (GstXML * xml, GstObject * object, xmlNodePtr self,
-    GData ** datalistp)
-{
-  xmlNodePtr children = self->xmlChildrenNode;
-  GstEditorItemAttr *attr = NULL;       /* GUI attributes in editor canvas */
-
-  attr = g_malloc (sizeof (GstEditorItemAttr));
-  //g_print("xml for object %s with pointer %p loaded, getting attrs",GST_OBJECT_NAME(object),(gpointer)object);
-  GST_DEBUG_OBJECT (object, "xml for object %s with pointer %p loaded, getting attrs",GST_OBJECT_NAME(object),(gpointer)object);
-  while (children) {
-    if (!g_ascii_strcasecmp ((gchar *) children->name, "item")) {
-      xmlNodePtr nodes = children->xmlChildrenNode;
-
-      while (nodes) {
-        if (!g_ascii_strcasecmp ((gchar *) nodes->name, "x")) {
-          attr->x = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "y")) {
-          attr->y = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "w")) {
-          attr->w = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        } else if (!g_ascii_strcasecmp ((gchar *) nodes->name, "h")) {
-          attr->h = g_ascii_strtod ((gchar *) xmlNodeGetContent (nodes), NULL);
-        }
-        nodes = nodes->next;
-      }
-      GST_DEBUG_OBJECT (object, "loaded with x: %f, y: %f, w: %f, h: %f",
-          attr->x, attr->y, attr->w, attr->h);
-    }
-    children = children->next;
-  }
-
-  /* save this in the datalist with the object's name as key */
-  GST_DEBUG_OBJECT (object, "adding to datalistp %p", datalistp);
-  g_datalist_set_data (datalistp, GST_OBJECT_NAME (object), attr);
-}
-
-#else /* !GST_XML_SUPPORTED */
-
-static gboolean
-do_save (GstEditor * editor)
-{
-  g_warning ("%s could not be saved: missing GstXML support", editor->filename);
-  return FALSE;
-}
-
-void
-gst_editor_load (GstEditor * editor, const gchar * file_name)
-{
-  g_warning ("gst_editor_load() not supported - missing GstXML support");
-}
-
-#endif
 
 void
 gst_editor_on_open (GtkWidget * widget, GstEditor * editor)
@@ -914,7 +782,7 @@ gst_editor_on_about (GtkWidget * widget, GstEditor * editor)
       "wrap-license", TRUE,
       "comments",
       "A graphical pipeline editor for "
-      "GStreamer capable of loading and saving XML.",
+      "GStreamer capable of loading and saving GstParse/gst-launch pipelines.",
       "website", "https://github.com/metratec/gst-editor/",
       "authors", authors,
       "logo-icon-name", GST_EDITOR_NAMED_ICON_LOGO,
