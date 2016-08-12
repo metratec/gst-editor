@@ -103,8 +103,9 @@ struct _GstEditorElementClass
 GType gst_editor_element_get_type (void);
 void gst_editor_element_move (GstEditorElement * element,
     gdouble dx, gdouble dy);
-void gst_editor_element_cut (GstEditorElement * element);
-void gst_editor_element_copy (GstEditorElement * element);
+
+void gst_editor_element_cut (GstEditorElement * element, GdkAtom selection);
+void gst_editor_element_copy (GstEditorElement * element, GdkAtom selection);
 void gst_editor_element_remove (GstEditorElement * element);
 
 void gst_editor_element_stop_child (GstEditorElement * child);

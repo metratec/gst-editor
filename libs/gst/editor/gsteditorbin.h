@@ -60,7 +60,7 @@ GType gst_editor_bin_get_type (void);
 gdouble gst_editor_bin_sort (GstEditorBin * bin, gdouble step);
 gboolean gst_editor_bin_paste_from_string (GstEditorBin * bin,
     const gchar * str, GError ** error);
-void gst_editor_bin_paste (GstEditorBin * bin);
+void gst_editor_bin_paste (GstEditorBin * bin, GdkAtom selection);
 void gst_editor_bin_debug_output (GstEditorBin * bin);
 
 /*

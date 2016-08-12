@@ -743,7 +743,7 @@ gst_editor_on_cut (GtkWidget * widget, GstEditor * editor)
     return;
   }
 
-  gst_editor_element_cut (element);
+  gst_editor_element_cut (element, GDK_SELECTION_CLIPBOARD);
 }
 
 void
@@ -759,13 +759,13 @@ gst_editor_on_copy (GtkWidget * widget, GstEditor * editor)
     return;
   }
 
-  gst_editor_element_copy (element);
+  gst_editor_element_copy (element, GDK_SELECTION_CLIPBOARD);
 }
 
 void
 gst_editor_on_paste (GtkWidget * widget, GstEditor * editor)
 {
-  gst_editor_bin_paste (editor->canvas->bin);
+  gst_editor_bin_paste (editor->canvas->bin, GDK_SELECTION_CLIPBOARD);
 }
 
 void

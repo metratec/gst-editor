@@ -274,6 +274,14 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
         g_object_set (canvas->property_window, "element", NULL, NULL);
       }
 
+      /*
+       * Update the PRIMARY selection clipboard.
+       * TODO: Instead of always serializing the selected element, it is
+       * possible to do this on-demand only since this selection property
+       * is always kept up to date.
+       * See gtk_clipboard_set_with_data().
+       */
+      gst_editor_element_copy (canvas->selection, GDK_SELECTION_PRIMARY);
       break;
 
     case PROP_PROPERTIES_VISIBLE:

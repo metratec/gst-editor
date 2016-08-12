@@ -1455,7 +1455,7 @@ on_copy (GSimpleAction * action,
 {
   GstEditorElement * element = GST_EDITOR_ELEMENT (user_data);
 
-  gst_editor_element_copy (element);
+  gst_editor_element_copy (element, GDK_SELECTION_CLIPBOARD);
 }
 
 static void
@@ -1464,7 +1464,7 @@ on_cut (GSimpleAction * action,
 {
   GstEditorElement * element = GST_EDITOR_ELEMENT (user_data);
 
-  gst_editor_element_cut (element);
+  gst_editor_element_cut (element, GDK_SELECTION_CLIPBOARD);
 }
 
 static void
@@ -1564,16 +1564,16 @@ gst_editor_element_move (GstEditorElement * element, gdouble dx, gdouble dy)
 }
 
 void
-gst_editor_element_cut (GstEditorElement * element)
+gst_editor_element_cut (GstEditorElement * element, GdkAtom selection)
 {
-  gst_editor_element_copy (element);
+  gst_editor_element_copy (element, selection);
   gst_editor_element_remove (element);
 }
 
 void
-gst_editor_element_copy (GstEditorElement * element)
+gst_editor_element_copy (GstEditorElement * element, GdkAtom selection)
 {
-  GtkClipboard *clipboard = gtk_clipboard_get (GDK_NONE);
+  GtkClipboard *clipboard = gtk_clipboard_get (selection);
   gchar *buffer;
 
   /*

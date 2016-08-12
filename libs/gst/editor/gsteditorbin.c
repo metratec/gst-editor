@@ -577,7 +577,7 @@ on_paste (GSimpleAction * action,
 {
   GstEditorBin *bin = GST_EDITOR_BIN (user_data);
 
-  gst_editor_bin_paste (bin);
+  gst_editor_bin_paste (bin, GDK_SELECTION_CLIPBOARD);
 }
 
 /**********************************************************************
@@ -761,9 +761,9 @@ gst_editor_bin_paste_from_string (GstEditorBin * bin, const gchar * str,
 }
 
 void
-gst_editor_bin_paste (GstEditorBin * bin)
+gst_editor_bin_paste (GstEditorBin * bin, GdkAtom selection)
 {
-  GtkClipboard *clipboard = gtk_clipboard_get (GDK_NONE);
+  GtkClipboard *clipboard = gtk_clipboard_get (selection);
   gchar *text;
   GError *error = NULL;
 
