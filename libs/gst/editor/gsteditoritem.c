@@ -24,12 +24,13 @@
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 
-#include <gst/editor/editor.h>
 #include <gst/common/gste-marshal.h>
 #include <gst/common/gste-debug.h>
 #include <gst/common/gste-serialize.h>
 
 #include "gst-helper.h"
+#include "gsteditor.h" // FIXME: for GST_EDITOR_SET_OBJECT()
+#include "gsteditoritem.h"
 
 GST_DEBUG_CATEGORY (gste_item_debug);
 #define GST_CAT_DEFAULT gste_item_debug

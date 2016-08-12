@@ -21,11 +21,10 @@
 #ifndef __GST_EDITOR_BIN_H__
 #define __GST_EDITOR_BIN_H__
 
-
 #include <gtk/gtk.h>
-#include <gst/editor/gsteditor.h>
-#include <gst/editor/gsteditorelement.h>
+#include <goocanvas.h>
 
+#include <gst/editor/gsteditorelement.h>
 
 #define GST_TYPE_EDITOR_BIN (gst_editor_bin_get_type())
 #define GST_EDITOR_BIN(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR_BIN, GstEditorBin))
@@ -34,8 +33,7 @@
 #define GST_IS_EDITOR_BIN_CLASS(obj) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_EDITOR_BIN))
 #define GST_EDITOR_BIN_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_EDITOR_BIN, GstEditorBinClass))
 
-
-struct _GstEditorBin
+typedef struct _GstEditorBin
 {
   GstEditorElement element;
 
@@ -47,14 +45,12 @@ struct _GstEditorBin
 
   /* datalist of GstElement names -> GstEditorItemAttr structs */
   GData **attributes;
-};
+} GstEditorBin;
 
-struct _GstEditorBinClass
+typedef struct _GstEditorBinClass
 {
   GstEditorElementClass parent_class;
-};
-
-
+} GstEditorBinClass;
 
 GType gst_editor_bin_get_type (void);
 gdouble gst_editor_bin_sort (GstEditorBin * bin, gdouble step);

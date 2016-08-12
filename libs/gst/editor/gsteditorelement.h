@@ -16,19 +16,15 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-
-
 #ifndef __GST_EDITOR_ELEMENT_H__
 #define __GST_EDITOR_ELEMENT_H__
 
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <gst/gst.h>
 #include <goocanvas.h>
 
-#include <gst/editor/editor.h>
 #include <gst/editor/gsteditoritem.h>
-
 
 #define GST_TYPE_EDITOR_ELEMENT (gst_editor_element_get_type())
 #define GST_EDITOR_ELEMENT(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR_ELEMENT, GstEditorElement))
@@ -41,8 +37,7 @@
 #define GST_EDITOR_ELEMENT_GROUP(obj) (GST_EDITOR_ELEMENT(obj)->group)
 #define GST_EDITOR_ELEMENT_CANVAS(obj) (GST_EDITOR_ELEMENT(obj)->canvas)
 
-
-struct _GstEditorElement
+typedef struct _GstEditorElement
 {
   GstEditorItem item;
 
@@ -85,9 +80,9 @@ struct _GstEditorElement
 
   guint bus_id;
   GRWLock rwlock; 
-};
+} GstEditorElement;
 
-struct _GstEditorElementClass
+typedef struct _GstEditorElementClass
 {
   GstEditorItemClass parent_class;
 
@@ -97,8 +92,7 @@ struct _GstEditorElementClass
 //      GstEditorElement * element);
   gint (*event) (GooCanvasItemSimple * item, GdkEvent * event,
       GstEditorElement * element);
-};
-
+} GstEditorElementClass;
 
 GType gst_editor_element_get_type (void);
 void gst_editor_element_move (GstEditorElement * element,

@@ -16,15 +16,18 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <gst/gst.h>
 #include <goocanvas.h>
 
 #include <gst/common/gste-debug.h>
 
-#include "editor.h"
 #include "gst-helper.h"
+#include "gsteditorpad.h"
+#include "gsteditorlink.h"
 
 /* class functions */
 static void gst_editor_link_class_init (GstEditorLinkClass * klass);

@@ -24,8 +24,8 @@
 #include <goocanvas.h>
 
 #include <gst/editor/gsteditoritem.h>
+#include <gst/editor/gsteditorelement.h>
 #include <gst/editor/gsteditorbin.h>
-#include "gsteditor.h"
 
 #define GST_TYPE_EDITOR_CANVAS (gst_editor_canvas_get_type())
 #define GST_EDITOR_CANVAS(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR_CANVAS, GstEditorCanvas))
@@ -44,7 +44,11 @@ enum GstEditorCanvasError {
 typedef struct _GstEditorCanvas
 {
   GooCanvas canvas;
-  GstEditor* parent;
+  /*
+   * FIXME: We should do without references to GstEditor,
+   * to allow embedding into other applications.
+   */
+  GObject* parent;
   GstEditorBin *bin;
   GstEditorElement *selection;
   GtkWidget *property_window;

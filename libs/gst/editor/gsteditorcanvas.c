@@ -20,17 +20,18 @@
 #include "config.h"
 #endif
 
-#include <gtk/gtk.h>
 #include <gst/gst.h>
+#include <gtk/gtk.h>
 
-#include <gst/editor/editor.h>
 #include <gst/common/gste-debug.h>
+
+#include "gst-helper.h"
 #include "gsteditorproperty.h"
 #include "gsteditorpalette.h"
 #include "gsteditorelement.h"
 #include "gsteditoritem.h"
-#include "gst-helper.h"
-
+#include "gsteditor.h"
+#include "gsteditorcanvas.h"
 
 /* signals and args */
 enum
@@ -166,7 +167,7 @@ gst_editor_canvas_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
 
       goo_canvas_set_bounds (
           GOO_CANVAS (canvas), x - 4, y - 4, x + width - 5, y + height - 5);
-      gst_editor_on_spinbutton ((GtkSpinButton *)NULL, canvas->parent);
+      gst_editor_on_spinbutton ((GtkSpinButton *)NULL, GST_EDITOR (canvas->parent));
     }
     // else{
     // g_print("gst_editor_canvas_size_allocate none\n");

@@ -16,15 +16,14 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-
 #ifndef __GST_EDITOR_PAD_H__
 #define __GST_EDITOR_PAD_H__
 
-#include <goocanvas.h>
 #include <gst/gst.h>
-#include <gst/editor/editor.h>
+#include <goocanvas.h>
 
+#include <gst/editor/gsteditoritem.h>
+#include <gst/editor/gsteditorlink.h>
 
 #define GST_EDITOR_PAD(obj) G_TYPE_CHECK_INSTANCE_CAST(obj, GST_TYPE_EDITOR_PAD, GstEditorPad)
 #define GST_EDITOR_PAD_CLASS(klass) G_TYPE_CHECK_CLASS_CAST(klass, GST_TYPE_EDITOR_PAD, GstEditorPadClass)
@@ -62,6 +61,18 @@
 #define GST_IS_EDITOR_PAD_GHOST_CLASS(klass) G_TYPE_CHECK_CLASS_TYPE(klass, GST_TYPE_EDITOR_PAD_GHOST)
 #define GST_TYPE_EDITOR_PAD_GHOST gst_editor_pad_ghost_get_type()
 
+typedef struct _GstEditorPad GstEditorPad;
+typedef struct _GstEditorPadClass GstEditorPadClass;
+typedef GstEditorPad GstEditorPadAlways;
+typedef GstEditorPadClass GstEditorPadAlwaysClass;
+typedef GstEditorPad GstEditorPadSometimes;
+typedef GstEditorPadClass GstEditorPadSometimesClass;
+typedef GstEditorPad GstEditorPadRequest;
+typedef GstEditorPadClass GstEditorPadRequestClass;
+typedef GstEditorPad GstEditorPadRequested;
+typedef GstEditorPadClass GstEditorPadRequestedClass;
+typedef GstEditorPad GstEditorPadGhost;
+typedef GstEditorPadClass GstEditorPadGhostClass;
 
 struct _GstEditorPad
 {
@@ -93,7 +104,6 @@ struct _GstEditorPadClass
 {
   GstEditorItemClass parent_class;
 };
-
 
 GType gst_editor_pad_get_type (void);
 GType gst_editor_pad_always_get_type (void);

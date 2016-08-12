@@ -16,17 +16,14 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-
 #ifndef __GST_EDITOR_ITEM_H__
 #define __GST_EDITOR_ITEM_H__
 
-#include <string.h>
-
-#include <goocanvas.h>
-#include <gio/gio.h>
 #include <gst/gst.h>
-#include <gst/editor/editor.h>
+#include <gio/gio.h>
+#include <gtk/gtk.h>
+#include <goocanvas.h>
+
 #include <gst/common/gste-serialize.h>
 
 #define GST_TYPE_EDITOR_ITEM (gst_editor_item_get_type())
@@ -76,7 +73,7 @@ typedef struct
   gdouble w, h;
 } GstEditorItemBand;
 
-struct _GstEditorItem
+typedef struct _GstEditorItem
 {
   GooCanvasGroup group;
 
@@ -111,9 +108,9 @@ struct _GstEditorItem
   guint32 outline_color;
 
   GRWLock *globallock;
-};
+} GstEditorItem;
 
-struct _GstEditorItemClass
+typedef struct _GstEditorItemClass
 {
   GooCanvasGroupClass parent_class;
 
@@ -126,7 +123,7 @@ struct _GstEditorItemClass
   void (*whats_this) (GstEditorItem * item);
 
   GMenu *gmenu;
-};
+} GstEditorItemClass;
 
 /* struct to keep positional info on EditorItem around before it lives */
 /* FIXME: maybe this should move out of header so not everyone can poke ? */
@@ -142,7 +139,7 @@ void gst_editor_item_resize (GstEditorItem * item);
 void gst_editor_item_repack (GstEditorItem * item);
 GstEditorItem *gst_editor_item_get (GstObject * object);
 void gst_editor_item_move (GstEditorItem * item, gdouble dx, gdouble dy);
-void gst_editor_item_disconnect (GstEditorItem * parent,GstEditorItem * child);
+void gst_editor_item_disconnect (GstEditorItem * parent, GstEditorItem * child);
 void gst_editor_item_hash_remove (GstObject * object);
 
 gchar *gst_editor_item_save (GstEditorItem * item, GsteSerializeFlags flags);

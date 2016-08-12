@@ -16,13 +16,13 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-
 #ifndef __GST_EDITOR_LINK_H__
 #define __GST_EDITOR_LINK_H__
 
 #include <goocanvas.h>
+
 #include <gst/editor/gsteditoritem.h>
+#include <gst/editor/gsteditorcanvas.h>
 
 #define GST_TYPE_EDITOR_LINK (gst_editor_link_get_type())
 #define GST_EDITOR_LINK(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR_LINK, GstEditorLink))
@@ -31,8 +31,7 @@
 #define GST_IS_EDITOR_LINK_CLASS(obj) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_EDITOR_LINK))
 #define GST_EDITOR_LINK_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_EDITOR_LINK, GstEditorLinkClass))
 
-
-struct _GstEditorLink
+typedef struct _GstEditorLink
 {
   GooCanvasPolyline line;
 
@@ -55,13 +54,12 @@ struct _GstEditorLink
   GooCanvasPoints *points;
 
   gdouble x, y;			/* terminating point    */
-};
+} GstEditorLink;
 
-struct _GstEditorLinkClass
+typedef struct _GstEditorLinkClass
 {
    GooCanvasPolylineClass parent_class;
-};
-
+} GstEditorLinkClass;
 
 GType gst_editor_link_get_type (void);
 gboolean gst_editor_link_link (GstEditorLink * link);

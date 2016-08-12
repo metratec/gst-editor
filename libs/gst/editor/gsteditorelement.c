@@ -16,22 +16,24 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <gtk/gtk.h>
 
 #include <gio/gio.h>
 #include <gst/gst.h>
-#include <gst/gstutils.h>
 
-#include "editor.h"
-#include "gst-helper.h"
-#include "gsteditorproperty.h"
-#include "gsteditoritem.h"
 #include <gst/common/gste-marshal.h>
 #include <gst/common/gste-debug.h>
 #include <gst/common/gste-serialize.h>
 #include "../../../pixmaps/pixmaps.h"
+
+#include "gst-helper.h"
+#include "gsteditorproperty.h"
+#include "gsteditoritem.h"
+#include "gsteditorelement.h"
 
 GST_DEBUG_CATEGORY (gste_element_debug);
 #define GST_CAT_DEFAULT gste_element_debug

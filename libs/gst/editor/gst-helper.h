@@ -21,14 +21,14 @@
 #ifndef __GST_HELPER_H__
 #define __GST_HELPER_H__
 
-
 #include <gst/gst.h>
-
+#include <goocanvas.h>
 
 void gsth_element_unlink_all (GstElement * element);
 void goo_canvas_item_simple_show (GooCanvasItemSimple *item);
 void goo_canvas_item_simple_hide (GooCanvasItemSimple *item);
-GooCanvasItem *goo_canvas_item_new (GooCanvasItem *parent, GType type, const gchar *first_arg_name, ...);
+GooCanvasItem *goo_canvas_item_new (GooCanvasItem *parent,
+    GType type, const gchar *first_arg_name, ...);
 //void goo_canvas_item_raise_pos (GooCanvasItem *item, int positions);
 //void goo_canvas_item_lower_pos (GooCanvasItem *item, int positions);
 

@@ -16,40 +16,10 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
-
 #ifndef __GST_EDITOR_MAIN_H__
 #define __GST_EDITOR_MAIN_H__
 
-
 #include <gst/gst.h>
-
-/* FIXME: how does gtk+ manage to do this? */
-
-typedef struct _GstEditor GstEditor;
-typedef struct _GstEditorClass GstEditorClass;
-typedef struct _GstEditorBin GstEditorBin;
-typedef struct _GstEditorBinClass GstEditorBinClass;
-typedef struct _GstEditorCanvas GstEditorCanvas;
-typedef struct _GstEditorCanvasClass GstEditorCanvasClass;
-typedef struct _GstEditorLink GstEditorLink;
-typedef struct _GstEditorLinkClass GstEditorLinkClass;
-typedef struct _GstEditorItem GstEditorItem;
-typedef struct _GstEditorItemClass GstEditorItemClass;
-typedef struct _GstEditorElement GstEditorElement;
-typedef struct _GstEditorElementClass GstEditorElementClass;
-typedef struct _GstEditorPad GstEditorPad;
-typedef struct _GstEditorPadClass GstEditorPadClass;
-typedef GstEditorPad GstEditorPadAlways;
-typedef GstEditorPadClass GstEditorPadAlwaysClass;
-typedef GstEditorPad GstEditorPadSometimes;
-typedef GstEditorPadClass GstEditorPadSometimesClass;
-typedef GstEditorPad GstEditorPadRequest;
-typedef GstEditorPadClass GstEditorPadRequestClass;
-typedef GstEditorPad GstEditorPadRequested;
-typedef GstEditorPadClass GstEditorPadRequestedClass;
-typedef GstEditorPad GstEditorPadGhost;
-typedef GstEditorPadClass GstEditorPadGhostClass;
 
 #include <gst/editor/gsteditor.h>
 #include <gst/editor/gsteditorbin.h>
@@ -61,4 +31,4 @@ typedef GstEditorPadClass GstEditorPadGhostClass;
 
 void gste_init (void);
 
-#endif /* __GST_EDITOR_H__ */
+#endif /* __GST_EDITOR_MAIN_H__ */

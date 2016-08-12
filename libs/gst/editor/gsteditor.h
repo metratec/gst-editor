@@ -19,12 +19,10 @@
 #ifndef __GST_EDITOR_H__
 #define __GST_EDITOR_H__
 
-#include <gst/gst.h>
 #include <gtk/gtk.h>
 
+#include <gst/editor/gsteditorcanvas.h>
 #include <gst/common/gste-serialize.h>
-
-#include <gst/editor/editor.h>
 
 #define GST_TYPE_EDITOR (gst_editor_get_type())
 #define GST_EDITOR(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR, GstEditor))
@@ -36,7 +34,7 @@
 #define GST_EDITOR_SET_OBJECT(item,object) (g_object_set_data (G_OBJECT (item), "gsteditorobject", (object)))
 #define GST_EDITOR_GET_OBJECT(item) (g_object_get_data (G_OBJECT (item), "gsteditorobject"))
 
-struct _GstEditor
+typedef struct _GstEditor
 {
   GObject object;
 
@@ -55,16 +53,16 @@ struct _GstEditor
   GstEditorCanvas *canvas;
 
   GMutex outputmutex;//only used for time measurement outputs
-};
+} GstEditor;
 
-struct _GstEditorClass
+typedef struct _GstEditorClass
 {
   GObjectClass parent_class;
-};
+} GstEditorClass;
 
 GType gst_editor_get_type (void);
 GtkWidget *gst_editor_new (GstElement * element);
 void gst_editor_load (GstEditor * editor, const gchar * file_name);
-void gst_editor_on_spinbutton(GtkSpinButton * spinheight, GstEditor * editor);
+void gst_editor_on_spinbutton (GtkSpinButton * spinheight, GstEditor * editor);
 
 #endif /* __GST_EDITOR_H__ */

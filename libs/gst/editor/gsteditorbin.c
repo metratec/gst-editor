@@ -16,21 +16,23 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <math.h>
 #include <string.h>
 
 #include <glib.h>
-#include <gio/gio.h>
 #include <gtk/gtk.h>
 #include <gst/gst.h>
 
-#include <gst/editor/editor.h>
 #include <gst/common/gste-debug.h>
-#include "../element-browser/browser.h"
+#include <gst/element-browser/browser.h>
 
 #include "gst-helper.h"
+#include "gsteditorlink.h"
+#include "gsteditorbin.h"
 
 GST_DEBUG_CATEGORY (gste_bin_debug);
 #define GST_CAT_DEFAULT gste_bin_debug

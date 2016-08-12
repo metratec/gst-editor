@@ -39,7 +39,7 @@
 #include <gst/common/gste-common.h>
 #include <gst/common/gste-debug.h>
 #include <gst/common/gste-serialize.h>
-#include "../element-browser/browser.h"
+#include <gst/element-browser/browser.h>
 #include <gst/element-browser/element-tree.h>
 
 #define GST_CAT_DEFAULT gste_debug_cat
@@ -223,7 +223,7 @@ gst_editor_init (GstEditor * editor)
   editor->canvas =
       (GstEditorCanvas *) g_object_new (GST_TYPE_EDITOR_CANVAS, NULL);
   editor->canvas->autosize =TRUE;
-  editor->canvas->parent=editor;
+  editor->canvas->parent = G_OBJECT (editor);
   gtk_widget_show (GTK_WIDGET (editor->canvas));
 
   gtk_container_add (GTK_CONTAINER (gtk_builder_get_object (editor->builder,

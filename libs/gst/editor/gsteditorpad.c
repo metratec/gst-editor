@@ -16,16 +16,22 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include <gio/gio.h>
 #include <gtk/gtk.h>
 #include <gst/gst.h>
-#include <gst/editor/editor.h>
+#include <goocanvas.h>
+
 #include <gst/common/gste-debug.h>
-#include <gst/editor/gsteditorelement.h>
 
 #include "gst-helper.h"
+#include "gsteditorelement.h"
+#include "gsteditor.h" // FIXME: for GST_EDITOR_SET_OBJECT()
+#include "gsteditorpad.h"
+
 /* interface methods */
 static void canvas_item_interface_init (GooCanvasItemIface * iface);
 static gboolean gst_editor_pad_enter_notify_event (GooCanvasItem * citem,
