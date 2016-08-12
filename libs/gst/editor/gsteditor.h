@@ -22,6 +22,8 @@
 #include <gst/gst.h>
 #include <gtk/gtk.h>
 
+#include <gst/common/gste-serialize.h>
+
 #include <gst/editor/editor.h>
 
 #define GST_TYPE_EDITOR (gst_editor_get_type())
@@ -39,14 +41,16 @@ struct _GstEditor
   GObject object;
 
   GtkBuilder *builder;
+  GtkWidget *save_dialog;
+  GtkFileFilter *filter_gep, *filter_gsp;
   GtkWidget *window;
   GtkWidget *element_tree;
   GtkSpinButton *sw,*sh;
-  
 
   gchar *filename;
   gboolean changed;
   gboolean need_name;
+  GsteSerializeFlags save_flags;
 
   GstEditorCanvas *canvas;
 

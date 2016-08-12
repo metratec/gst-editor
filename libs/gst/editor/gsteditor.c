@@ -56,8 +56,6 @@ static void gst_editor_connect_func (GtkBuilder * builder, GObject * object,
     const gchar * signal_name, const gchar * handler_name,
     GObject * connect_object, GConnectFlags flags, gpointer user_data);
 
-static gboolean do_save (GstEditor * editor);
-
 static gint on_delete_event (GtkWidget * widget,
     GdkEvent * event, GstEditor * editor);
 static void on_canvas_notify (GObject * object,
@@ -149,8 +147,10 @@ gst_editor_init (GstEditor * editor)
   GModule *symbols;
   gchar *path;
   GError *error = NULL;
+
   static const gchar *object_ids[] = {
-      "main_project_window", "adjustment1", "adjustment2", NULL
+      "main_project_window", "adjustment1", "adjustment2",
+      "save_dialog", "save_dialog_settings", NULL
   };
 
   symbols = g_module_open (NULL, 0);
@@ -176,6 +176,30 @@ gst_editor_init (GstEditor * editor)
 
   gtk_builder_connect_signals_full (editor->builder,
       gst_editor_connect_func, &data);
+
+  editor->save_dialog =
+      GTK_WIDGET (gtk_builder_get_object (editor->builder, "save_dialog"));
+
+  /*
+   * NOTE: Filter support is more or less broken in Glade, so
+   * we add them with code here.
+   * Filter ownership is transferred to the open/save dialogs,
+   * so we do not have to clean them up.
+   */
+  editor->filter_gep = gtk_file_filter_new ();
+  gtk_file_filter_set_name (editor->filter_gep,
+      _("Gst-Editor Pipeline (*.gep)"));
+  gtk_file_filter_add_pattern (editor->filter_gep, "*.gep");
+  gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (editor->save_dialog),
+      editor->filter_gep);
+
+  editor->filter_gsp = gtk_file_filter_new ();
+  gtk_file_filter_set_name (editor->filter_gsp,
+      _("Plain Gst-Launch Pipeline (*.gsp;*.txt)"));
+  gtk_file_filter_add_pattern (editor->filter_gsp, "*.gsp");
+  gtk_file_filter_add_pattern (editor->filter_gsp, "*.txt");
+  gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (editor->save_dialog),
+      editor->filter_gsp);
 
   editor->window =
       GTK_WIDGET (gtk_builder_get_object (editor->builder, "main_project_window"));
@@ -438,30 +462,102 @@ gst_editor_new (GstElement * element)
   return ret;
 }
 
+static gboolean
+gst_editor_save (GstEditor * editor)
+{
+  GError *error = NULL;
+  GstEditorItem *pipeline_item = GST_EDITOR_ITEM (editor->canvas->bin);
+
+  if (g_str_has_suffix (editor->filename, ".gep")) {
+    /*
+     * Save as Gst-Editor Pipeline with metadata.
+     */
+    GKeyFile *key_file = g_key_file_new ();
+
+    gst_editor_item_save_with_metadata (pipeline_item, key_file,
+        editor->save_flags);
+
+    g_key_file_save_to_file (key_file, editor->filename, &error);
+    g_key_file_unref (key_file);
+    if (error) {
+      g_warning ("%s could not be saved: %s", editor->filename, error->message);
+      g_error_free (error);
+      return FALSE;
+    }
+  } else {
+    /*
+     * Save as plain Gst-Launch pipeline.
+     */
+    gchar *pipeline = gst_editor_item_save (pipeline_item, editor->save_flags);
+
+    g_file_set_contents (editor->filename, pipeline, -1, &error);
+    g_free (pipeline);
+    if (error) {
+      g_warning ("%s could not be saved: %s", editor->filename, error->message);
+      g_error_free (error);
+      return FALSE;
+    }
+  }
+
+  gst_editor_statusbar_message ("Pipeline saved to %s.", editor->filename);
+  return TRUE;
+}
+
 void
 gst_editor_on_save_as (GtkWidget * widget, GstEditor * editor)
 {
-  GtkWidget *file_chooser;
+  gint response;
+  gchar *filename;
+  GObject *setting;
 
-  file_chooser = gtk_file_chooser_dialog_new ("Please select a file for saving.",
-      GTK_WINDOW (editor->window), GTK_FILE_CHOOSER_ACTION_SAVE,
-      _("_Cancel"), GTK_RESPONSE_CANCEL,
-      _("Save _As"), GTK_RESPONSE_ACCEPT,
-      NULL);
+  gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (editor->save_dialog),
+      g_str_has_suffix (editor->filename, ".gep")
+          ? editor->filter_gep : editor->filter_gsp);
 
-  gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (file_chooser),
-      editor->filename);
+  if (editor->need_name)
+    gtk_file_chooser_set_current_name (GTK_FILE_CHOOSER (editor->save_dialog),
+        editor->filename);
+  else
+    gtk_file_chooser_set_filename (GTK_FILE_CHOOSER (editor->save_dialog),
+        editor->filename);
 
-  if (gtk_dialog_run (GTK_DIALOG (file_chooser)) == GTK_RESPONSE_ACCEPT) {
-    gchar *filename =
-        gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (file_chooser));
-    g_object_set (editor, "filename", filename, NULL);
-    g_free (filename);
+  /*
+   * NOTE: The dialog's response codes have been chosen manually in Glade
+   * to match GTK_RESPONSE_ACCEPT/GTK_RESPONSE_CANCEL.
+   * Let's just hope the stock response Ids do not change suddenly.
+   */
+  response = gtk_dialog_run (GTK_DIALOG (editor->save_dialog));
+  gtk_widget_hide (editor->save_dialog);
+  if (response != GTK_RESPONSE_ACCEPT)
+    return;
 
-    do_save (editor);
-  }
+  filename =
+      gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (editor->save_dialog));
+  g_object_set (editor, "filename", filename, NULL);
+  g_free (filename);
 
-  gtk_widget_destroy (file_chooser);
+  /*
+   * Determine flags from the dialog's setting check boxes.
+   * NOTE: save_dialog_capsfilter_as_element is enabled by default
+   * since that preserves more information and the save files (at least
+   * the *.gep files) are not meant for human consumption anyway.
+   * Other setting flags might be enforced by the serialization.
+   */
+  editor->save_flags = 0;
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_verbose");
+  if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (setting)))
+    editor->save_flags |= GSTE_SERIALIZE_VERBOSE;
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_all_bins");
+  if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (setting)))
+    editor->save_flags |= GSTE_SERIALIZE_ALL_BINS;
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_pipelines_as_bins");
+  if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (setting)))
+    editor->save_flags |= GSTE_SERIALIZE_PIPELINES_AS_BINS;
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_capsfilter_as_element");
+  if (gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (setting)))
+    editor->save_flags |= GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT;
+
+  gst_editor_save (editor);
 }
 
 void
@@ -472,35 +568,11 @@ gst_editor_on_save (GtkWidget * widget, GstEditor * editor)
     return;
   }
 
-  do_save (editor);
-}
-
-static gboolean
-do_save (GstEditor * editor)
-{
-  GKeyFile *key_file = g_key_file_new ();
-  GError *error = NULL;
-
   /*
-   * GstCapsFilter elements are serialized as elements always
-   * since that preserves more information and the GKeyFiles are
-   * not meant to be read by humans anyway.
-   * FIXME: It may be a good idea to make this configurable
-   * in the save dialog.
+   * Inherits file name and flags from the last save dialog
+   * invocation.
    */
-  gst_editor_item_save_with_metadata (GST_EDITOR_ITEM (editor->canvas->bin),
-      key_file, GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT);
-
-  g_key_file_save_to_file (key_file, editor->filename, &error);
-  g_key_file_unref (key_file);
-  if (error) {
-    g_warning ("%s could not be saved: %s", editor->filename, error->message);
-    g_error_free (error);
-    return FALSE;
-  }
-
-  gst_editor_statusbar_message ("Pipeline saved to %s.", editor->filename);
-  return TRUE;
+  gst_editor_save (editor);
 }
 
 void
@@ -542,11 +614,24 @@ gst_editor_on_open (GtkWidget * widget, GstEditor * editor)
 {
   GtkWidget *file_chooser;
 
+  /*
+   * NOTE: Could be moved into Glade (editor.ui) just like the Save dialog,
+   * but there is little benefit for this one.
+   */
   file_chooser = gtk_file_chooser_dialog_new ("Please select a file to load.",
       GTK_WINDOW (editor->window), GTK_FILE_CHOOSER_ACTION_OPEN,
       _("_Cancel"), GTK_RESPONSE_CANCEL,
       _("_Open"), GTK_RESPONSE_ACCEPT,
       NULL);
+
+  gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (file_chooser), editor->filter_gep);
+  /*
+   * TODO: Currently we can only load pipelines with meta data.
+   * It might be useful to open plain pipeline definitions as well.
+   * However, this requires support for automatically laying out the pipeline graph.
+   */
+  //gtk_file_chooser_add_filter (GTK_FILE_CHOOSER (file_chooser), editor->filter_gsp);
+  gtk_file_chooser_set_filter (GTK_FILE_CHOOSER (file_chooser), editor->filter_gep);
 
   if (gtk_dialog_run (GTK_DIALOG (file_chooser)) == GTK_RESPONSE_ACCEPT) {
     gchar *filename =
