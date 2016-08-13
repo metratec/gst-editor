@@ -20,6 +20,7 @@
 #include "config.h"
 #endif
 
+#include <stdarg.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <sys/time.h>
@@ -33,7 +34,6 @@
 #include "gsteditoritem.h"
 #include "gsteditorcanvas.h"
 #include "gsteditorelement.h"
-#include "gsteditorstatusbar.h"
 #include "namedicons.h"
 
 #include <gst/common/gste-common.h>
@@ -58,10 +58,19 @@ static void gst_editor_connect_func (GtkBuilder * builder, GObject * object,
 
 static gint on_delete_event (GtkWidget * widget,
     GdkEvent * event, GstEditor * editor);
+
+static void on_canvas_size_allocate (GtkWidget * widget,
+    GdkRectangle * allocation, gpointer user_data);
 static void on_canvas_notify (GObject * object,
     GParamSpec * param, GstEditor * ui);
+
 static void on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data);
+
+static void gst_editor_statusbar_message (GstEditor * editor,
+    const gchar * message, ...) G_GNUC_PRINTF (2, 3);
+
+#define STATUSBAR_TIMEOUT 4200
 
 enum
 {
@@ -223,7 +232,6 @@ gst_editor_init (GstEditor * editor)
   editor->canvas =
       (GstEditorCanvas *) g_object_new (GST_TYPE_EDITOR_CANVAS, NULL);
   editor->canvas->autosize =TRUE;
-  editor->canvas->parent = G_OBJECT (editor);
   gtk_widget_show (GTK_WIDGET (editor->canvas));
 
   gtk_container_add (GTK_CONTAINER (gtk_builder_get_object (editor->builder,
@@ -231,12 +239,18 @@ gst_editor_init (GstEditor * editor)
 
   _num_editor_windows++;
 
-  gst_editor_statusbar_init (editor);
+  editor->statusbar =
+    GTK_STATUSBAR (gtk_builder_get_object (editor->builder, "status_bar"));
+  editor->statusbar_timeout_id = 0;
 
   g_signal_connect (editor->window, "delete-event",
       G_CALLBACK (on_delete_event), editor);
-  g_signal_connect (editor->canvas, "notify", G_CALLBACK (on_canvas_notify),
-      editor);
+
+  g_signal_connect (editor->canvas, "size-allocate",
+      G_CALLBACK (on_canvas_size_allocate), editor);
+  g_signal_connect (editor->canvas, "notify",
+      G_CALLBACK (on_canvas_notify), editor);
+
   g_mutex_init (&editor->outputmutex);
 }
 
@@ -499,7 +513,7 @@ gst_editor_save (GstEditor * editor)
     }
   }
 
-  gst_editor_statusbar_message ("Pipeline saved to %s.", editor->filename);
+  gst_editor_statusbar_message (editor, "Pipeline saved to %s.", editor->filename);
   return TRUE;
 }
 
@@ -600,7 +614,7 @@ gst_editor_load (GstEditor * editor, const gchar * file_name)
 
   g_object_set (editor, "filename", file_name, NULL);
 
-  gst_editor_statusbar_message ("Pipeline loaded from %s.", editor->filename);
+  gst_editor_statusbar_message (editor, "Pipeline loaded from %s.", editor->filename);
 
   pipeline = gst_editor_canvas_get_pipeline (editor->canvas);
   gst_editor_element_connect (editor, pipeline);
@@ -678,7 +692,7 @@ have_pipeline_description (gchar * string, gpointer data)
 
   editor = (GstEditor *) gst_editor_new (pipeline);
 
-  gst_editor_statusbar_message ("Pipeline loaded from launch description.");
+  gst_editor_statusbar_message (editor, "Pipeline loaded from launch description.");
 }
 #endif
 
@@ -738,8 +752,8 @@ gst_editor_on_cut (GtkWidget * widget, GstEditor * editor)
   g_object_get (editor->canvas, "selection", &element, NULL);
 
   if (!element) {
-    gst_editor_statusbar_message
-        ("Could not cut element: No element currently selected.");
+    gst_editor_statusbar_message (editor,
+        "Could not cut element: No element currently selected.");
     return;
   }
 
@@ -754,8 +768,8 @@ gst_editor_on_copy (GtkWidget * widget, GstEditor * editor)
   g_object_get (editor->canvas, "selection", &element, NULL);
 
   if (!element) {
-    gst_editor_statusbar_message
-        ("Could not copy element: No element currently selected.");
+    gst_editor_statusbar_message (editor,
+        "Could not copy element: No element currently selected.");
     return;
   }
 
@@ -794,8 +808,8 @@ gst_editor_on_remove (GtkWidget * widget, GstEditor * editor)
   g_object_get (editor->canvas, "selection", &element, NULL);
 
   if (!element) {
-    gst_editor_statusbar_message
-        ("Could not remove element: No element currently selected.");
+    gst_editor_statusbar_message (editor,
+        "Could not remove element: No element currently selected.");
     return;
   }
 
@@ -878,7 +892,7 @@ gst_editor_on_about (GtkWidget * widget, GstEditor * editor)
 static gboolean
 sort (GstEditor * editor)
 {
-  gst_editor_statusbar_message ("Change in bin pressure: %f",
+  gst_editor_statusbar_message (editor, "Change in bin pressure: %f",
       gst_editor_bin_sort (editor->canvas->bin, 0.1));
   return TRUE;
 }
@@ -919,10 +933,10 @@ gst_editor_on_sort_toggled (GtkToggleButton * toggle, GstEditor * editor)
 {
   GList *elements, *srcpads;
     
-    //gst_editor_statusbar_message ("Doing debug output...");
+    //gst_editor_statusbar_message (editor, "Doing debug output...");
     //gst_editor_bin_debug_output(editor->canvas->selection);
 
-  gst_editor_statusbar_message ("Doing debug output...");
+  gst_editor_statusbar_message (editor, "Doing debug output...");
   GstBin *top = GST_BIN (GST_EDITOR_ITEM(editor->canvas->bin)->object);
   elements = g_list_last (GST_BIN_CHILDREN (top));
   g_print("Getting Gstreamer Children, Total %d\n",
@@ -1004,16 +1018,25 @@ gst_editor_on_spinbutton (GtkSpinButton * spinheight, GstEditor * editor)
   }
 }
 
+static void
+on_canvas_size_allocate (GtkWidget * widget,
+    GdkRectangle * allocation, gpointer user_data)
+{
+  GstEditor *editor = GST_EDITOR (user_data);
+
+  gst_editor_on_spinbutton (editor->sh, editor);
+}
+
 /*  gboolean active;
 
   active = gtk_toggle_button_get_active (toggle);
 
   if (active) {
-    gst_editor_statusbar_message ("Sorting bin...");
+    gst_editor_statusbar_message (editor, "Sorting bin...");
 
     g_timeout_add (200, (GSourceFunc) sort, editor);
   } else {
-    gst_editor_statusbar_message ("Finished sorting.");
+    gst_editor_statusbar_message (editor, "Finished sorting.");
     g_source_remove_by_user_data (editor);
   }*/
 
@@ -1045,7 +1068,7 @@ on_canvas_notify (GObject * object, GParamSpec * param, GstEditor * editor)
                 "view-utility-palette"), "active", &v);
   } else if (g_ascii_strcasecmp (param->name, "status") == 0) {
     g_object_get (object, "status", &status, NULL);
-    gst_editor_statusbar_message (status);
+    gst_editor_statusbar_message (editor, "%s", status);
     g_free (status);
   }
 }
@@ -1103,4 +1126,42 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
 
   g_return_if_fail (element != NULL);
   gst_bin_add (GST_BIN (selected_bin), element);
+}
+
+static gboolean
+gst_editor_statusbar_clear (gpointer data)
+{
+  GstEditor *editor = GST_EDITOR (data);
+
+  gtk_statusbar_pop (editor->statusbar, 1);
+  editor->statusbar_timeout_id = 0;
+
+  return G_SOURCE_REMOVE;
+}
+
+static void
+gst_editor_statusbar_reset_timeout (GstEditor * editor, guint timeout)
+{
+  /* remove last timeout, if still present */
+  if (editor->statusbar_timeout_id != 0)
+    g_source_remove (editor->statusbar_timeout_id);
+
+  editor->statusbar_timeout_id = gdk_threads_add_timeout (timeout,
+      gst_editor_statusbar_clear, editor);
+}
+
+static void
+gst_editor_statusbar_message (GstEditor * editor, const gchar * message, ...)
+{
+  va_list arg;
+  gchar *text;
+
+  va_start (arg, message);
+  text = g_strdup_vprintf (message, arg);
+  va_end (arg);
+
+  gtk_statusbar_pop (editor->statusbar, 1);
+  gtk_statusbar_push (editor->statusbar, 1, text);
+  gst_editor_statusbar_reset_timeout (editor, STATUSBAR_TIMEOUT);
+  g_free (text);
 }

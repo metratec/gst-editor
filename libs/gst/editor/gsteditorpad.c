@@ -29,7 +29,6 @@
 
 #include "gst-helper.h"
 #include "gsteditorelement.h"
-#include "gsteditor.h" // FIXME: for GST_EDITOR_SET_OBJECT()
 #include "gsteditorpad.h"
 
 /* interface methods */

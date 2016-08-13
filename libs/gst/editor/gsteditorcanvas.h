@@ -44,11 +44,6 @@ enum GstEditorCanvasError {
 typedef struct _GstEditorCanvas
 {
   GooCanvas canvas;
-  /*
-   * FIXME: We should do without references to GstEditor,
-   * to allow embedding into other applications.
-   */
-  GObject* parent;
   GstEditorBin *bin;
   GstEditorElement *selection;
   GtkWidget *property_window;

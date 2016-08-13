@@ -30,7 +30,6 @@
 #include "gsteditorpalette.h"
 #include "gsteditorelement.h"
 #include "gsteditoritem.h"
-#include "gsteditor.h"
 #include "gsteditorcanvas.h"
 
 /* signals and args */
@@ -167,7 +166,6 @@ gst_editor_canvas_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
 
       goo_canvas_set_bounds (
           GOO_CANVAS (canvas), x - 4, y - 4, x + width - 5, y + height - 5);
-      gst_editor_on_spinbutton ((GtkSpinButton *)NULL, GST_EDITOR (canvas->parent));
     }
     // else{
     // g_print("gst_editor_canvas_size_allocate none\n");

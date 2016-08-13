@@ -29,7 +29,6 @@
 #include <gst/common/gste-serialize.h>
 
 #include "gst-helper.h"
-#include "gsteditor.h" // FIXME: for GST_EDITOR_SET_OBJECT()
 #include "gsteditoritem.h"
 
 GST_DEBUG_CATEGORY (gste_item_debug);

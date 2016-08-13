@@ -24,6 +24,11 @@
 #include <gst/gst.h>
 #include <goocanvas.h>
 
+#define GST_EDITOR_SET_OBJECT(item, object) \
+    (g_object_set_data (G_OBJECT (item), "gsteditorobject", (object)))
+#define GST_EDITOR_GET_OBJECT(item) \
+    (g_object_get_data (G_OBJECT (item), "gsteditorobject"))
+
 void gsth_element_unlink_all (GstElement * element);
 void goo_canvas_item_simple_show (GooCanvasItemSimple *item);
 void goo_canvas_item_simple_hide (GooCanvasItemSimple *item);

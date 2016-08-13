@@ -11,7 +11,6 @@ libgsteditor_la_SOURCES =	\
 	gsteditorpalette.c	\
 	gsteditorpopup.c	\
 	gsteditorproperty.c	\
-	gsteditorstatusbar.c \
 	gst-helper.c		\
 	namedicons.c
 
@@ -37,5 +36,4 @@ libgsteditorinclude_HEADERS = editor.h \
 	gsteditoritem.h \
 	gsteditorpad.h \
 	gsteditorlink.h \
-	gsteditorcanvas.h \
-        gsteditorstatusbar.h
+	gsteditorcanvas.h

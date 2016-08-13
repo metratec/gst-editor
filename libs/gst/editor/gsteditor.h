@@ -31,9 +31,6 @@
 #define GST_IS_EDITOR_CLASS(obj) (G_TYPE_CHECK_CLASS_TYPE ((klass), GST_TYPE_EDITOR))
 #define GST_EDITOR_GET_CLASS(obj) (G_TYPE_INSTANCE_GET_CLASS ((obj), GTK_TYPE_EDITOR, GstEditorClass))
 
-#define GST_EDITOR_SET_OBJECT(item,object) (g_object_set_data (G_OBJECT (item), "gsteditorobject", (object)))
-#define GST_EDITOR_GET_OBJECT(item) (g_object_get_data (G_OBJECT (item), "gsteditorobject"))
-
 typedef struct _GstEditor
 {
   GObject object;
@@ -44,6 +41,8 @@ typedef struct _GstEditor
   GtkWidget *window;
   GtkWidget *element_tree;
   GtkSpinButton *sw,*sh;
+  GtkStatusbar *statusbar;
+  guint statusbar_timeout_id;
 
   gchar *filename;
   gboolean changed;
@@ -63,6 +62,5 @@ typedef struct _GstEditorClass
 GType gst_editor_get_type (void);
 GtkWidget *gst_editor_new (GstElement * element);
 void gst_editor_load (GstEditor * editor, const gchar * file_name);
-void gst_editor_on_spinbutton (GtkSpinButton * spinheight, GstEditor * editor);
 
 #endif /* __GST_EDITOR_H__ */
