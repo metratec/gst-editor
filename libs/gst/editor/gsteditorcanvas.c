@@ -46,7 +46,8 @@ enum
   PROP_SELECTION,
   PROP_PROPERTIES_VISIBLE,
   PROP_PALETTE_VISIBLE,
-  PROP_STATUS
+  PROP_STATUS,
+  PROP_LIVE
 };
 
 static void gst_editor_canvas_class_init (GstEditorCanvasClass * klass);
@@ -128,6 +129,14 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
   g_object_class_install_property (object_class, PROP_STATUS,
       g_param_spec_string ("status", "status", "status", "",
           G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
+  /*
+   * This is a construct-only property, since the items do
+   * not currently react to property changes:
+   */
+  g_object_class_install_property (object_class, PROP_LIVE,
+      g_param_spec_boolean ("live", "live",
+          "Whether element states can be changed",
+          TRUE, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
   widget_class->size_allocate = gst_editor_canvas_size_allocate;
 }
@@ -340,6 +349,17 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       canvas->status = g_strdup (status);
       break;
 
+    /*
+     * NOTE: This is evaluated by the child canvas items to decide
+     * whether to show their state box or not.
+     * Since it is a construct-only property, they do not need to
+     * react to property changes, although that would be easy using
+     * the "notify::live" signal.
+     */
+    case PROP_LIVE:
+      canvas->live = g_value_get_boolean (value);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -372,6 +392,10 @@ gst_editor_canvas_get_property (GObject * object, guint prop_id, GValue * value,
 
     case PROP_STATUS:
       g_value_set_string (value, g_strdup (canvas->status));
+      break;
+
+    case PROP_LIVE:
+      g_value_set_boolean (value, canvas->live);
       break;
 
     default:

@@ -52,6 +52,7 @@ typedef struct _GstEditorCanvas
   GData *attributes;    /* list of name -> GstEditorItemAttr mappings */
   GRWLock globallock;
   gboolean autosize;
+  gboolean live;
   gdouble widthbackup, heightbackup;
 } GstEditorCanvas;
 

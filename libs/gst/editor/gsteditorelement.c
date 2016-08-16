@@ -33,6 +33,7 @@
 #include "gst-helper.h"
 #include "gsteditorproperty.h"
 #include "gsteditoritem.h"
+#include "gsteditorcanvas.h"
 #include "gsteditorelement.h"
 
 GST_DEBUG_CATEGORY (gste_element_debug);
@@ -372,10 +373,9 @@ gst_editor_element_get_property (GObject * object, guint prop_id,
 /*static*/ void
 gst_editor_element_realize (GooCanvasItem * citem)
 {
-
+  GstEditorCanvas *canvas;
   GstEditorElement *element;
   GstEditorItem *item;
-  gint i;
   GdkPixbuf *pixbuf;
   static const guint8 *state_icons[] = {
     off_stock_image,
@@ -426,7 +426,7 @@ gst_editor_element_realize (GooCanvasItem * citem)
 
   GST_EDITOR_SET_OBJECT (element->statebox, element);
 
-  for (i = 0; i < 4; i++) {
+  for (gint i = 0; i < 4; i++) {
     pixbuf = gdk_pixbuf_new_from_inline (-1, state_icons[i], FALSE, NULL);
     element->stateicons[i] = goo_canvas_image_new (GOO_CANVAS_ITEM (item),
         pixbuf, 0.0, 0.0, "antialias", CAIRO_ANTIALIAS_NONE, NULL);
@@ -445,6 +445,17 @@ gst_editor_element_realize (GooCanvasItem * citem)
     g_signal_connect (element->stateicons[i], "button-release-event",
         G_CALLBACK (gst_editor_element_state_button_release_event),
         GINT_TO_POINTER (i));
+  }
+
+  /*
+   * If the GooCanvas (GstEditorCanvas) is set as a non-live canvas,
+   * it makes no sense to be able to change element states.
+   */
+  canvas = GST_EDITOR_CANVAS (goo_canvas_item_get_canvas (citem));
+  if (!canvas->live) {
+    goo_canvas_item_simple_hide (GOO_CANVAS_ITEM_SIMPLE (element->statebox));
+    for (gint i = 0; i < 4; i++)
+      goo_canvas_item_simple_hide (GOO_CANVAS_ITEM_SIMPLE (element->stateicons[i]));
   }
 
   gst_editor_element_add_pads (element);
