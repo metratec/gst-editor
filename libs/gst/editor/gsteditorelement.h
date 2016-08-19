@@ -60,8 +60,6 @@ typedef struct _GstEditorElement
   gdouble srcwidth, srcheight;	/* size of src pads */
   gint sinks, srcs;		/* how many pads? */
 
-  GooCanvasGroup *contents;	/* contents if any */
-
   gboolean active;		/* is it active (currently selected) */
   gboolean resizeable;
   gboolean moveable;
