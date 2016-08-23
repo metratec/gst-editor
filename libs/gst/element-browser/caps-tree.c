@@ -208,6 +208,7 @@ update_caps_tree (GstElementBrowserCapsTree * ct)
       switch (gst_iterator_next (it, &item)) {
         case GST_ITERATOR_OK:
         {
+          /* NOTE: g_value_get_object() does not increase the refcount */
           GstPad *pad = GST_PAD (g_value_get_object (&item));
           GstCaps *caps;
 
@@ -227,7 +228,6 @@ update_caps_tree (GstElementBrowserCapsTree * ct)
           path = gtk_tree_model_get_path (GTK_TREE_MODEL (store), &iter);
           gtk_tree_view_expand_row (GTK_TREE_VIEW (ct->treeview), path, FALSE);
           gtk_tree_path_free (path);
-          gst_object_unref (pad);
           g_value_reset (&item);
           break;
         }

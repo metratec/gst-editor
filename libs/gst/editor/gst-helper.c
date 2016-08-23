@@ -16,8 +16,13 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */  
-    
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
+#include <gst/gst.h>
 #include <goocanvas.h>
+
 #include "gst-helper.h"
 
 void
@@ -31,6 +36,7 @@ gsth_element_unlink_all (GstElement * element)
   while (!done) {
     switch (gst_iterator_next (it, &item)) {
       case GST_ITERATOR_OK: {
+        /* NOTE: g_value_get_object() does not increase the refcount */
         GstPad * pad = GST_PAD (g_value_get_object (&item));
         GstPad * peer = GST_PAD_PEER (pad);
         if (peer) {
@@ -39,7 +45,6 @@ gsth_element_unlink_all (GstElement * element)
           else
             gst_pad_unlink (peer, pad);
         }
-        gst_object_unref (pad);
         g_value_reset (&item);
         break;
       }

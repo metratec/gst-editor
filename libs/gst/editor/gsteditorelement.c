@@ -1286,6 +1286,7 @@ gst_editor_element_add_pads (GstEditorElement * element)
 
     switch (gst_iterator_next (pads, &gitem)) {
       case GST_ITERATOR_OK:
+        /* NOTE: g_value_get_object() does not increase the refcount */
         pad = GST_PAD (g_value_get_object (&gitem));
         pad_template = gst_pad_get_pad_template (pad);
         /* 
@@ -1317,7 +1318,6 @@ gst_editor_element_add_pads (GstEditorElement * element)
             GST_OBJECT_NAME (pad), gst_element_get_name (e));
         gst_editor_element_add_pad (element, pad);
 
-        gst_object_unref (pad);
         g_value_reset (&gitem);
         break;
       case GST_ITERATOR_RESYNC:

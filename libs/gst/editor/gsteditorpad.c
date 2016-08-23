@@ -933,6 +933,7 @@ on_pad_linked (GstPad * pad, GstPad * peer, GstEditorItem * item)
       while (!done) {
         switch (gst_iterator_next (pads, &item)) {
           case GST_ITERATOR_OK:
+            /* NOTE: g_value_get_object() does not increase the refcount */
             _refreshpad = GST_PAD (g_value_get_object (&item));
             if (GST_IS_GHOST_PAD (_refreshpad)) {
               g_print ("Ghoastpad found that could be ours: %p\n", _refreshpad);
@@ -962,7 +963,6 @@ on_pad_linked (GstPad * pad, GstPad * peer, GstEditorItem * item)
               // else g_print("Oh, that am I not: %p!!\n",target);
               // gst_editor_pad_realize ((GooCanvasItem*)refreshpad);
             }
-            gst_object_unref (_refreshpad);
             g_value_reset (&item);
             break;
           case GST_ITERATOR_RESYNC:

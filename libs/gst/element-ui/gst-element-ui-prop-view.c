@@ -621,12 +621,17 @@ pview_param_changed (GstElementUIPropView * pview)
         while (!done) {
           switch (gst_iterator_next (padit, &item)) {
           case GST_ITERATOR_OK:
+            /*
+             * NOTE: g_value_get_object() does not increase the refcount
+             * and since the enum_pointer is just a crude way to map
+             * pads to combo box positions, we don't take a reference
+             * on them here.
+             */
             pad = GST_PAD (g_value_get_object (&item));
             pview->enum_pointer[i++] = pad;
             gtk_combo_box_text_append_text (
                 GTK_COMBO_BOX_TEXT (pview->combobox),
                 GST_OBJECT_NAME (pad));
-            gst_object_unref (pad);
             g_value_reset (&item);
             break;
           case GST_ITERATOR_RESYNC:

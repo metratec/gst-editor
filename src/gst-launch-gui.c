@@ -163,13 +163,13 @@ build_tree (GtkTreeIter * parent, GstBin * bin)
     GstObject *child_obj;
     switch (gst_iterator_next (children, &child)) {
       case GST_ITERATOR_OK:
+        /* NOTE: g_value_get_object() does not increase the refcount */
         child_obj = GST_OBJECT (g_value_get_object (&child));
         gtk_tree_store_append (store, iter, parent);
         gtk_tree_store_set (store, iter, 0,
             GST_OBJECT_NAME (child_obj), 1, child_obj, -1);
         if (GST_IS_BIN (child_obj))
           build_tree (iter, GST_BIN (child_obj));
-        gst_object_unref (child_obj);
         g_value_reset (&child);
         break;
       case GST_ITERATOR_RESYNC:
