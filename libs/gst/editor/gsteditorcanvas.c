@@ -47,7 +47,8 @@ enum
   PROP_PROPERTIES_VISIBLE,
   PROP_PALETTE_VISIBLE,
   PROP_STATUS,
-  PROP_LIVE
+  PROP_LIVE,
+  PROP_SHOW_ALL_BINS
 };
 
 static void gst_editor_canvas_class_init (GstEditorCanvasClass * klass);
@@ -137,6 +138,20 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
       g_param_spec_boolean ("live", "live",
           "Whether element states can be changed",
           TRUE, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+  /*
+   * This setting would be useful to have at runtime.
+   * However it's not trivial to implement, since GstEditorBins
+   * will have to behave just like GstEditorElements when show-all-bins
+   * is disabled.
+   * The easiest way to apply this setting dynamically might
+   * be to completely reload the current pipeline into the canvas.
+   * There would still be issues with the layout of the graph
+   * nodes though, since GstEditorBins require more space than elements.
+   */
+  g_object_class_install_property (object_class, PROP_SHOW_ALL_BINS,
+      g_param_spec_boolean ("show-all-bins", "show-all-bins",
+          "Whether all GstBin contents should be shown",
+          FALSE, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
   widget_class->size_allocate = gst_editor_canvas_size_allocate;
 }
@@ -360,6 +375,14 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       canvas->live = g_value_get_boolean (value);
       break;
 
+    /*
+     * GstElements will subscribe for this property change
+     * to show and hide element contents dynamically.
+     */
+    case PROP_SHOW_ALL_BINS:
+      canvas->show_all_bins = g_value_get_boolean (value);
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -396,6 +419,10 @@ gst_editor_canvas_get_property (GObject * object, guint prop_id, GValue * value,
 
     case PROP_LIVE:
       g_value_set_boolean (value, canvas->live);
+      break;
+
+    case PROP_SHOW_ALL_BINS:
+      g_value_set_boolean (value, canvas->show_all_bins);
       break;
 
     default:

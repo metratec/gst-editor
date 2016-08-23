@@ -53,6 +53,7 @@ typedef struct _GstEditorCanvas
   GRWLock globallock;
   gboolean autosize;
   gboolean live;
+  gboolean show_all_bins;
   gdouble widthbackup, heightbackup;
 } GstEditorCanvas;
 

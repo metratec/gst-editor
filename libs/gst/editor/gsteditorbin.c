@@ -32,6 +32,7 @@
 
 #include "gst-helper.h"
 #include "gsteditorlink.h"
+#include "gsteditorcanvas.h"
 #include "gsteditorbin.h"
 
 GST_DEBUG_CATEGORY (gste_bin_debug);
@@ -62,6 +63,8 @@ static void gst_editor_bin_element_added (GstObject * bin, GstObject * child,
 /* callback on the gstbin */
 static void gst_editor_bin_element_added_cb (GstObject * bin, GstObject * child,
     GstEditorBin * editorbin);
+
+static gboolean gst_editor_bin_child_as_bin (GstEditorBin * editorbin, GstObject * child);
 
 /* popup callbacks */
 static void on_add_element (GSimpleAction * action,
@@ -499,7 +502,7 @@ gst_editor_bin_element_added (GstObject * bin, GstObject * child,
   }
   GST_DEBUG_OBJECT (bin, "putting child %s at x=%f; y=%f", child_name, x, y);
 
-  if (GST_IS_BIN (child)) {
+  if (gst_editor_bin_child_as_bin (editorbin, child)) {
     /* for bins, also pass along the attributes so they can also set
      * attributes on their children correctly */
     GST_DEBUG_OBJECT (bin, "child %s is a bin, setting attributes %p",
@@ -548,6 +551,22 @@ g_print("In editorbin, gotten Transformation x: %f y:%f Scale %f Rotation %f and
   g_idle_add ((GSourceFunc) gst_editor_element_sync_state, editorbin);
   g_print("Finished adding element %s with pointer %p Added to bin %s with pointer %p getting mutex...List of parent has now %d entries\n",GST_OBJECT_NAME(child),(void*)child,GST_OBJECT_NAME(bin),bin,g_list_length(editorbin->elements));
   g_rw_lock_writer_unlock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
+}
+
+static gboolean
+gst_editor_bin_child_as_bin (GstEditorBin * editorbin, GstObject * child)
+{
+  GstEditorCanvas *canvas =
+      GST_EDITOR_CANVAS (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (editorbin)));
+
+  /*
+   * By default, we add only direct instances of GstBin or GstPipeline as
+   * GstEditorBins to the canvas because other GstBin derivations are
+   * usually self-managed and have factory-created children that we
+   * shouldn't tamper with.
+   */
+  return G_OBJECT_TYPE (child) == GST_TYPE_BIN || G_OBJECT_TYPE (child) == GST_TYPE_PIPELINE ||
+      (canvas->show_all_bins && GST_IS_BIN (child));
 }
 
 /**********************************************************************
