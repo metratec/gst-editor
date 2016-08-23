@@ -1077,39 +1077,17 @@ static void
 on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data)
 {
-  GstElement *element, *selected_bin;
   GstElementFactory *selected_factory;
+  GstElement *element, *selected_bin;
   GstEditor *editor = GST_EDITOR (user_data);
-  GstState state;
 
   g_return_if_fail (editor->canvas != NULL);
+
   g_object_get (element_tree, "selected", &selected_factory, NULL);
-  g_object_get (editor->canvas, "selection", &selected_bin, NULL);
 
-  /* GstEditorCanvas::selection is actually a GstEditorElement, not a
-     GstElement */
-  if (selected_bin)
-    selected_bin = GST_ELEMENT (GST_EDITOR_ITEM (selected_bin)->object);
-
+  selected_bin = gst_editor_canvas_get_selected_bin (editor->canvas, NULL);
   if (!selected_bin)
-    selected_bin = GST_ELEMENT (GST_EDITOR_ITEM (editor->canvas->bin)->object);
-  else if (!GST_IS_BIN (selected_bin))
-    selected_bin = GST_ELEMENT (GST_OBJECT_PARENT (selected_bin));
-
-  /* Check if we're allowed to add to the bin, ie if it's paused.
-   * if not, throw up a warning */
-  if (gst_element_get_state (selected_bin, &state, NULL,
-          GST_CLOCK_TIME_NONE) != GST_STATE_CHANGE_SUCCESS ||
-      state == GST_STATE_PLAYING) {
-    gchar *message =
-        g_strdup_printf ("bin %s is in PLAYING state, you cannot add "
-        "elements to it in this state !",
-        gst_element_get_name (selected_bin));
-
-    //gst_editor_popup_warning (message);
-    g_free (message);
     return;
-  }
 
   //GtkWidget * check = lookup_widget(GTK_WIDGET(togglebutton), "defaultnamebutton");
   GtkWidget * check =

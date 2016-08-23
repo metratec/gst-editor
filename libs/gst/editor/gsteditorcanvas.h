@@ -74,4 +74,6 @@ gst_editor_canvas_get_pipeline (GstEditorCanvas * canvas)
 gboolean gst_editor_canvas_load_with_metadata (GstEditorCanvas * canvas,
     GKeyFile * key_file, GError ** error);
 
+GstElement * gst_editor_canvas_get_selected_bin (GstEditorCanvas * canvas, GError ** error);
+
 #endif /* __GST_EDITOR_CANVAS_H__ */

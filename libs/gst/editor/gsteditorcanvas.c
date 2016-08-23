@@ -29,6 +29,7 @@
 #include "gsteditorproperty.h"
 #include "gsteditorpalette.h"
 #include "gsteditorelement.h"
+#include "gsteditorbin.h"
 #include "gsteditoritem.h"
 #include "gsteditorcanvas.h"
 
@@ -671,4 +672,35 @@ gst_editor_canvas_load_with_metadata (GstEditorCanvas * canvas,
   }
 
   return TRUE;
+}
+
+GstElement *
+gst_editor_canvas_get_selected_bin (GstEditorCanvas * canvas, GError ** error)
+{
+  GstElement *selected_bin;
+  GstState state;
+
+  if (canvas->selection) {
+    selected_bin = GST_ELEMENT (GST_EDITOR_ITEM (canvas->selection)->object);
+    if (!GST_IS_EDITOR_BIN (canvas->selection))
+      /* selected element not a GstBin, or not treated like one by the editor */
+      selected_bin = GST_ELEMENT (GST_OBJECT_PARENT (selected_bin));
+  } else {
+    selected_bin = GST_ELEMENT (GST_EDITOR_ITEM (canvas->bin)->object);
+  }
+
+  /* Check if we're allowed to add to the bin, ie if it's paused.
+   * if not, throw up a warning */
+  if (gst_element_get_state (selected_bin, &state, NULL,
+          GST_CLOCK_TIME_NONE) != GST_STATE_CHANGE_SUCCESS ||
+      state == GST_STATE_PLAYING) {
+    gchar *name = gst_element_get_name (selected_bin);
+    g_set_error (error, GST_EDITOR_CANVAS_ERROR, GST_EDITOR_CANVAS_ERROR_FAILED,
+        "Selected bin %s is in PLAYING state and is not suited for adding "
+        "elements to it", name);
+    g_free (name);
+    return NULL;
+  }
+
+  return selected_bin;
 }

@@ -17,7 +17,9 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <ctype.h>
 #include <sys/stat.h>
@@ -25,11 +27,14 @@
 
 #include <gtk/gtk.h>
 #include <gst/gst.h>
-#include "gsteditorpalette.h"
-#include "gsteditorpopup.h"
+
 #include <gst/common/gste-common.h>
 #include <gst/debug-ui/debug-ui.h>
 #include <gst/element-browser/element-tree.h>
+
+#include "gsteditorpalette.h"
+#include "gsteditorpopup.h"
+#include "gsteditorcanvas.h"
 
 typedef struct
 {
@@ -271,37 +276,19 @@ static void
 on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data)
 {
-  GstElement *element, *selected_bin;
   GstElementFactory *selected_factory;
+  GstElement *element, *selected_bin;
   GstEditorPalette *palette = GST_EDITOR_PALETTE (user_data);
-  GstState state;
+  GError *error = NULL;
 
   g_return_if_fail (palette->canvas != NULL);
+
   g_object_get (element_tree, "selected", &selected_factory, NULL);
-  g_object_get (palette->canvas, "selection", &selected_bin, NULL);
 
-  /* GstEditorCanvas::selection is actually a GstEditorElement, not a
-     GstElement */
-  if (selected_bin)
-    selected_bin = GST_ELEMENT (GST_EDITOR_ITEM (selected_bin)->object);
-
-  if (!selected_bin)
-    selected_bin = GST_ELEMENT (GST_EDITOR_ITEM (palette->canvas->bin)->object);
-  else if (!GST_IS_BIN (selected_bin))
-    selected_bin = GST_ELEMENT (GST_OBJECT_PARENT (selected_bin));
-
-  /* Check if we're allowed to add to the bin, ie if it's paused.
-   * if not, throw up a warning */
-  if (gst_element_get_state (selected_bin, &state, NULL,
-          GST_CLOCK_TIME_NONE) != GST_STATE_CHANGE_SUCCESS ||
-      state == GST_STATE_PLAYING) {
-    gchar *message =
-        g_strdup_printf ("bin %s is in PLAYING state, you cannot add "
-        "elements to it in this state !",
-        gst_element_get_name (selected_bin));
-
-    gst_editor_popup_warning (message);
-    g_free (message);
+  selected_bin = gst_editor_canvas_get_selected_bin (palette->canvas, &error);
+  if (!selected_bin) {
+    gst_editor_popup_warning (error->message);
+    g_error_free (error);
     return;
   }
 
