@@ -657,18 +657,23 @@ gst_editor_pad_realize (GooCanvasItem * citem)
       _peer = gst_ghost_pad_get_target (GST_GHOST_PAD (_pad));
       peer = (GstEditorPad *) gst_editor_item_get ((GstObject *) _peer);
     }
-    g_return_if_fail (peer != NULL);
-    g_message ("link ghost pad for %s:%s and %s:%s, pointers: pad:%p peer:%p",
-        GST_DEBUG_PAD_NAME (_pad), GST_DEBUG_PAD_NAME (_peer),_pad,_peer);
-    link =
-        goo_canvas_item_new (GOO_CANVAS_ITEM (citem),
-        gst_editor_link_get_type (), NULL);
-    g_object_set (G_OBJECT (link), "ghost", TRUE, NULL);
-    if (!peer->issrc)
-      g_object_set (G_OBJECT (link), "src-pad", pad, "sink-pad", peer, NULL);
-    else
-      g_object_set (G_OBJECT (link), "sink-pad", pad, "src-pad", peer, NULL);
-    gst_editor_link_link (GST_EDITOR_LINK (link));
+    /*
+     * The ghost pad might not have a target if a GstBin has been
+     * added as a GstEditorElement to the canvas.
+     */
+    if (peer != NULL) {
+      g_message ("link ghost pad for %s:%s and %s:%s, pointers: pad:%p peer:%p",
+          GST_DEBUG_PAD_NAME (_pad), GST_DEBUG_PAD_NAME (_peer),_pad,_peer);
+      link =
+          goo_canvas_item_new (GOO_CANVAS_ITEM (citem),
+          gst_editor_link_get_type (), NULL);
+      g_object_set (G_OBJECT (link), "ghost", TRUE, NULL);
+      if (!peer->issrc)
+        g_object_set (G_OBJECT (link), "src-pad", pad, "sink-pad", peer, NULL);
+      else
+        g_object_set (G_OBJECT (link), "sink-pad", pad, "src-pad", peer, NULL);
+      gst_editor_link_link (GST_EDITOR_LINK (link));
+    }
   }
 
   item->realized = TRUE;
