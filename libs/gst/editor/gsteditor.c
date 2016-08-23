@@ -779,7 +779,17 @@ gst_editor_on_copy (GtkWidget * widget, GstEditor * editor)
 void
 gst_editor_on_paste (GtkWidget * widget, GstEditor * editor)
 {
-  gst_editor_bin_paste (editor->canvas->bin, GDK_SELECTION_CLIPBOARD);
+  GstElement *bin = gst_editor_canvas_get_selected_bin (editor->canvas, NULL);
+  GstEditorItem *item;
+
+  if (!bin)
+    /* FIXME: Need error handling? */
+    return;
+
+  item = gst_editor_item_get (GST_OBJECT (bin));
+  g_assert (item != NULL);
+
+  gst_editor_bin_paste (GST_EDITOR_BIN (item), GDK_SELECTION_CLIPBOARD);
 }
 
 void
@@ -1087,9 +1097,9 @@ on_element_tree_select (GstElementBrowserElementTree * element_tree,
 
   selected_bin = gst_editor_canvas_get_selected_bin (editor->canvas, NULL);
   if (!selected_bin)
+    /* FIXME: Need error reporting? */
     return;
 
-  //GtkWidget * check = lookup_widget(GTK_WIDGET(togglebutton), "defaultnamebutton");
   GtkWidget * check =
       GTK_WIDGET (gtk_builder_get_object (editor->builder, "defaultnamebutton"));
   GtkWidget * entry =
