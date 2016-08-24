@@ -995,6 +995,14 @@ on_pad_removed (GstElement * element, GstPad * pad,
 
   gst_editor_element_remove_pad (editor_element, pad);
   gst_editor_item_resize (GST_EDITOR_ITEM (editor_element));
+
+  GstEditorItem *editor_pad = gst_editor_item_get (GST_OBJECT (pad));
+  g_object_set (editor_pad, "object", NULL, NULL);
+
+  if (GST_EDITOR_PAD (editor_pad)->link)
+    gst_editor_link_unlink (GST_EDITOR_PAD (editor_pad)->link);
+  goo_canvas_item_remove (GOO_CANVAS_ITEM (editor_pad));
+
   g_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);  
 }
 
@@ -1229,9 +1237,7 @@ gst_editor_element_add_pads (GstEditorElement * element)
 static void
 gst_editor_element_remove_pad (GstEditorElement * element, GstPad * pad)
 {
-  GstEditorItem *editor_pad;
-
-  editor_pad = gst_editor_item_get (GST_OBJECT (pad));
+  GstEditorItem *editor_pad = gst_editor_item_get (GST_OBJECT (pad));
 
   if (GST_PAD_DIRECTION (pad) == GST_PAD_SINK) {
     element->sinkpads = g_list_remove (element->sinkpads, editor_pad);
