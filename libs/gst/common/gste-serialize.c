@@ -76,38 +76,61 @@ gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallb
 {
   GstPad *peer = gst_pad_get_peer (pad);
 
-  /*
-   * If the special GstCapsFilter syntax is allowed,
-   * we return all capabilities of capsfilters between
-   * `pad` and the last capsfilter's peer.
-   */
-  while (peer && GST_OBJECT_PARENT (peer) &&
-      gst_is_capsfilter (GST_OBJECT_PARENT (peer), cb)) {
-    GstCaps *caps;
-    GstPad *caps_srcpad;
+  while (peer && GST_OBJECT_PARENT (peer)) {
+    if (G_OBJECT_TYPE (peer) == GST_TYPE_PROXY_PAD) {
+      /*
+       * Skip links to proxy pads, so we end up with a "normal" peer
+       * in the bin it is linked to.
+       * While it is possible to serialize links between bins
+       * with the syntax (...bin...) ! (...bin...), this will fail
+       * if the bins have multiple ghost pads as we will have to qualify
+       * the pad name but have no way to define which elements in the
+       * bin they are connected to.
+       */
+      GstPad *ghost = GST_PAD (GST_OBJECT_PARENT (peer));
+      gst_object_unref (peer);
+      peer = gst_pad_get_peer (ghost);
+    } else if (GST_IS_GHOST_PAD (peer)) {
+      /*
+       * Skip links to ghost pads. See above.
+       */
+      GstGhostPad *ghost = GST_GHOST_PAD_CAST (peer);
+      peer = gst_ghost_pad_get_target (ghost);
+      gst_object_unref (ghost);
+    } else if (gst_is_capsfilter (GST_OBJECT_PARENT (peer), cb)) {
+      /*
+       * If the special GstCapsFilter syntax is allowed,
+       * we return all capabilities of capsfilters between
+       * `pad` and the last capsfilter's peer.
+       */
+      GstCaps *caps;
+      GstPad *caps_srcpad;
 
-    /*
-     * We assume that capsfilters always have the "caps" property.
-     * The alternative would be to use g_object_get_property() and
-     * gst_value_serialize().
-     * It may theoretically not contain any capabilities though.
-     * We simply ignore those capsfilters.
-     */
-    g_object_get (GST_OBJECT_PARENT (peer), "caps", &caps, NULL);
-    if (caps)
-      /* transfer ownership of caps to caps_list */
-      *caps_list = g_list_append (*caps_list, caps);
+      /*
+       * We assume that capsfilters always have the "caps" property.
+       * The alternative would be to use g_object_get_property() and
+       * gst_value_serialize().
+       * It may theoretically not contain any capabilities though.
+       * We simply ignore those capsfilters.
+       */
+      g_object_get (GST_OBJECT_PARENT (peer), "caps", &caps, NULL);
+      if (caps)
+        /* transfer ownership of caps to caps_list */
+        *caps_list = g_list_append (*caps_list, caps);
 
-    /*
-     * We can assert that all GstCapsFilter elements have a
-     * src pad.
-     */
-    caps_srcpad = gst_element_get_static_pad (GST_ELEMENT (GST_OBJECT_PARENT (peer)),
-        "src");
-    g_assert (caps_srcpad != NULL);
-    gst_object_unref (peer);
-    peer = gst_pad_get_peer (caps_srcpad);
-    gst_object_unref (caps_srcpad);
+      /*
+       * We can assert that all GstCapsFilter elements have a
+       * src pad.
+       */
+      caps_srcpad = gst_element_get_static_pad (GST_ELEMENT (GST_OBJECT_PARENT (peer)),
+          "src");
+      g_assert (caps_srcpad != NULL);
+      gst_object_unref (peer);
+      peer = gst_pad_get_peer (caps_srcpad);
+      gst_object_unref (caps_srcpad);
+    } else {
+      break;
+    }
   }
 
   return peer;
@@ -522,9 +545,14 @@ gst_bin_save_thyself (GstBin * bin, GstElement * next_element,
   cb->append (")", cb->user_data);
 
   /*
-   * This outputs links following the element serialization.
+   * Even though GstBins have pads as well we do not serialize
+   * them (here) since they are all ghost pads.
+   * If the bin has more than one ghost pad, it would have to
+   * be fully-qualified by pad name, but there is no way to
+   * explicitly construct ghost pads in the gst-launch syntax.
+   * Instead cross-bin links are serialized as links after elements.
    */
-  gst_element_save_pads (GST_ELEMENT (bin), next_element, cb);
+  //gst_element_save_pads (GST_ELEMENT (bin), next_element, cb);
 }
 
 /*
@@ -539,51 +567,6 @@ gst_pipeline_save_thyself (GstPipeline * pipeline, GsteSerializeCallbacks * cb)
 {
   gst_bin_save_children (GST_BIN (pipeline), cb);
 }
-
-#if 0
-static xmlNodePtr
-gst_proxy_pad_save_thyself (GstObject * object, xmlNodePtr parent)
-{
-  xmlNodePtr self;
-  GstProxyPad *proxypad;
-  GstPad *pad;
-  GstPad *peer;
-
-  g_return_val_if_fail (GST_IS_PROXY_PAD (object), NULL);
-
-  self = xmlNewChild (parent, NULL, (xmlChar *) "ghostpad", NULL);
-  xmlNewChild (self, NULL, (xmlChar *) "name",
-      (xmlChar *) GST_OBJECT_NAME (object));
-  xmlNewChild (self, NULL, (xmlChar *) "parent",
-      (xmlChar *) GST_OBJECT_NAME (GST_OBJECT_PARENT (object)));
-
-  proxypad = GST_PROXY_PAD_CAST (object);
-  pad = GST_PAD_CAST (proxypad);
-  peer = GST_PAD_CAST (pad->peer);
-
-  if (GST_IS_PAD (pad)) {
-    if (GST_PAD_IS_SRC (pad))
-      xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "source");
-    else if (GST_PAD_IS_SINK (pad))
-      xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "sink");
-    else
-      xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "unknown");
-  } else {
-    xmlNewChild (self, NULL, (xmlChar *) "direction", (xmlChar *) "unknown");
-  }
-  if (GST_IS_PAD (peer)) {
-    gchar *content = g_strdup_printf ("%s.%s",
-        GST_OBJECT_NAME (GST_PAD_PARENT (peer)), GST_PAD_NAME (peer));
-
-    xmlNewChild (self, NULL, (xmlChar *) "peer", (xmlChar *) content);
-    g_free (content);
-  } else {
-    xmlNewChild (self, NULL, (xmlChar *) "peer", NULL);
-  }
-
-  return self;
-}
-#endif
 
 static void
 gst_object_save_thyself (GstObject * object,
