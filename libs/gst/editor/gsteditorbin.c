@@ -33,6 +33,8 @@
 #include "gst-helper.h"
 #include "gsteditorlink.h"
 #include "gsteditorcanvas.h"
+#include "gsteditorelement.h"
+#include "gsteditoritem.h"
 #include "gsteditorbin.h"
 
 GST_DEBUG_CATEGORY (gste_bin_debug);
@@ -57,12 +59,15 @@ static void gst_editor_bin_resize (GstEditorItem * bin);
 static void gst_editor_bin_repack (GstEditorItem * bin);
 static void gst_editor_bin_object_changed (GstEditorItem * bin,
     GstObject * object);
+
 static void gst_editor_bin_element_added (GstObject * bin, GstObject * child,
     GstEditorBin * editorbin);
 
 /* callback on the gstbin */
-static void gst_editor_bin_element_added_cb (GstObject * bin, GstObject * child,
-    GstEditorBin * editorbin);
+static void gst_editor_bin_element_added_cb (GstBin * bin, GstElement * child,
+    gpointer user_data);
+static void gst_editor_bin_element_removed_cb (GstBin * bin, GstElement * child,
+    gpointer user_data);
 
 static gboolean gst_editor_bin_child_as_bin (GstEditorBin * editorbin, GstObject * child);
 
@@ -259,8 +264,10 @@ gst_editor_bin_realize (GooCanvasItem * citem)
 #endif
 
   //children = gst_bin_get_list (GST_BIN (item->object));
-  g_signal_connect (G_OBJECT (item->object), "element_added",
+  g_signal_connect (item->object, "element-added",
       G_CALLBACK (gst_editor_bin_element_added_cb), bin);
+  g_signal_connect (item->object, "element-removed",
+      G_CALLBACK (gst_editor_bin_element_removed_cb), bin);
 
   children = g_list_last(GST_BIN_CHILDREN (GST_BIN (item->object)));
 
@@ -372,15 +379,22 @@ gst_editor_bin_object_changed (GstEditorItem * item, GstObject * object)
     //g_object_unref(G_OBJECT(oldbin));
 
     //normally done within realize, but otherwise it wont work:)
-    g_signal_connect (G_OBJECT (gstbin), "element_added",
-    G_CALLBACK (gst_editor_bin_element_added_cb), bin);
+    g_signal_connect (gstbin, "element-added",
+        G_CALLBACK (gst_editor_bin_element_added_cb), bin);
+    g_signal_connect (gstbin, "element-removed",
+        G_CALLBACK (gst_editor_bin_element_removed_cb), bin);
   }
   if (oldbin&&!gstbin) {//we are getting deleted
     g_print ("Disconnecting signals for old bin %s with pointer %p.\n",
         item->title_text, item);
-    if (GST_IS_BIN(oldbin)) g_signal_handlers_disconnect_by_func (oldbin,
-    G_CALLBACK (gst_editor_bin_element_added_cb), bin);
-    else g_print("But GstBin seems to have disappeared\n");
+    if (GST_IS_BIN (oldbin)) {
+      g_signal_handlers_disconnect_by_func (oldbin,
+          G_CALLBACK (gst_editor_bin_element_added_cb), bin);
+      g_signal_handlers_disconnect_by_func (oldbin,
+          G_CALLBACK (gst_editor_bin_element_removed_cb), bin);
+    } else {
+      g_print ("But GstBin seems to have disappeared\n");
+    }
   }
   if (gstbin) {
     l = g_list_last(gstbin->children);
@@ -399,13 +413,7 @@ gst_editor_bin_object_changed (GstEditorItem * item, GstObject * object)
           bin);
       l = g_list_previous (l);
     }
-    //is also done within realize
-    //g_signal_connect (G_OBJECT (gstbin), "element_added",
-    //  G_CALLBACK (gst_editor_bin_element_added_cb), bin);
-
   }
-
-
 
   if (GST_EDITOR_ITEM_CLASS (parent_class)->object_changed)
     (GST_EDITOR_ITEM_CLASS (parent_class)->object_changed) (item, object);
@@ -414,16 +422,6 @@ gst_editor_bin_object_changed (GstEditorItem * item, GstObject * object)
 /**********************************************************************
  * Callbacks from the gstbin (must be threadsafe)
  **********************************************************************/
-
-/* fixed: threadsafety */
-static void
-gst_editor_bin_element_added_cb (GstObject * bin, GstObject * child,
-    GstEditorBin * editorbin){
-g_print("gst_editor_bin_element_added_cb: %s with pointer %p Added to bin %s with pointer %p getting global mutex...\n",GST_OBJECT_NAME(child),(void*)child,GST_OBJECT_NAME(bin),bin);
-g_rw_lock_writer_lock(GST_EDITOR_ITEM(editorbin)->globallock);
-gst_editor_bin_element_added (bin,child,editorbin);
-g_rw_lock_writer_unlock(GST_EDITOR_ITEM(editorbin)->globallock);
-}
 
 static void
 gst_editor_bin_element_added (GstObject * bin, GstObject * child,
@@ -551,6 +549,149 @@ g_print("In editorbin, gotten Transformation x: %f y:%f Scale %f Rotation %f and
   g_idle_add ((GSourceFunc) gst_editor_element_sync_state, editorbin);
   g_print("Finished adding element %s with pointer %p Added to bin %s with pointer %p getting mutex...List of parent has now %d entries\n",GST_OBJECT_NAME(child),(void*)child,GST_OBJECT_NAME(bin),bin,g_list_length(editorbin->elements));
   g_rw_lock_writer_unlock (&(GST_EDITOR_ELEMENT(editorbin)->rwlock));
+}
+
+/*
+ * Can be called from another thread.
+ * At least this seemed to be the case in GStreamer 0.10.
+ */
+static void
+gst_editor_bin_element_added_cb (GstBin * bin, GstElement * child, gpointer user_data)
+{
+  GstEditorBin *editorbin = GST_EDITOR_BIN (user_data);
+
+  g_debug ("gst_editor_bin_element_added_cb: %s with pointer %p Added to bin %s "
+      "with pointer %p getting global mutex...",
+      GST_OBJECT_NAME (child), (void *)child, GST_OBJECT_NAME (bin), bin);
+
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM (editorbin)->globallock);
+  gst_editor_bin_element_added (GST_OBJECT (bin), GST_OBJECT (child), editorbin);
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM (editorbin)->globallock);
+}
+
+static void
+unset_deepdelete_editor_pads (GstEditorElement * element)
+{
+  int numc = g_list_length (element->srcpads);
+  g_debug ("removing %d srcpads from element %p", numc, element);
+  GList * l;
+  l = element->srcpads;
+  while (l) {
+    if (GST_IS_EDITOR_ITEM (l->data)) {
+      gst_editor_item_hash_remove (GST_EDITOR_ITEM (l->data)->object);
+      g_object_set (GST_EDITOR_ITEM (l->data), "object", NULL,
+          NULL);  // should free all the callbacks
+    }
+    if (GOO_IS_CANVAS_ITEM (l->data))
+      goo_canvas_item_remove (l->data);
+    l = g_list_next (l);
+  }
+  numc = g_list_length (element->sinkpads);
+  g_debug ("removing %d sinkpads", numc);
+  l = element->sinkpads;
+  while (l) {
+    if (GST_IS_EDITOR_ITEM (l->data)) {
+      g_debug ("Processing sinkpad %p, object %p", l->data,
+          GST_EDITOR_ITEM (l->data)->object);
+      gst_editor_item_hash_remove (GST_EDITOR_ITEM (l->data)->object);
+      g_object_set (GST_EDITOR_ITEM (l->data), "object", NULL,
+          NULL);  // should free all the callbacks
+    }
+    g_debug ("deleting canvas next");
+    if (GOO_IS_CANVAS_ITEM (l->data))
+      goo_canvas_item_remove (l->data);
+    l = g_list_next (l);
+  }
+  g_debug ("finished unset_deepdelete_editor_pads");
+}
+
+static void
+unset_deepdelete_editor (GstEditorBin * bin)
+{
+  int numc = g_list_length (bin->elements);
+  g_debug ("removing %d children", numc);
+  GList * l;
+  l = bin->elements;
+  while (l) {
+    if (GST_IS_EDITOR_BIN (l->data))
+      unset_deepdelete_editor (l->data);
+    if (GST_IS_EDITOR_ELEMENT (l->data))
+      unset_deepdelete_editor_pads (GST_EDITOR_ELEMENT (l->data));
+    if (GST_IS_EDITOR_ITEM (l->data)) {
+      gst_editor_item_hash_remove (GST_EDITOR_ITEM (l->data)->object);
+      gst_editor_item_disconnect (GST_EDITOR_ITEM (bin), l->data);
+      // should free all the callbacks
+      g_object_set (GST_EDITOR_ITEM (l->data), "object", NULL, NULL);
+    }
+    if (GOO_IS_CANVAS_ITEM (l->data))
+      goo_canvas_item_remove (GOO_CANVAS_ITEM (l->data));
+    l = g_list_next (l);
+  }
+  l = bin->links;
+  while (l) {
+    if ((l->data) && (GST_IS_EDITOR_LINK (l->data))) {
+      if (GOO_IS_CANVAS_ITEM (GST_EDITOR_LINK (l->data)->canvas))
+        goo_canvas_item_remove (
+            GOO_CANVAS_ITEM (GST_EDITOR_LINK (l->data)->canvas));
+      else
+        g_debug ("GstEditorlink %p has no canvas", l->data);
+      g_object_unref (l->data);
+    } else
+      g_debug ("failed to remove GstEditorlink %p", l->data);
+    l = g_list_next (l);
+  }
+  g_debug ("unset_deepdelete finished");
+}
+
+static void
+gst_editor_bin_element_removed_cb (GstBin * bin, GstElement * child, gpointer user_data)
+{
+  GstEditorBin *editorbin = GST_EDITOR_BIN (user_data);
+  GstEditorElement *child_element;
+
+  g_debug ("gst_editor_bin_element_removed_cb: %s with pointer %p removed from bin %s "
+      "with pointer %p; getting global mutex...",
+      GST_OBJECT_NAME (child), (void *)child, GST_OBJECT_NAME (bin), bin);
+
+  g_rw_lock_writer_lock (GST_EDITOR_ITEM (editorbin)->globallock);
+  child_element = GST_EDITOR_ELEMENT (gst_editor_item_get (GST_OBJECT (child)));
+  g_assert (child_element != NULL);
+  g_rw_lock_writer_lock (&child_element->rwlock);
+
+  gst_editor_item_disconnect (GST_EDITOR_ITEM (editorbin),
+      GST_EDITOR_ITEM (child_element));
+  editorbin->elements = g_list_remove (editorbin->elements, child_element);
+
+  if (child_element->active)
+    g_object_set (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (child_element)),
+        "selection", NULL, NULL);
+
+  gst_editor_item_hash_remove (GST_OBJECT (child));
+
+  if (GST_EDITOR_ITEM (child_element)->object)
+    g_object_set (child_element, "object", NULL, NULL);
+
+  /*
+   * Kill all children (recursively).
+   * This is necessary to properly clean up everything, update
+   * the editor item hash, etc.
+   * FIXME: It would be better to rely on the recursive invocation
+   * of the element-removed signal on the bin. But it doesn't
+   * get invoked when we call gst_editor_element_remove()
+   * on the child bin's elements.
+   */
+  if (GST_IS_EDITOR_BIN (child_element))
+    unset_deepdelete_editor (GST_EDITOR_BIN (child_element));
+
+  goo_canvas_item_remove (GOO_CANVAS_ITEM (child_element));
+
+  g_rw_lock_writer_unlock (&child_element->rwlock);
+  g_rw_lock_writer_unlock (GST_EDITOR_ITEM(editorbin)->globallock);
+
+  g_object_unref (child_element);
+
+  g_debug ("Survived removing this item:%s %p Pointer of GstEditorElement %p",
+      GST_OBJECT_NAME (child), child, child_element);
 }
 
 static gboolean

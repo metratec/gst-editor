@@ -104,8 +104,6 @@ static void on_pad_removed (GstElement * element, GstPad * pad,
     GstEditorElement * editor_element);
 //static void on_state_change (GstElement * element, GstState old,
 //    GstState state, GstEditorElement * editor_element);
-static void on_parent_notify (GstElement * element, GParamSpec * pspec,
-    GstEditorElement * editor_element);
 
 /* utility functions */
 static void gst_editor_element_add_pad (GstEditorElement * element,
@@ -688,7 +686,6 @@ gst_editor_element_object_changed (GstEditorItem * item, GstObject * object)
     // g_source_remove                     (guint tag);
     g_signal_handlers_disconnect_by_func (item->object, on_new_pad, item);
     g_signal_handlers_disconnect_by_func (item->object, on_pad_removed, item);
-    g_signal_handlers_disconnect_by_func (item->object, on_parent_notify, item);
     //in case it stays alive..
     //if(G_IS_OBJECT(item)&&G_OBJECT_PARENT(item)&&GST_IS_EDITOR_BIN(G_OBJECT_PARENT(item))){
     //  GstEditorBin* parent=GST_EDITOR_BIN(G_OBJECT_PARENT(item));
@@ -707,8 +704,6 @@ gst_editor_element_object_changed (GstEditorItem * item, GstObject * object)
 
     g_signal_connect (object, "pad-added", G_CALLBACK (on_new_pad), item);
     g_signal_connect (object, "pad-removed", G_CALLBACK (on_pad_removed), item);
-    g_signal_connect (object, "notify::parent",
-        G_CALLBACK (on_parent_notify), item);
   }
 
   if (GST_EDITOR_ITEM_CLASS (parent_class)->object_changed)
@@ -1051,150 +1046,6 @@ on_state_change (GstBus * bus, GstMessage * message, gpointer data)
 }
 #endif
 #endif
-
-//method to kick out all children and their children but not the element itself,
-//hack out of hashtable
-void unset_deepdelete(GooCanvasItem * citem){
-  int numc=goo_canvas_item_get_n_children(citem); 
-  g_print("unset:deepdelete removing %d children\n",numc);
-  for (numc--;numc>0;numc--){
-    GooCanvasItem * temp;
-    temp=goo_canvas_item_get_child(citem,numc);
-    unset_deepdelete(temp);
-    //if (GST_IS_EDITOR_ELEMENT(temp)) unset_deepdelete(temp);
-    //else if (GST_IS_EDITOR_PAD(temp))
-    if (GST_IS_EDITOR_ITEM(temp)){
-        g_print("Unset deepdelete, processing %s.\n",GST_EDITOR_ITEM(temp)->title_text);
-	gst_editor_item_hash_remove (GST_EDITOR_ITEM(temp)->object);
-        //gst_editor_item_dispose(GST_EDITOR_ITEM(temp));
-        g_object_set(GST_EDITOR_ITEM(temp),"object",NULL,NULL);//should free all the callbacks
-        GST_EDITOR_ITEM(temp)->title=NULL;
-        GST_EDITOR_ITEM(temp)->border=NULL;
-	//g_object_unref(GST_EDITOR_ITEM(temp));
-        
-    }
-    goo_canvas_item_remove_child(citem,numc);
-  }
-}
-
-void unset_deepdelete_editor_pads(GstEditorElement * element){
-  int numc=g_list_length(element->srcpads); 
-  g_print("removing %d srcpads from element %p\n",numc,element);
-  GList *l;
-  l=element->srcpads;
-  while (l){
-  if (GST_IS_EDITOR_ITEM(l->data)){
-	gst_editor_item_hash_remove (GST_EDITOR_ITEM(l->data)->object);
-        g_object_set(GST_EDITOR_ITEM(l->data),"object",NULL,NULL);//should free all the callbacks
-  }
-  if (GOO_IS_CANVAS_ITEM(l->data))goo_canvas_item_remove(l->data);
-  l=g_list_next(l);
-  }
-  numc=g_list_length(element->sinkpads); 
-  g_print("removing %d sinkpads\n",numc);
-  l=element->sinkpads;
-  while (l){
-  if (GST_IS_EDITOR_ITEM(l->data)){
-	g_print("Processing sinkpad %p, object %p\n",l->data,GST_EDITOR_ITEM(l->data)->object);
-	gst_editor_item_hash_remove (GST_EDITOR_ITEM(l->data)->object);
-        g_object_set(GST_EDITOR_ITEM(l->data),"object",NULL,NULL);//should free all the callbacks
-    }
-    g_print("deleting canvas next\n");
-    if (GOO_IS_CANVAS_ITEM(l->data))goo_canvas_item_remove(l->data);
-    l=g_list_next(l);
-  }
-  g_print("finished unset_deepdelete_editor_pads\n");
-}
-
-void unset_deepdelete_editor(GstEditorBin * bin){
-  int numc=g_list_length(bin->elements); 
-  g_print("removing %d children\n",numc);
-  GList *l;
-  l=bin->elements;
-  while (l) {
-    if (GST_IS_EDITOR_BIN (l->data))
-      unset_deepdelete_editor (l->data);
-    if (GST_IS_EDITOR_ELEMENT (l->data))
-      unset_deepdelete_editor_pads (GST_EDITOR_ELEMENT (l->data));
-    if (GST_IS_EDITOR_ITEM (l->data)) {
-      gst_editor_item_hash_remove (GST_EDITOR_ITEM (l->data)->object);
-      gst_editor_item_disconnect (GST_EDITOR_ITEM (bin), l->data);
-      // should free all the callbacks
-      g_object_set (GST_EDITOR_ITEM (l->data), "object", NULL, NULL);
-    }
-    if (GOO_IS_CANVAS_ITEM (l->data))
-      goo_canvas_item_remove (GOO_CANVAS_ITEM (l->data));
-    l = g_list_next (l);
-  }
-  l = bin->links;
-  while (l) {
-    if ((l->data) && (GST_IS_EDITOR_LINK (l->data))) {
-      if (GOO_IS_CANVAS_ITEM (GST_EDITOR_LINK (l->data)->canvas))
-        goo_canvas_item_remove (GOO_CANVAS_ITEM (GST_EDITOR_LINK (l->data)->canvas));
-      else
-        g_print ("GstEditorlink %p has no canvas\n", l->data);
-      g_object_unref (l->data);
-    } else
-      g_print ("failed to remove GstEditorlink %p\n", l->data);
-    l = g_list_next (l);
-  }
-  g_print ("unset_deepdelete finished\n");
-}
-
-static void
-on_parent_notify (GstElement * element, GParamSpec * pspec,
-    GstEditorElement * editor_element)
-{
-  g_rw_lock_writer_lock (GST_EDITOR_ITEM (editor_element)->globallock);
-  g_rw_lock_writer_lock (&editor_element->rwlock);
-
-  if (!GST_OBJECT_PARENT (element) && editor_element->parent_object) {
-    g_print ("removing this item:%s Pointer:%p Getting global Mutex for write\n",
-        GST_OBJECT_NAME (element), element);
-
-    GstEditorBin *editor_bin =
-        GST_EDITOR_BIN (gst_editor_item_get (editor_element->parent_object));
-
-    /* unreffing groups does nothing to the children right now. grrrrr. just hide
-     * the damn thing and hack out the editorbin internals */
-    //goo_canvas_item_simple_hide (GOO_CANVAS_ITEM_SIMPLE (editor_element));
-
-    if (editor_bin) {
-      gst_editor_item_disconnect (GST_EDITOR_ITEM (editor_bin),
-          GST_EDITOR_ITEM (editor_element));
-      editor_bin->elements = g_list_remove (editor_bin->elements, editor_element);
-    } else {
-      g_print ("fixme: on_parent_unset called on element %s. Parent unknown!\n",
-          GST_OBJECT_NAME (element));
-    }
-
-    if (editor_element->active)
-      g_object_set (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (editor_element)),
-          "selection", NULL, NULL);
-
-    gst_editor_item_hash_remove (GST_OBJECT (element));//for the save side twice
-    if (GST_EDITOR_ITEM (editor_element)->object) {
-    //  gst_editor_item_hash_remove(GST_EDITOR_ITEM (editor_element)->object);
-      //g_object_unref(GST_EDITOR_ITEM (editor_element)->object);
-      if (G_IS_OBJECT(editor_element)) g_object_set (GST_EDITOR_ITEM (editor_element), "object", NULL, NULL);
-    }
-    //kill children...
-    if (GST_IS_EDITOR_BIN(editor_element)){
-      unset_deepdelete_editor(GST_EDITOR_BIN(editor_element));
-      //unset_deepdelete(GOO_CANVAS_ITEM(editor_element));
-    }
-    //
-    goo_canvas_item_remove(GOO_CANVAS_ITEM(editor_element));
-
-    g_print ("Survived removing this item:%s %p Pointer of GstEditorElement %p\n",
-        GST_OBJECT_NAME (element), element, editor_element);
-  }
-  editor_element->parent_object = GST_OBJECT_PARENT (element);
-
-  g_rw_lock_writer_unlock (&editor_element->rwlock); 
-  g_rw_lock_writer_unlock (GST_EDITOR_ITEM(editor_element)->globallock);
-  g_object_unref (editor_element);
-}
 
 /**********************************************************************
  * Utility functions
