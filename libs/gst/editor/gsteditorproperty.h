@@ -22,7 +22,9 @@
 #define __GST_EDITOR_PROPERTY_H__
 
 #include <gst/gst.h>
-#include <gst/editor/editor.h>
+#include <gtk/gtk.h>
+
+#include <gst/editor/gsteditorelement.h>
 
 #define GST_TYPE_EDITOR_PROPERTY (gst_editor_property_get_type())
 #define GST_EDITOR_PROPERTY(obj) (G_TYPE_CHECK_INSTANCE_CAST ((obj), GST_TYPE_EDITOR_PROPERTY, GstEditorProperty))
@@ -41,24 +43,18 @@ typedef struct _GstEditorPropertyClass GstEditorPropertyClass;
 
 struct _GstEditorProperty
 {
-  GObject object;
+  GtkBin bin;
 
   GstElement *shown_element;
 
   GtkBuilder *builder;
-  GtkWidget *window;
   GtkWidget *element_ui;
   GtkWidget *caps_browser;
 };
 
 struct _GstEditorPropertyClass
 {
-  GObjectClass parent_class;
-
-  void (*element_selected) (GstEditorProperty * property,
-      GstEditorElement * element);
-  void (*in_selection_mode) (GstEditorProperty * property,
-      GstEditorElement * element);
+  GtkBinClass parent_class;
 };
 
 GType gst_editor_property_get_type ();

@@ -34,6 +34,7 @@
 #include "gsteditoritem.h"
 #include "gsteditorcanvas.h"
 #include "gsteditorelement.h"
+#include "gsteditorproperty.h"
 #include "namedicons.h"
 
 #include <gst/common/gste-common.h>
@@ -63,6 +64,11 @@ static void on_canvas_size_allocate (GtkWidget * widget,
     GdkRectangle * allocation, gpointer user_data);
 static void on_canvas_notify (GObject * object,
     GParamSpec * param, GstEditor * ui);
+
+static void on_property_element_changed (GObject * object,
+    GParamSpec * param, GstEditor * ui);
+static gboolean on_property_window_delete (GtkWidget * widget,
+    GdkEvent * event, gpointer user_data);
 
 static void on_element_tree_select (GstElementBrowserElementTree * element_tree,
     gpointer user_data);
@@ -251,6 +257,24 @@ gst_editor_init (GstEditor * editor)
   g_signal_connect (editor->canvas, "notify",
       G_CALLBACK (on_canvas_notify), editor);
 
+  editor->property_window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_default_size (GTK_WINDOW (editor->property_window),
+      400, 600);
+  gtk_window_set_type_hint (GTK_WINDOW (editor->property_window),
+      GDK_WINDOW_TYPE_HINT_UTILITY);
+  gtk_window_set_transient_for (GTK_WINDOW (editor->property_window),
+      GTK_WINDOW (editor->window));
+  gtk_container_add (GTK_CONTAINER (editor->property_window),
+      GTK_WIDGET (editor->canvas->property));
+  gtk_widget_show (editor->property_window);
+
+  /* updates the property window title dynamically */
+  g_signal_connect (editor->canvas->property, "notify::element",
+      G_CALLBACK (on_property_element_changed), editor);
+  /* show/hide property window */
+  g_signal_connect (editor->property_window, "delete-event",
+      G_CALLBACK (on_property_window_delete), editor);
+
   g_mutex_init (&editor->outputmutex);
 }
 
@@ -311,6 +335,7 @@ gst_editor_dispose (GObject * object)
 {
   GstEditor *editor = GST_EDITOR (object);
 
+  gtk_widget_destroy (editor->property_window);
   gtk_widget_destroy (editor->window);
 
   _num_editor_windows--;
@@ -829,10 +854,24 @@ gst_editor_on_remove (GtkWidget * widget, GstEditor * editor)
 void
 gst_editor_show_element_inspector (GtkWidget * widget, GstEditor * editor)
 {
-  gboolean b;
+  gtk_widget_set_visible (editor->property_window,
+      gtk_check_menu_item_get_active (GTK_CHECK_MENU_ITEM (widget)));
+}
 
-  g_object_get (widget, "active", &b, NULL);
-  g_object_set (editor->canvas, "properties-visible", b, NULL);
+static gboolean
+on_property_window_delete (GtkWidget * widget, GdkEvent * event, gpointer user_data)
+{
+  GstEditor *editor = GST_EDITOR (user_data);
+  GtkCheckMenuItem *item;
+
+  /* deactivate the "Element Inspector" menu item */
+  item = GTK_CHECK_MENU_ITEM (gtk_builder_get_object (editor->builder,
+      "view-element-inspector"));
+  gtk_check_menu_item_set_active (item, FALSE);
+
+  gtk_widget_hide (widget);
+  /* don't destroy window */
+  return TRUE;
 }
 
 void
@@ -1065,12 +1104,7 @@ on_canvas_notify (GObject * object, GParamSpec * param, GstEditor * editor)
   GValue v = { 0, };
   gchar *status;
 
-  if (g_ascii_strcasecmp (param->name, "properties-visible") == 0) {
-    g_value_init (&v, param->value_type);
-    g_object_get_property (object, param->name, &v);
-    g_object_set_property (gtk_builder_get_object (editor->builder,
-                "view-element-inspector"), "active", &v);
-  } else if (g_ascii_strcasecmp (param->name, "palette-visible") == 0) {
+  if (g_ascii_strcasecmp (param->name, "palette-visible") == 0) {
     g_message ("canvas property notify");
     g_value_init (&v, param->value_type);
     g_object_get_property (object, param->name, &v);
@@ -1081,6 +1115,17 @@ on_canvas_notify (GObject * object, GParamSpec * param, GstEditor * editor)
     gst_editor_statusbar_message (editor, "%s", status);
     g_free (status);
   }
+}
+
+static void
+on_property_element_changed (GObject * object, GParamSpec * param, GstEditor * editor)
+{
+  GstEditorProperty *property = editor->canvas->property;
+
+  gchar *title = g_strconcat ("Properties: ",
+      property->shown_element ? GST_OBJECT_NAME (property->shown_element) : "(none)", NULL);
+  gtk_window_set_title (GTK_WINDOW (editor->property_window), title);
+  g_free (title);
 }
 
 static void

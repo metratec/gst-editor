@@ -31,7 +31,7 @@
 #include "../../../pixmaps/pixmaps.h"
 
 #include "gst-helper.h"
-#include "gsteditorproperty.h"
+#include "gsteditorpad.h"
 #include "gsteditoritem.h"
 #include "gsteditorcanvas.h"
 #include "gsteditorelement.h"

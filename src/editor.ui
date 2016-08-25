@@ -1925,68 +1925,58 @@ categories</property>
       </object>
     </child>
   </object>
-  <object class="GtkWindow" id="property_window">
+  <object class="GtkNotebook" id="property_notebook">
     <property name="visible">True</property>
-    <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Properties: Selected Element</property>
-    <property name="default_width">200</property>
-    <property name="default_height">400</property>
-    <property name="type_hint">utility</property>
+    <property name="can_focus">True</property>
     <child>
-      <object class="GtkNotebook" id="notebook1">
+      <object class="GtkScrolledWindow" id="scrolledwindow-element-ui">
         <property name="visible">True</property>
-        <property name="can_focus">True</property>
+        <property name="can_focus">False</property>
+      </object>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel" id="label57">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">Properties</property>
+        <property name="justify">center</property>
+      </object>
+      <packing>
+        <property name="tab_fill">False</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkBox" id="vbox14">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
         <child>
-          <object class="GtkScrolledWindow" id="scrolledwindow-element-ui">
+          <object class="GtkScrolledWindow" id="scrolledwindow-caps-browser">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-          </object>
-        </child>
-        <child type="tab">
-          <object class="GtkLabel" id="label57">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Properties</property>
-            <property name="justify">center</property>
           </object>
           <packing>
-            <property name="tab_fill">False</property>
-          </packing>
-        </child>
-        <child>
-          <object class="GtkBox" id="vbox14">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="orientation">vertical</property>
-            <child>
-              <object class="GtkScrolledWindow" id="scrolledwindow-caps-browser">
-                <property name="visible">True</property>
-                <property name="can_focus">False</property>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">0</property>
-              </packing>
-            </child>
-          </object>
-          <packing>
-            <property name="position">1</property>
-          </packing>
-        </child>
-        <child type="tab">
-          <object class="GtkLabel" id="label58">
-            <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="label" translatable="yes">Pads</property>
-            <property name="justify">center</property>
-          </object>
-          <packing>
-            <property name="position">1</property>
-            <property name="tab_fill">False</property>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
           </packing>
         </child>
       </object>
+      <packing>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child type="tab">
+      <object class="GtkLabel" id="label58">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="label" translatable="yes">Pads</property>
+        <property name="justify">center</property>
+      </object>
+      <packing>
+        <property name="position">1</property>
+        <property name="tab_fill">False</property>
+      </packing>
     </child>
   </object>
   <object class="GtkMenu" id="request_pad_menu">

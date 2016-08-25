@@ -45,7 +45,6 @@ enum
   PROP_ATTRIBUTES,
   PROP_BIN,
   PROP_SELECTION,
-  PROP_PROPERTIES_VISIBLE,
   PROP_PALETTE_VISIBLE,
   PROP_STATUS,
   PROP_LIVE,
@@ -64,9 +63,6 @@ static void gst_editor_canvas_dispose (GObject * object);
 static void gst_editor_canvas_size_allocate (GtkWidget * widget,
     GtkAllocation * allocation);
 
-static void on_realize (GstEditorCanvas * canvas);
-static void on_property_destroyed (GstEditorCanvas * canvas,
-    gpointer stale_pointer);
 static void on_palette_destroyed (GstEditorCanvas * canvas,
     gpointer stale_pointer);
 
@@ -122,9 +118,6 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
   g_object_class_install_property (object_class, PROP_SELECTION,
       g_param_spec_object ("selection", "selection", "selection",
           gst_editor_element_get_type (), G_PARAM_READWRITE));
-  g_object_class_install_property (object_class, PROP_PROPERTIES_VISIBLE,
-      g_param_spec_boolean ("properties-visible", "properties-visible",
-          "properties-visible", FALSE, G_PARAM_READWRITE));
   g_object_class_install_property (object_class, PROP_PALETTE_VISIBLE,
       g_param_spec_boolean ("palette-visible", "palette-visible",
           "palette-visible", FALSE, G_PARAM_READWRITE));
@@ -160,11 +153,13 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
 static void
 gst_editor_canvas_init (GstEditorCanvas * editorcanvas)
 {
-  g_signal_connect_after (editorcanvas, "realize",
-      G_CALLBACK (on_realize), NULL);
   g_rw_lock_init (&editorcanvas->globallock);
 
   g_datalist_init (&editorcanvas->attributes);
+
+  editorcanvas->property =
+      GST_EDITOR_PROPERTY (g_object_new (GST_TYPE_EDITOR_PROPERTY, NULL));
+  gtk_widget_show (GTK_WIDGET (editorcanvas->property));
 }
 
 static void
@@ -291,9 +286,8 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
 
       if (canvas->selection) {
         g_object_set (canvas->selection, "active", TRUE, NULL);
-        if (canvas->property_window)
-          g_object_set (canvas->property_window, "element",
-              GST_EDITOR_ITEM (canvas->selection)->object, NULL);
+        g_object_set (canvas->property, "element",
+            GST_EDITOR_ITEM (canvas->selection)->object, NULL);
 
         /*
          * Update the PRIMARY selection clipboard.
@@ -304,37 +298,13 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
          */
         gst_editor_element_copy (canvas->selection, GDK_SELECTION_PRIMARY);
       } else {
-        if (canvas->property_window)
-          g_object_set (canvas->property_window, "element", NULL, NULL);
+        g_object_set (canvas->property, "element", NULL, NULL);
 
         /*
          * Clear the PRIMARY selection clipboard.
          */
         gtk_clipboard_clear (gtk_clipboard_get (GDK_SELECTION_PRIMARY));
       }
-      break;
-
-    case PROP_PROPERTIES_VISIBLE:
-      g_return_if_fail (gtk_widget_get_realized (GTK_WIDGET (canvas)) == TRUE);
-
-      b = g_value_get_boolean (value);
-
-      if (b) {
-        if (!canvas->property_window) {
-          canvas->property_window =
-              g_object_new (gst_editor_property_get_type (), "parent",
-              gtk_widget_get_toplevel (GTK_WIDGET (canvas)), NULL);
-          g_object_weak_ref (G_OBJECT (canvas->property_window),
-              (GWeakNotify) on_property_destroyed, canvas);
-        }
-        if (canvas->selection)
-          g_object_set (canvas->property_window, "element",
-              GST_EDITOR_ITEM (canvas->selection)->object, NULL);
-      } else if (!b && canvas->property_window) {
-        g_object_unref (G_OBJECT (canvas->property_window));
-        /* the weak ref takes care of setting canvas->property_window = NULL */
-      }
-
       break;
 
     case PROP_PALETTE_VISIBLE:
@@ -412,10 +382,6 @@ gst_editor_canvas_get_property (GObject * object, guint prop_id, GValue * value,
       g_value_set_object (value, (GObject *) canvas->selection);
       break;
 
-    case PROP_PROPERTIES_VISIBLE:
-      g_value_set_boolean (value, canvas->property_window ? TRUE : FALSE);
-      break;
-
     case PROP_PALETTE_VISIBLE:
       g_value_set_boolean (value, canvas->palette ? TRUE : FALSE);
       break;
@@ -443,32 +409,11 @@ gst_editor_canvas_dispose (GObject * object)
 {
   GstEditorCanvas *canvas = GST_EDITOR_CANVAS (object);
 
-  if (canvas->property_window)
-    g_object_unref (G_OBJECT (canvas->property_window));
+  g_object_unref (canvas->property);
   if (canvas->palette)
     g_object_unref (G_OBJECT (canvas->palette));
 
   g_rw_lock_clear (&canvas->globallock);
-}
-
-static void
-on_realize (GstEditorCanvas * canvas)
-{
-  /* do this now so window manager hints can be set properly */
-  //g_object_set (canvas,
-  //    "properties-visible", TRUE, "palette-visible", TRUE, NULL);
-  g_object_set (canvas,
-      "properties-visible", TRUE, NULL);
-}
-
-static void
-on_property_destroyed (GstEditorCanvas * canvas, gpointer stale_pointer)
-{
-  g_return_if_fail (GST_IS_EDITOR_CANVAS (canvas));
-
-  canvas->property_window = NULL;
-
-  g_object_notify (G_OBJECT (canvas), "properties-visible");
 }
 
 static void

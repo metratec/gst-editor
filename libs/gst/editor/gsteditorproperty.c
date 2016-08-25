@@ -17,7 +17,9 @@
  * Free Software Foundation, Inc., 59 Temple Place - Suite 330,
  * Boston, MA 02111-1307, USA.
  */
-
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 
 #include <ctype.h>
 #include <sys/stat.h>
@@ -25,11 +27,13 @@
 
 #include <gtk/gtk.h>
 #include <gst/gst.h>
-#include "gsteditorproperty.h"
+
 #include "../common/gste-common.h"
 #include "../element-ui/gst-element-ui.h"
 #include "../element-browser/caps-tree.h"
-    typedef struct
+#include "gsteditorproperty.h"
+
+typedef struct
 {
   GstEditorProperty *property;
   GModule *symbols;
@@ -39,15 +43,13 @@ connect_struct;
 enum
 {
   PROP_0,
-  PROP_ELEMENT,
-  PROP_PARENT
+  PROP_ELEMENT
 };
 
 enum
 {
   LAST_SIGNAL
 };
-
 
 /* class functions */
 static void gst_editor_property_class_init (GstEditorPropertyClass * klass);
@@ -57,17 +59,11 @@ static void gst_editor_property_set_property (GObject * object, guint prop_id,
     const GValue * value, GParamSpec * pspec);
 static void gst_editor_property_get_property (GObject * object, guint prop_id,
     GValue * value, GParamSpec * pspec);
-static void gst_editor_property_dispose (GObject * object);
 static void gst_editor_property_connect_func (GtkBuilder * builder,
     GObject * object, const gchar * signal_name, const gchar * handler_name,
     GObject * connect_object, GConnectFlags flags, gpointer user_data);
-static gint on_delete_event (
-    GtkWidget * widget, GdkEvent * event, gpointer data);
 
 static gpointer parent_class = NULL;
-
-/* static guint gst_editor_property_signals[LAST_SIGNAL] = { 0 }; */
-
 
 GType
 gst_editor_property_get_type (void)
@@ -88,7 +84,7 @@ gst_editor_property_get_type (void)
     };
 
     property_type =
-        g_type_register_static (G_TYPE_OBJECT, "GstEditorProperty",
+        g_type_register_static (GTK_TYPE_BIN, "GstEditorProperty",
         &property_info, 0);
   }
   return property_type;
@@ -101,19 +97,14 @@ gst_editor_property_class_init (GstEditorPropertyClass * klass)
 
   object_class = G_OBJECT_CLASS (klass);
 
-  parent_class = g_type_class_ref (G_TYPE_OBJECT);
+  parent_class = g_type_class_ref (GTK_TYPE_BIN);
 
   object_class->set_property = gst_editor_property_set_property;
   object_class->get_property = gst_editor_property_get_property;
-  object_class->dispose = gst_editor_property_dispose;
 
   g_object_class_install_property (object_class, PROP_ELEMENT,
       g_param_spec_object ("element", "Element", "Element",
           gst_element_get_type (), G_PARAM_READWRITE));
-
-  g_object_class_install_property (object_class, PROP_PARENT,
-      g_param_spec_object ("parent", "Parent", "Parent window",
-          gtk_window_get_type (), G_PARAM_WRITABLE));
 }
 
 static void
@@ -122,8 +113,10 @@ gst_editor_property_init (GstEditorProperty * property)
   connect_struct data;
   GModule *symbols;
   gchar *path;
+  GtkWidget *notebook;
   GError *error = NULL;
-  static const gchar *object_ids[] = {"property_window", NULL};
+
+  static const gchar *object_ids[] = {"property_notebook", NULL};
 
   symbols = g_module_open (NULL, 0);
 
@@ -139,7 +132,7 @@ gst_editor_property_init (GstEditorProperty * property)
   if (!gtk_builder_add_objects_from_file (property->builder,
           path, (gchar **) object_ids, &error)) {
     g_error (
-        "GStreamer Editor could not load property_window from builder file: %s",
+        "GStreamer Editor could not load property_notebook from builder file: %s",
         error->message);
     g_error_free (error);
   }
@@ -148,9 +141,9 @@ gst_editor_property_init (GstEditorProperty * property)
   gtk_builder_connect_signals_full (property->builder,
       gst_editor_property_connect_func, &data);
 
-  property->window =
-      GTK_WIDGET (gtk_builder_get_object (property->builder, "property_window"));
-  gtk_widget_show (property->window);
+  notebook =
+      GTK_WIDGET (gtk_builder_get_object (property->builder, "property_notebook"));
+  gtk_container_add (GTK_CONTAINER (property), notebook);
 
   property->element_ui =
       g_object_new (gst_element_ui_get_type (), "view-mode",
@@ -169,9 +162,6 @@ gst_editor_property_init (GstEditorProperty * property)
       property->caps_browser);
 
   property->shown_element = NULL;
-
-  g_signal_connect (property->window, "delete-event",
-      G_CALLBACK (on_delete_event), property);
 }
 
 /* we need more control here so... */
@@ -205,9 +195,6 @@ gst_editor_property_set_property (GObject * object, guint prop_id,
 {
   GstEditorProperty *property;
   GstElement *old_element;
-  gchar *title;
-  GdkWindow *window;
-  GdkAtom atoms[2] = { GDK_NONE, GDK_NONE };
 
   /* get the major types of this object */
   property = GST_EDITOR_PROPERTY (object);
@@ -216,35 +203,13 @@ gst_editor_property_set_property (GObject * object, guint prop_id,
   switch (prop_id) {
     case PROP_ELEMENT:
       property->shown_element = g_value_get_object (value);
-      if (property->shown_element != old_element) {
-        g_object_set (property->element_ui, "element", property->shown_element,
-            NULL);
-        g_object_set (property->caps_browser, "element",
-            property->shown_element, NULL);
-        if (property->shown_element)
-          title =
-              g_strdup_printf ("Properties: %s",
-              GST_OBJECT_NAME (property->shown_element));
-        else
-          title = g_strdup ("Properties: (none)");
-        g_object_set (property->window, "title", title, NULL);
-        g_free (title);
-      }
-      break;
+      if (property->shown_element == old_element)
+        break;
 
-    case PROP_PARENT:
-      gtk_window_set_transient_for (GTK_WINDOW (property->window),
-          GTK_WINDOW (g_value_get_object (value)));
-
-      /* we are assumed to be realized at this point.. */
-      window = gtk_widget_get_window (property->window);
-
-      atoms[0] = gdk_atom_intern ("_NET_WM_WINDOW_TYPE", FALSE);
-
-      gdk_property_change (window,
-          gdk_atom_intern ("_NET_WM_WINDOW_TYPE_UTILITY", FALSE),
-          gdk_atom_intern ("ATOM", FALSE),
-          32, GDK_PROP_MODE_REPLACE, (guchar *) atoms, 1);
+      g_object_set (property->element_ui, "element",
+          property->shown_element, NULL);
+      g_object_set (property->caps_browser, "element",
+          property->shown_element, NULL);
       break;
 
     default:
@@ -271,24 +236,4 @@ gst_editor_property_get_property (GObject * object, guint prop_id,
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
   }
-}
-
-static void
-gst_editor_property_dispose (GObject * object)
-{
-  GstEditorProperty *property = GST_EDITOR_PROPERTY (object);
-
-  gtk_widget_destroy (property->window);
-
-  G_OBJECT_CLASS (parent_class)->dispose (object);
-}
-
-static gint
-on_delete_event (GtkWidget * widget, GdkEvent * event, gpointer data)
-{
-  GstEditorProperty *property = GST_EDITOR_PROPERTY (data);
-
-  g_object_unref (G_OBJECT (property));
-
-  return FALSE;
 }

@@ -40,6 +40,7 @@ typedef struct _GstEditor
   GtkFileFilter *filter_gep, *filter_gsp;
   GtkWidget *window;
   GtkWidget *element_tree;
+  GtkWidget *property_window;
   GtkSpinButton *sw,*sh;
   GtkStatusbar *statusbar;
   guint statusbar_timeout_id;

@@ -23,6 +23,7 @@
 #include <gtk/gtk.h>
 #include <goocanvas.h>
 
+#include <gst/editor/gsteditorproperty.h>
 #include <gst/editor/gsteditoritem.h>
 #include <gst/editor/gsteditorelement.h>
 #include <gst/editor/gsteditorbin.h>
@@ -46,7 +47,7 @@ typedef struct _GstEditorCanvas
   GooCanvas canvas;
   GstEditorBin *bin;
   GstEditorElement *selection;
-  GtkWidget *property_window;
+  GstEditorProperty *property;
   GtkWidget *palette;
   gchar *status;
   GData *attributes;    /* list of name -> GstEditorItemAttr mappings */
