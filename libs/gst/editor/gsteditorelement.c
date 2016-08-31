@@ -149,6 +149,7 @@ enum
 
 
 static GObjectClass *parent_class;
+static GooCanvasItemIface *parent_iface;
 
 static guint gst_editor_element_signals[LAST_SIGNAL] = { 0 };
 
@@ -237,6 +238,8 @@ gst_editor_element_class_init (GstEditorElementClass * klass)
   item_class = GST_EDITOR_ITEM_CLASS (klass);
 
   parent_class = g_type_class_ref (GST_TYPE_EDITOR_ITEM);
+  parent_iface = (GooCanvasItemIface *)g_type_interface_peek (parent_class,
+      GOO_TYPE_CANVAS_ITEM);
 
   gst_editor_element_signals[SIZE_CHANGED] =
       g_signal_new ("size_changed", G_OBJECT_CLASS_TYPE (klass),
@@ -593,7 +596,6 @@ static gboolean
 gst_editor_element_button_press_event (GooCanvasItem * citem,
     GooCanvasItem * target, GdkEventButton * event)
 {
-  GooCanvasItemIface *iface;
   GdkCursor *fleur;
   GstEditorElement *element = GST_EDITOR_ELEMENT (citem);
 
@@ -615,22 +617,21 @@ gst_editor_element_button_press_event (GooCanvasItem * citem,
       fleur = gdk_cursor_new (GDK_FLEUR);
 
       goo_canvas_pointer_grab (goo_canvas_item_get_canvas (citem),
-          citem, GDK_POINTER_MOTION_MASK |
-/*                             GDK_ENTER_NOTIFY_MASK | */
-/*                             GDK_LEAVE_NOTIFY_MASK | */
-          GDK_BUTTON_RELEASE_MASK, fleur, event->time);
+          citem,
+          GDK_POINTER_MOTION_MASK | GDK_POINTER_MOTION_HINT_MASK |
+          GDK_BUTTON_RELEASE_MASK,
+          fleur, event->time);
       g_object_unref (fleur);
     }
 
     return TRUE;
   }
-//   if (GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_press_event)
-//    return GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_press_event (citem, target, event);
-  iface =
-      (GooCanvasItemIface *) g_type_interface_peek (parent_class,
-      GOO_TYPE_CANVAS_ITEM);
-  if (iface->button_press_event)
-    return iface->button_press_event (citem, target, event);
+
+  /*
+   * Chain up to the parent class interface implementation.
+   */
+  if (parent_iface->button_press_event)
+    return parent_iface->button_press_event (citem, target, event);
 
   return FALSE;
 }
@@ -655,8 +656,16 @@ gst_editor_element_motion_notify_event (GooCanvasItem * citem,
 //     element->dragy = event->y;
 //       g_print ("%p received 'moved' at %g, %g \n", citem, dx, dy);
     element->moved = TRUE;
+    return TRUE;
   }
-  return TRUE;
+
+  /*
+   * Chain up to the parent class interface implementation.
+   */
+  if (parent_iface->motion_notify_event)
+    return parent_iface->motion_notify_event (citem, target, event);
+
+  return FALSE;
 }
 
 static gboolean
@@ -665,16 +674,30 @@ gst_editor_element_button_release_event (GooCanvasItem * citem,
 {
   GstEditorElement *element = GST_EDITOR_ELEMENT (citem);
 
-  if (element->dragging /*&& event->button == 1 */ ) {
-    element->dragging = FALSE;
-    goo_canvas_pointer_ungrab (goo_canvas_item_get_canvas (citem),
-        citem, event->time);
+  if (gst_editor_element_ungrab (element, event->time))
     return TRUE;
-  }
-//   if (GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_release_event)
-//      return GOO_CANVAS_ITEM_GET_IFACE (goo_canvas_item_get_parent(citem))->button_release_event (citem, target, event);
+
+  /*
+   * Chain up to the parent class interface implementation.
+   */
+  if (parent_iface->button_release_event)
+    return parent_iface->button_release_event (citem, target, event);
 
   return FALSE;
+}
+
+gboolean
+gst_editor_element_ungrab (GstEditorElement * element, guint32 time)
+{
+  GooCanvasItem *citem = GOO_CANVAS_ITEM (element);
+
+  if (!element->dragging)
+    return FALSE;
+
+  element->dragging = FALSE;
+  goo_canvas_pointer_ungrab (goo_canvas_item_get_canvas (citem),
+      citem, time);
+  return TRUE;
 }
 
 static void

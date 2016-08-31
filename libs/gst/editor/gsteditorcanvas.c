@@ -62,6 +62,7 @@ static void gst_editor_canvas_dispose (GObject * object);
 
 static void gst_editor_canvas_size_allocate (GtkWidget * widget,
     GtkAllocation * allocation);
+static void gst_editor_canvas_grab_notify (GtkWidget * widget, gboolean was_grabbed);
 
 static void on_palette_destroyed (GstEditorCanvas * canvas,
     gpointer stale_pointer);
@@ -148,6 +149,7 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
           FALSE, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
 
   widget_class->size_allocate = gst_editor_canvas_size_allocate;
+  widget_class->grab_notify = gst_editor_canvas_grab_notify;
 }
 
 static void
@@ -197,6 +199,30 @@ gst_editor_canvas_size_allocate (GtkWidget * widget, GtkAllocation * allocation)
   if (GTK_WIDGET_CLASS (parent_class)->size_allocate) {
     GTK_WIDGET_CLASS (parent_class)->size_allocate (widget, allocation);
   }
+}
+
+static void
+gst_editor_canvas_grab_notify (GtkWidget * widget, gboolean was_grabbed)
+{
+  GstEditorCanvas *canvas = GST_EDITOR_CANVAS (widget);
+
+  if (!was_grabbed) {
+    g_debug ("canvas becomes shadowed by a GTK+ grab");
+
+    /*
+     * The canvas becomes shadowed by a GTK+ grab (e.g. a modal
+     * dialog is shown).
+     * We must make sure that any pointer grab hold by any
+     * element (e.g. for dragging) is released.
+     * Else there are problems with interacting with the
+     * widget holding the new grab.
+     */
+    if (canvas->selection)
+      gst_editor_element_ungrab (canvas->selection, 0);
+  }
+
+  if (GTK_WIDGET_CLASS (parent_class)->grab_notify)
+    GTK_WIDGET_CLASS (parent_class)->grab_notify (widget, was_grabbed);
 }
 
 static void

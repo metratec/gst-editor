@@ -103,4 +103,6 @@ gboolean gst_editor_element_sync_state (GstEditorElement * element);
  */
 void gst_editor_element_realize (GooCanvasItem * citem);
 
+gboolean gst_editor_element_ungrab (GstEditorElement * element, guint32 time);
+
 #endif /* __GST_EDITOR_ELEMENT_H__ */
