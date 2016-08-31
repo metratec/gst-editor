@@ -77,7 +77,17 @@ gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallb
   GstPad *peer = gst_pad_get_peer (pad);
 
   while (peer && GST_OBJECT_PARENT (peer)) {
-    if (G_OBJECT_TYPE (peer) == GST_TYPE_PROXY_PAD) {
+    GstObject *peer_parent = GST_OBJECT_PARENT (peer);
+
+    /*
+     * Proxy/Ghost pads are only skipped for real GstBins.
+     * Bin derivations are assumed to manage their source/sink pads,
+     * so we can refer to their name (we have to unless GSTE_SERIALIZE_ALL_BINS
+     * is set as otherwise we may not serialize any GstBin children).
+     */
+    gboolean skip_proxy_pads = G_OBJECT_TYPE (peer_parent) == GST_TYPE_BIN;
+
+    if (skip_proxy_pads && G_OBJECT_TYPE (peer) == GST_TYPE_PROXY_PAD) {
       /*
        * Skip links to proxy pads, so we end up with a "normal" peer
        * in the bin it is linked to.
@@ -87,17 +97,17 @@ gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallb
        * the pad name but have no way to define which elements in the
        * bin they are connected to.
        */
-      GstPad *ghost = GST_PAD (GST_OBJECT_PARENT (peer));
+      GstPad *ghost = GST_PAD (peer_parent);
       gst_object_unref (peer);
       peer = gst_pad_get_peer (ghost);
-    } else if (GST_IS_GHOST_PAD (peer)) {
+    } else if (skip_proxy_pads && GST_IS_GHOST_PAD (peer)) {
       /*
        * Skip links to ghost pads. See above.
        */
       GstGhostPad *ghost = GST_GHOST_PAD_CAST (peer);
       peer = gst_ghost_pad_get_target (ghost);
       gst_object_unref (ghost);
-    } else if (gst_is_capsfilter (GST_OBJECT_PARENT (peer), cb)) {
+    } else if (gst_is_capsfilter (peer_parent, cb)) {
       /*
        * If the special GstCapsFilter syntax is allowed,
        * we return all capabilities of capsfilters between
