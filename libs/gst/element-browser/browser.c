@@ -161,8 +161,7 @@ gst_element_browser_init (GstElementBrowser * browser)
   g_signal_connect (G_OBJECT (tree), "element-activated",
       G_CALLBACK (on_tree_activated), browser);
 
-  gtk_widget_show_all (GTK_WIDGET (browser));
-  gtk_widget_hide (GTK_WIDGET (browser));
+  gtk_widget_show_all (gtk_bin_get_child (GTK_BIN (browser)));
 }
 
 GtkWidget *
