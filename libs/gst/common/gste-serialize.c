@@ -140,12 +140,47 @@ gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallb
 }
 
 static void
+gst_pad_save_name (GstPad * pad, gboolean have_dot, GsteSerializeCallbacks * cb)
+{
+  GstPadDirection direction = gst_pad_get_direction (pad);
+  GstObject *parent = GST_OBJECT_PARENT (pad);
+  GstPadTemplate *pad_template = gst_pad_get_pad_template (pad);
+
+  if (pad_template &&
+      GST_PAD_TEMPLATE_PRESENCE (pad_template) != GST_PAD_ALWAYS) {
+    /*
+     * We must serialize the link using its pad template name.
+     * FIXME: If the element has no normal pads and only one
+     * pad template, we could omit the pad template name.
+     */
+    if (!have_dot) {
+      append_space (cb);
+      cb->append (".", cb->user_data);
+    }
+    cb->append (GST_PAD_TEMPLATE_NAME_TEMPLATE (pad_template), cb->user_data);
+  } else if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
+      !parent || gst_element_count_pads (GST_ELEMENT (parent), direction) > 1) {
+    /*
+     * The pad name can be omitted if there is only one
+     * pad of the same type in the object.
+     */
+    if (!have_dot) {
+      append_space (cb);
+      cb->append (".", cb->user_data);
+    }
+    cb->append (GST_OBJECT_NAME (pad), cb->user_data);
+  }
+
+  if (pad_template)
+    gst_object_unref (pad_template);
+}
+
+static void
 gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next_element,
     GsteSerializeCallbacks * cb)
 {
   GstObject *parent = GST_OBJECT_PARENT (pad);
   GstPad *peer;
-  GstPadDirection peer_direction;
   GstObject *peer_parent;
 
   /* list of GstCaps that we own */
@@ -157,7 +192,6 @@ gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next
     g_list_free_full (caps_list, (GDestroyNotify)gst_caps_unref);
     return;
   }
-  peer_direction = gst_pad_get_direction (peer);
 
   peer_parent = GST_OBJECT_PARENT (peer);
   if (!peer_parent) {
@@ -171,7 +205,6 @@ gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next
    * For pads serialized as part of an element, the link's source
    * element can be omitted.
    */
-  have_dot = FALSE;
   if (parent &&
       (cb->flags & GSTE_SERIALIZE_VERBOSE || parent != GST_OBJECT_CAST (last_element))) {
     append_space (cb);
@@ -181,19 +214,9 @@ gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next
      */
     cb->append (GST_OBJECT_NAME (parent), cb->user_data);
     cb->append (".", cb->user_data);
-    have_dot = TRUE;
-  }
-  /*
-   * The pad name can be omitted if there is only one
-   * pad of the same type in the object.
-   */
-  if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
-      !parent || gst_element_count_pads (GST_ELEMENT (parent), direction) > 1) {
-    if (!have_dot) {
-      append_space (cb);
-      cb->append (".", cb->user_data);
-    }
-    cb->append (GST_OBJECT_NAME (pad), cb->user_data);
+    gst_pad_save_name (pad, TRUE, cb);
+  } else {
+    gst_pad_save_name (pad, FALSE, cb);
   }
 
   /*
@@ -245,7 +268,6 @@ gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next
    * element can be omitted since often it will refer to the
    * next element in the bin.
    */
-  have_dot = FALSE;
   if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
       peer_parent != GST_OBJECT_CAST (next_element)) {
     append_space (cb);
@@ -255,19 +277,9 @@ gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next
      */
     cb->append (GST_OBJECT_NAME (peer_parent), cb->user_data);
     cb->append (".", cb->user_data);
-    have_dot = TRUE;
-  }
-  /*
-   * The pad name can be omitted if there is only one
-   * pad of the same type in the object.
-   */
-  if (cb->flags & GSTE_SERIALIZE_VERBOSE ||
-      gst_element_count_pads (GST_ELEMENT (peer_parent), peer_direction) > 1) {
-    if (!have_dot) {
-      append_space (cb);
-      cb->append (".", cb->user_data);
-    }
-    cb->append (GST_OBJECT_NAME (peer), cb->user_data);
+    gst_pad_save_name (peer, TRUE, cb);
+  } else {
+    gst_pad_save_name (peer, FALSE, cb);
   }
 
   gst_object_unref (peer);
