@@ -346,13 +346,18 @@ gst_element_ui_prop_view_update (GstElementUIPropView * pview)
   block_signals (pview);
 
   g_mutex_lock (&pview->value_mutex);
-  gchar *contents;
   
   GST_DEBUG ("Name of parameters to update view %s\n",G_PARAM_SPEC_TYPE_NAME(pview->param));
-  
-  contents = g_strdup_value_contents (pview->value);
+
+  /*
+   * FIXME: This can result in critical messages by
+   * g_strdup_value_contents() for NULL structures.
+   */
+#if 0
+  gchar *contents = g_strdup_value_contents (pview->value);
   GST_DEBUG ("updating prop view to new value %s", contents);
   g_free (contents);
+#endif
 
 
   /* clear the update request flag, within the value_mutex */
