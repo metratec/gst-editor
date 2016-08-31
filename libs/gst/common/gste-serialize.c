@@ -103,7 +103,6 @@ gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallb
        * we return all capabilities of capsfilters between
        * `pad` and the last capsfilter's peer.
        */
-      GstCaps *caps;
       GstPad *caps_srcpad;
 
       /*
@@ -113,10 +112,14 @@ gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallb
        * It may theoretically not contain any capabilities though.
        * We simply ignore those capsfilters.
        */
-      g_object_get (GST_OBJECT_PARENT (peer), "caps", &caps, NULL);
-      if (caps)
-        /* transfer ownership of caps to caps_list */
-        *caps_list = g_list_append (*caps_list, caps);
+      if (caps_list) {
+        GstCaps *caps;
+
+        g_object_get (GST_OBJECT_PARENT (peer), "caps", &caps, NULL);
+        if (caps)
+          /* transfer ownership of caps to caps_list */
+          *caps_list = g_list_append (*caps_list, caps);
+      }
 
       /*
        * We can assert that all GstCapsFilter elements have a
@@ -140,7 +143,6 @@ static void
 gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next_element,
     GsteSerializeCallbacks * cb)
 {
-  GstPadDirection direction = gst_pad_get_direction (pad);
   GstObject *parent = GST_OBJECT_PARENT (pad);
   GstPad *peer;
   GstPadDirection peer_direction;
@@ -148,18 +150,6 @@ gst_pad_save_thyself (GstPad * pad, GstElement * last_element, GstElement * next
 
   /* list of GstCaps that we own */
   GList *caps_list = NULL;
-
-  gboolean have_dot;
-
-  /*
-   * If we are serializing as part of an element, there is no
-   * need to serialize both source and sink pads since each
-   * link only needs to appear once in the pipeline and in general
-   * we want to serialize from source to sink pads (as the number of
-   * fully-qualified peer names can be reduced).
-   */
-  if (last_element && direction == GST_PAD_SINK)
-    return;
 
   peer = gst_pad_get_peer_with_caps (pad, &caps_list, cb);
   if (!peer) {
@@ -411,6 +401,8 @@ static void
 gst_element_save_pads (GstElement * element, GstElement * next_element,
     GsteSerializeCallbacks * cb)
 {
+  GSList *pads_filtered = NULL;
+
   /*
    * When serializing a single element from a larger pipeline,
    * it does not make sense to output its pads/links since the elements
@@ -419,18 +411,67 @@ gst_element_save_pads (GstElement * element, GstElement * next_element,
   if (cb->recursion_depth == 0)
     return;
 
-  for (GList *pads = g_list_last (GST_ELEMENT_PADS (element));
-      pads != NULL; pads = g_list_previous (pads)) {
+  /*
+   * Create a filtered pad list containing only the pads
+   * that will be serialized in the end.
+   * This is important for passing the previous/next element
+   * pointers to the pad serialization.
+   */
+  for (GList *pads = GST_ELEMENT_PADS (element);
+       pads != NULL; pads = g_list_next (pads)) {
     GstPad *pad = GST_PAD_CAST (pads->data);
+    GstPad *peer;
+    GstObject *peer_parent;
 
     /*
-     * Only serialize direct pads.
+     * Only serialize direct pads and source pads.
+     * If we are serializing as part of an element, there is no
+     * need to serialize both source and sink pads since each
+     * link only needs to appear once in the pipeline and in general
+     * we want to serialize from source to sink pads (as the number of
+     * fully-qualified peer names can be reduced).
+     */
+    if (GST_ELEMENT_CAST (GST_OBJECT_PARENT (pad)) != element ||
+        gst_pad_get_direction (pad) == GST_PAD_SINK)
+      continue;
+
+    /*
+     * Unlinked pads cannot get serialized.
+     * This check is redundantly in gst_pad_save_thyself() since
+     * it matters for stand-alone pad serialization as well.
+     */
+    peer = gst_pad_get_peer_with_caps (pad, NULL, cb);
+    if (!peer)
+      continue;
+    peer_parent = GST_OBJECT_PARENT (peer);
+    gst_object_unref (peer);
+
+    /*
+     * Pads not linked to any element cannot get serialized.
+     * This check is redundantly in gst_pad_save_thyself() since
+     * it matters for stand-alone pad serialization as well.
+     */
+    if (!peer_parent)
+      continue;
+
+    pads_filtered = g_slist_prepend (pads_filtered, pad);
+  }
+
+  for (GSList *cur = pads_filtered; cur != NULL; cur = g_slist_next (cur)) {
+    /*
      * This uses the generic gst_object_save_thyself(), so
      * the object_saved callback gets called.
+     *
+     * The last_element gets only set for the first serialized pad
+     * and the next_element for the last since we can only omit immediately
+     * preceding and following element names.
      */
-    if (GST_ELEMENT_CAST (GST_OBJECT_PARENT (pad)) == element)
-      gst_object_save_thyself (GST_OBJECT (pad), element, next_element, cb);
+    gst_object_save_thyself (GST_OBJECT (cur->data),
+        cur == pads_filtered ? element : NULL,
+        g_slist_next (cur) ? NULL : next_element, cb);
   }
+
+  g_slist_free (pads_filtered);
 }
 
 static void
