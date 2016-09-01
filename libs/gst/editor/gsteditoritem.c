@@ -30,6 +30,7 @@
 
 #include "gst-helper.h"
 #include "gsteditorcanvas.h"
+#include "gsteditorelement.h"
 #include "gsteditoritem.h"
 
 GST_DEBUG_CATEGORY (gste_item_debug);
@@ -532,7 +533,15 @@ serialize_object_saved_cb (GstObject * object, gpointer user_data)
   gdouble x, y, width, height;
   gchar *group_name;
 
-  if (!item)
+  /*
+   * It only makes sense to serialize meta data for objects that
+   * have a corresponding GstEditorElement (which includes Bins).
+   * Specifically we do not want to serialize meta data for GstEditorPads
+   * which have implicit dimensions anyway, cannot be identified uniquely
+   * (easily) and may have no correspence in the pipeline serialization
+   * (as in the case of instantiated request pads).
+   */
+  if (!item || !GST_IS_EDITOR_ELEMENT (item))
     return;
 
   goo_canvas_item_get_transform (GOO_CANVAS_ITEM (item), &matrix);
