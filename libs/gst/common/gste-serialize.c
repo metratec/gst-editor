@@ -126,9 +126,18 @@ gst_pad_get_peer_with_caps (GstPad * pad, GList ** caps_list, GsteSerializeCallb
         GstCaps *caps;
 
         g_object_get (GST_OBJECT_PARENT (peer), "caps", &caps, NULL);
-        if (caps)
-          /* transfer ownership of caps to caps_list */
-          *caps_list = g_list_append (*caps_list, caps);
+        if (caps) {
+          /*
+           * Empty and ANY caps cannot be serialized in the special
+           * filtered link syntax and they do not contribute anything
+           * meaningful anyway.
+           */
+          if (!gst_caps_is_empty (caps) && !gst_caps_is_any (caps))
+            /* transfer ownership of caps to caps_list */
+            *caps_list = g_list_append (*caps_list, caps);
+          else
+            gst_caps_unref (caps);
+        }
       }
 
       /*
