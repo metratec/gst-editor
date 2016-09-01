@@ -561,6 +561,23 @@ gst_editor_on_save_as (GtkWidget * widget, GstEditor * editor)
         editor->filename);
 
   /*
+   * Initialize the dialog's setting check boxes - they might have
+   * changed since it was shown last.
+   */
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_verbose");
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (setting),
+      editor->save_flags & GSTE_SERIALIZE_VERBOSE);
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_all_bins");
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (setting),
+      editor->save_flags & GSTE_SERIALIZE_ALL_BINS);
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_pipelines_as_bins");
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (setting),
+      editor->save_flags & GSTE_SERIALIZE_PIPELINES_AS_BINS);
+  setting = gtk_builder_get_object (editor->builder, "save_dialog_capsfilter_as_element");
+  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (setting),
+      editor->save_flags & GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT);
+
+  /*
    * NOTE: The dialog's response codes have been chosen manually in Glade
    * to match GTK_RESPONSE_ACCEPT/GTK_RESPONSE_CANCEL.
    * Let's just hope the stock response Ids do not change suddenly.
@@ -577,10 +594,8 @@ gst_editor_on_save_as (GtkWidget * widget, GstEditor * editor)
 
   /*
    * Determine flags from the dialog's setting check boxes.
-   * NOTE: save_dialog_capsfilter_as_element is enabled by default
-   * since that preserves more information and the save files (at least
-   * the *.gep files) are not meant for human consumption anyway.
-   * Other setting flags might be enforced by the serialization.
+   * NOTE: Some settings might be required (at least for *.GEP files
+   * that should be loadable), so they may be enforced by the serialization.
    */
   editor->save_flags = 0;
   setting = gtk_builder_get_object (editor->builder, "save_dialog_verbose");
@@ -636,6 +651,12 @@ gst_editor_load (GstEditor * editor, const gchar * file_name)
     g_error_free (error);
     goto cleanup;
   }
+
+  /*
+   * Restore save flags.
+   * Errors are handled gracefully by assuming no special settings (0).
+   */
+  editor->save_flags = g_key_file_get_integer (key_file, PACKAGE_NAME, "Flags", NULL);
 
   g_object_set (editor, "filename", file_name, NULL);
 

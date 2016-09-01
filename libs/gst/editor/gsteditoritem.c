@@ -587,6 +587,20 @@ gst_editor_item_save_with_metadata (GstEditorItem * item, GKeyFile * key_file,
    */
   flags |= GSTE_SERIALIZE_PIPELINES_AS_BINS;
 
+  /*
+   * The GstEditor uses standalone capsfilter elements,
+   * so they must also be serialized as elements, in order to
+   * be able to associate meta-data with it.
+   */
+  flags |= GSTE_SERIALIZE_CAPSFILTER_AS_ELEMENT;
+
+  /*
+   * Saving the serialization flags makes sure that special
+   * settings can be restored on loading -- we do not usually
+   * prompt for file name and settings again.
+   */
+  g_key_file_set_integer (key_file, PACKAGE_NAME, "Flags", flags);
+
   gste_serialize_save (item->object, flags,
       serialize_append_cb, serialize_object_saved_cb, &ctx);
   g_key_file_set_string (key_file, PACKAGE_NAME,
