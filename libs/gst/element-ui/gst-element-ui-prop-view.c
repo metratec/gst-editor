@@ -320,6 +320,7 @@ gst_element_ui_prop_view_update_async (GstElementUIPropView * pview)
 
   g_mutex_lock (&pview->value_mutex);
 
+  g_value_reset (pview->value);
   g_object_get_property ((GObject *) pview->element, pview->param->name,
       pview->value);
 
