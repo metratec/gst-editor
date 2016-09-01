@@ -166,6 +166,7 @@ gst_editor_canvas_init (GstEditorCanvas * editorcanvas)
 
   editorcanvas->property =
       GST_EDITOR_PROPERTY (g_object_new (GST_TYPE_EDITOR_PROPERTY, NULL));
+  g_object_ref_sink (editorcanvas->property);
   gtk_widget_show (GTK_WIDGET (editorcanvas->property));
 }
 
