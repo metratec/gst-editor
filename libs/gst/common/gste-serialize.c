@@ -432,7 +432,7 @@ static void
 gst_element_save_pads (GstElement * element, GstElement * next_element,
     GsteSerializeCallbacks * cb)
 {
-  GSList *pads_filtered = NULL;
+  GList *pads_filtered = NULL;
 
   /*
    * When serializing a single element from a larger pipeline,
@@ -485,10 +485,10 @@ gst_element_save_pads (GstElement * element, GstElement * next_element,
     if (!peer_parent)
       continue;
 
-    pads_filtered = g_slist_prepend (pads_filtered, pad);
+    pads_filtered = g_list_append (pads_filtered, pad);
   }
 
-  for (GSList *cur = pads_filtered; cur != NULL; cur = g_slist_next (cur)) {
+  for (GList *cur = pads_filtered; cur != NULL; cur = g_list_next (cur)) {
     /*
      * This uses the generic gst_object_save_thyself(), so
      * the object_saved callback gets called.
@@ -502,7 +502,7 @@ gst_element_save_pads (GstElement * element, GstElement * next_element,
         g_slist_next (cur) ? NULL : next_element, cb);
   }
 
-  g_slist_free (pads_filtered);
+  g_list_free (pads_filtered);
 }
 
 static void
