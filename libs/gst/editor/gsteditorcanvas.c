@@ -48,7 +48,8 @@ enum
   PROP_PALETTE_VISIBLE,
   PROP_STATUS,
   PROP_LIVE,
-  PROP_SHOW_ALL_BINS
+  PROP_SHOW_ALL_BINS,
+  PROP_AUTOSIZE
 };
 
 static void gst_editor_canvas_class_init (GstEditorCanvasClass * klass);
@@ -147,6 +148,10 @@ gst_editor_canvas_class_init (GstEditorCanvasClass * klass)
       g_param_spec_boolean ("show-all-bins", "show-all-bins",
           "Whether all GstBin contents should be shown",
           FALSE, G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY));
+  g_object_class_install_property (object_class, PROP_AUTOSIZE,
+      g_param_spec_boolean ("autosize", "autosize",
+          "Whether to autosize the canvas", TRUE,
+          G_PARAM_READWRITE | G_PARAM_CONSTRUCT));
 
   widget_class->size_allocate = gst_editor_canvas_size_allocate;
   widget_class->grab_notify = gst_editor_canvas_grab_notify;
@@ -386,6 +391,25 @@ gst_editor_canvas_set_property (GObject * object, guint prop_id,
       canvas->show_all_bins = g_value_get_boolean (value);
       break;
 
+    case PROP_AUTOSIZE:
+      canvas->autosize = g_value_get_boolean (value);
+
+      if (canvas->bin) {
+        gdouble x, y;
+        GooCanvasBounds bounds;
+
+        g_object_set (canvas->bin,
+            "width", canvas->widthbackup,
+            "height", canvas->heightbackup, NULL);
+        goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (canvas->bin), &bounds);
+        x = bounds.x1;
+        y = bounds.y1;
+        goo_canvas_set_bounds (GOO_CANVAS (canvas),
+            x - 4, y - 4,
+            x + canvas->widthbackup + 3, y + canvas->heightbackup + 3);
+      }
+      break;
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
       break;
@@ -422,6 +446,10 @@ gst_editor_canvas_get_property (GObject * object, guint prop_id, GValue * value,
 
     case PROP_SHOW_ALL_BINS:
       g_value_set_boolean (value, canvas->show_all_bins);
+      break;
+
+    case PROP_AUTOSIZE:
+      g_value_set_boolean (value, canvas->autosize);
       break;
 
     default:
@@ -628,25 +656,14 @@ gst_editor_canvas_load_with_metadata (GstEditorCanvas * canvas,
   attr = g_datalist_get_data (&canvas->attributes, GST_ELEMENT_NAME (pipeline));
   /* now decide */
   if (attr) {
-    gdouble x, y, width, height;
-    GooCanvasBounds bounds;
-
     canvas->widthbackup = attr->w;
     canvas->heightbackup = attr->h;
-    g_object_set (canvas->bin,
-        "width", canvas->widthbackup,
-        "height", canvas->heightbackup, NULL);
-    if (canvas->bin)
-      g_object_get (canvas->bin, "width", &width, "height", &height, NULL);
-
-    goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (canvas->bin), &bounds);
-    x = bounds.x1;
-    y = bounds.y1;
-    goo_canvas_set_bounds (GOO_CANVAS (canvas),
-        x - 4, y - 4, x + width + 3, y + height + 3);
   } else {
     g_warning ("Element attributes for %s not found!", GST_ELEMENT_NAME (pipeline));
   }
+
+  g_object_set (canvas, "autosize",
+      g_key_file_get_boolean (key_file, PACKAGE_NAME, "Autosize", NULL), NULL);
 
   return TRUE;
 }

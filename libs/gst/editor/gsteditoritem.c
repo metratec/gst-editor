@@ -29,6 +29,7 @@
 #include <gst/common/gste-serialize.h>
 
 #include "gst-helper.h"
+#include "gsteditorcanvas.h"
 #include "gsteditoritem.h"
 
 GST_DEBUG_CATEGORY (gste_item_debug);
@@ -567,6 +568,7 @@ gst_editor_item_save_with_metadata (GstEditorItem * item, GKeyFile * key_file,
     GsteSerializeFlags flags)
 {
   SerializeCtx ctx;
+  GstEditorCanvas *canvas;
 
   /*
    * Pipelines are written into a container format (Key file) with
@@ -607,6 +609,10 @@ gst_editor_item_save_with_metadata (GstEditorItem * item, GKeyFile * key_file,
       "Pipeline", ctx.pipeline->str);
 
   g_string_free (ctx.pipeline, TRUE);
+
+  canvas = GST_EDITOR_CANVAS (goo_canvas_item_get_canvas (GOO_CANVAS_ITEM (item)));
+  g_key_file_set_boolean (key_file, PACKAGE_NAME,
+      "Autosize", canvas->autosize);
 }
 
 /**********************************************************************

@@ -591,7 +591,7 @@
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
                 <child>
-                  <object class="GtkCheckButton" id="checkbutton1">
+                  <object class="GtkCheckButton" id="autosize-checkbutton">
                     <property name="label" translatable="yes">AutoSize (W x H)</property>
                     <property name="use_action_appearance">False</property>
                     <property name="visible">True</property>
@@ -617,6 +617,7 @@
                 <child>
                   <object class="GtkSpinButton" id="spinbutton1">
                     <property name="visible">True</property>
+                    <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="invisible_char">●</property>
                     <property name="primary_icon_activatable">False</property>
@@ -640,6 +641,7 @@
                 <child>
                   <object class="GtkSpinButton" id="spinbutton2">
                     <property name="visible">True</property>
+                    <property name="sensitive">False</property>
                     <property name="can_focus">True</property>
                     <property name="invisible_char">●</property>
                     <property name="primary_icon_activatable">False</property>

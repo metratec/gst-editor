@@ -658,6 +658,21 @@ gst_editor_load (GstEditor * editor, const gchar * file_name)
    */
   editor->save_flags = g_key_file_get_integer (key_file, PACKAGE_NAME, "Flags", NULL);
 
+  /*
+   * The canvas "autosize" property was updated.
+   * FIXME: It may be more elegant to watch on "notify::autosize"
+   */
+  gtk_toggle_button_set_active (
+      GTK_TOGGLE_BUTTON (gtk_builder_get_object (editor->builder,
+          "autosize-checkbutton")), editor->canvas->autosize);
+  gtk_widget_set_sensitive (GTK_WIDGET (editor->sw), !editor->canvas->autosize);
+  gtk_widget_set_sensitive (GTK_WIDGET (editor->sh), !editor->canvas->autosize);
+  gdouble width, height;
+  g_object_get (editor->canvas->bin,
+      "width", &width, "height", &height, NULL);
+  gtk_spin_button_set_value (editor->sw, width);
+  gtk_spin_button_set_value (editor->sh, height);
+
   g_object_set (editor, "filename", file_name, NULL);
 
   gst_editor_statusbar_message (editor, "Pipeline loaded from %s.", editor->filename);
@@ -1034,32 +1049,24 @@ gst_editor_on_sort_toggled (GtkToggleButton * toggle, GstEditor * editor)
 }
 
 void
-gst_editor_on_autosize (GtkCheckButton * autosize, GstEditor * editor)
+gst_editor_on_autosize (GtkCheckButton * button, GstEditor * editor)
 {
-    gboolean value;
-    gdouble x, y,width,height;
-    GooCanvasBounds bounds;
-    value=gtk_toggle_button_get_active((GtkToggleButton*)autosize);
-    editor->canvas->autosize=value;
-    if (value){
-	g_object_set(editor->canvas->bin, "width",editor->canvas->widthbackup,"height",editor->canvas->heightbackup,NULL);
-        if (editor->canvas->bin) g_object_get (editor->canvas->bin, "width", &width, "height", &height, NULL);
-	gtk_spin_button_set_value(editor->sw,width);
-	gtk_spin_button_set_value(editor->sh,height);
-        goo_canvas_item_get_bounds (GOO_CANVAS_ITEM (editor->canvas->bin), &bounds);
-        x = bounds.x1;
-        y = bounds.y1;
-        goo_canvas_set_bounds (GOO_CANVAS (editor->canvas), x - 4, y - 4,
-        x + width +3, y + height +3);
-        //g_print("Gotten Object Size %d and %d size\n",(int)width,(int)height);     
-	}
-    else{
-      //g_print("Will Show Adjustment Values According to bins size\n");     
+    gboolean autosize = gtk_toggle_button_get_active (GTK_TOGGLE_BUTTON (button));
 
-    }
-    //g_print("AutoSize toggled %d\n",(int)value);
+    g_object_set (editor->canvas, "autosize", autosize, NULL);
+
+    gtk_widget_set_sensitive (GTK_WIDGET (editor->sw), !autosize);
+    gtk_widget_set_sensitive (GTK_WIDGET (editor->sh), !autosize);
 }
 
+/*
+ * FIXME: This accesses internals of GstEditorCanvas and GstEditorBin
+ * and should probably be in those classes.
+ * This would also avoid redundancies with gsteditorcanvas.c.
+ * The most elegant solution would probably be to provide GtkAdjustments
+ * for the width and height since that would avoid any glue code to update
+ * the spin buttons or react to their changes.
+ */
 void
 gst_editor_on_spinbutton (GtkSpinButton * spinheight, GstEditor * editor)
 {
