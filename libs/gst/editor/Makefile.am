@@ -28,7 +28,7 @@ noinst_HEADERS =                \
 	gst-helper.h		\
 	namedicons.h
 
-libgsteditorincludedir = $(includedir)/@PACKAGE@-@VERSION@/gst/editor
+libgsteditorincludedir = $(includedir)/@PACKAGE@-@GST_API_VERSION@/gst/editor
 libgsteditorinclude_HEADERS = editor.h \
 	gsteditor.h \
 	gsteditorbin.h \

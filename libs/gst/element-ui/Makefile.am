@@ -7,5 +7,5 @@ libgstelementui_la_SOURCES =		\
 libgstelementui_la_CFLAGS = $(GST_EDITOR_CFLAGS)
 libgstelementui_la_LDFLAGS = $(GST_EDITOR_LIBS)
 
-libgstelementuiincludedir = $(includedir)/@PACKAGE@-@VERSION@/gst/element-ui
+libgstelementuiincludedir = $(includedir)/@PACKAGE@-@GST_API_VERSION@/gst/element-ui
 libgstelementuiinclude_HEADERS = gst-element-ui.h gst-element-ui-prop-view.h
