@@ -22,7 +22,6 @@ libgsteditor_la_LDFLAGS = $(GST_EDITOR_LIBS) \
 	$(top_builddir)/libs/gst/debug-ui/libgstdebugui.la
 
 noinst_HEADERS =                \
-        gsteditorproperty.h     \
 	gsteditorpopup.h	\
         gsteditorpalette.h      \
 	gst-helper.h		\
@@ -36,4 +35,5 @@ libgsteditorinclude_HEADERS = editor.h \
 	gsteditoritem.h \
 	gsteditorpad.h \
 	gsteditorlink.h \
-	gsteditorcanvas.h
+	gsteditorcanvas.h \
+	gsteditorproperty.h

@@ -17,6 +17,11 @@ noinst_HEADERS = \
   gste-common-priv.h gste-common.h \
   gste-serialize.h
 
+# NOTE: While we do not install this as a separate library currently,
+# we still need the GsteSerialize headers in third-party applications.
+libgstecommonincludedir = $(includedir)/@PACKAGE@-@GST_API_VERSION@/gst/common
+libgstecommoninclude_HEADERS = gste-serialize.h
+
 BUILT_SOURCES = $(built_source_make) $(built_header_make)
 CLEANFILES = $(built_source_make) $(built_header_make)
 
