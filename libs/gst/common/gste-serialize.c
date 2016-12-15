@@ -60,6 +60,41 @@ append_space (GsteSerializeCallbacks * cb)
   cb->flags |= GSTE_SERIALIZE_NEED_SPACE;
 }
 
+/**
+ * Quote a string so that GstParse will interpret the quoted
+ * string to mean unquoted_string.
+ *
+ * This follows the lexical rules of GstParse's parse.l.
+ * That's why neither g_shell_quote(), nor g_strescape()
+ * can be used.
+ *
+ * Quotes are avoided if possible.
+ */
+static gchar *
+gste_serialize_quote (const gchar *unquoted_string)
+{
+  gsize quoted_len = 1 + 1 + 1;
+  gchar *quoted, *p;
+
+  if (!strchr (unquoted_string, ' '))
+    return g_strdup (unquoted_string);
+
+  for (const gchar *p = unquoted_string; *p; p++)
+    quoted_len += *p == '"' ? 2 : 1;
+  p = quoted = g_malloc (quoted_len);
+
+  *p++ = '"';
+  while (*unquoted_string) {
+    if (*unquoted_string == '"')
+      *p++ = '\\';
+    *p++ = *unquoted_string++;
+  }
+  *p++ = '"';
+  *p = '\0';
+
+  return quoted;
+}
+
 static inline gboolean
 gst_is_capsfilter (GstObject * object, GsteSerializeCallbacks * cb)
 {
@@ -318,7 +353,6 @@ gst_object_save_properties (GstObject * object, GsteSerializeCallbacks * cb)
   for (guint i = 0; i < nspecs; i++) {
     GParamSpec *spec = specs[i];
     GValue value = G_VALUE_INIT;
-    gchar *contents;
 
     if (!(spec->flags & G_PARAM_READABLE))
       continue;
@@ -367,14 +401,6 @@ gst_object_save_properties (GstObject * object, GsteSerializeCallbacks * cb)
       cb->append ("=\"\"", cb->user_data);
     } else {
       /*
-       * This is a workaround for GstCaps properties.
-       * They are serialized by gst_value_serialize() without
-       * quotes, even though gst_caps_to_string() will frequently
-       * include spaces.
-       */
-      gboolean needs_quotes = GST_VALUE_HOLDS_CAPS (&value);
-
-      /*
        * The GstParse deserialization (see gst_parse_element_set() in grammar.y)
        * uses gst_value_deserialize(), so this should produce the desired output.
        * There is also g_strdup_value_contents() but it should only be used
@@ -382,17 +408,24 @@ gst_object_save_properties (GstObject * object, GsteSerializeCallbacks * cb)
        * The element name is a property of GstObject and should thus be
        * serialized automatically.
        */
-      contents = gst_value_serialize (&value);
+      gchar *contents = gst_value_serialize (&value);
+
       if (contents) {
+        /*
+         * The quoting is necessary because some properties like GstCaps and
+         * GEnums may be serialized with spaces which must be escaped or quoted
+         * in GstParse strings (see parser.l).
+         * All other syntactic components that we generate are identifiers
+         * which cannot be quoted anyway.
+         */
+        gchar *quoted = gste_serialize_quote (contents);
+
         append_space (cb);
         cb->append (spec->name, cb->user_data);
         cb->append ("=", cb->user_data);
-        if (needs_quotes)
-          cb->append ("\"", cb->user_data);
-        cb->append (contents, cb->user_data);
-        if (needs_quotes)
-          cb->append ("\"", cb->user_data);
-        g_free (contents);
+        cb->append (quoted, cb->user_data);
+
+        g_free (quoted);
       } else {
         /*
          * This is more or less expected for certain properties with opaque
@@ -405,6 +438,8 @@ gst_object_save_properties (GstObject * object, GsteSerializeCallbacks * cb)
         g_debug ("Cannot serialize property \"%s\" of type %s in class %s",
             spec->name, g_type_name (spec->value_type), G_OBJECT_CLASS_NAME (klass));
       }
+
+      g_free (contents);
     }
 
     g_value_unset (&value);
