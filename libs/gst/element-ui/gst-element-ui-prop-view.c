@@ -185,6 +185,10 @@ gst_element_ui_prop_view_init (GstElementUIPropView * pview)
   gtk_widget_set_hexpand (combobox, TRUE);
   gtk_grid_attach (GTK_GRID (table_args), combobox, 0, 4, 6, 1);
 
+  /*
+   * There is GtkFileChooserButton, but files and URIs will actually
+   * be GStrings, so there should be a free-text entry.
+   */
   file = gtk_button_new_from_icon_name ("document-open",
       GTK_ICON_SIZE_BUTTON);
   gtk_button_set_label (GTK_BUTTON (file), _("_Open"));
@@ -742,43 +746,79 @@ pview_value_changed (GstElementUIPropView * pview)
 //    gst_element_ui_prop_view_update (pview);
 }
 
+static gboolean
+destroy_on_idle (gpointer user_data)
+{
+   gtk_widget_destroy (GTK_WIDGET (user_data));
+   return G_SOURCE_REMOVE;
+}
+
+static void
+on_file_selected (GtkDialog * dialog, gint response_id, gpointer user_data)
+{
+  GstElementUIPropView *pview = GST_ELEMENT_UI_PROP_VIEW (user_data);
+
+  if (response_id == GTK_RESPONSE_ACCEPT) {
+    gchar *str;
+
+    /*
+     * local-only is FALSE for URI properties.
+     */
+    str = gtk_file_chooser_get_local_only (GTK_FILE_CHOOSER (dialog))
+        ? gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog))
+        : gtk_file_chooser_get_uri (GTK_FILE_CHOOSER(dialog));
+    g_object_set (G_OBJECT (pview->element),
+        pview->param->name, str, NULL);
+    gtk_entry_set_text (GTK_ENTRY (pview->filetext), str);
+    g_free (str);
+  }
+
+  /*
+   * We cannot destroy the dialog now.
+   * Doing it in a separate callback is still simpler than keeping
+   * the widget around and reusing it.
+   */
+  //gtk_widget_destroy (GTK_WIDGET (dialog));
+  gdk_threads_add_idle (destroy_on_idle, dialog);
+}
+
 static void
 on_location_hit (GtkWidget * widget, GstElementUIPropView * pview)
 {
-
+  GtkWindow *window = GTK_WINDOW (gtk_widget_get_toplevel (widget));
   GtkWidget *dialog;
 
-  dialog = gtk_file_chooser_dialog_new ("Choose File",
-				      NULL,
-				      GTK_FILE_CHOOSER_ACTION_OPEN,
-				      _("_Cancel"), GTK_RESPONSE_CANCEL,
-				      _("_Open"), GTK_RESPONSE_ACCEPT,
-				      NULL);
-  if (strstr (pview->param->name, "uri"))
-    gtk_file_chooser_select_filename (GTK_FILE_CHOOSER (dialog),
-        gtk_entry_get_text (GTK_ENTRY (pview->filetext)) + 7);
-  else
+  dialog = gtk_file_chooser_dialog_new (_("Choose File"),
+				        window,
+				        GTK_FILE_CHOOSER_ACTION_OPEN,
+				        _("_Cancel"), GTK_RESPONSE_CANCEL,
+				        _("_Open"), GTK_RESPONSE_ACCEPT,
+				        NULL);
+
+  /*
+   * FIXME: These heuristics may be too simple.
+   */
+  gtk_file_chooser_set_local_only (GTK_FILE_CHOOSER (dialog),
+      strstr (pview->param->name, "uri") == NULL);
+
+  if (gtk_file_chooser_get_local_only (GTK_FILE_CHOOSER (dialog)))
     gtk_file_chooser_select_filename (GTK_FILE_CHOOSER (dialog),
         gtk_entry_get_text (GTK_ENTRY (pview->filetext)));
-  if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
-    char *filename;
+  else
+    gtk_file_chooser_select_uri (GTK_FILE_CHOOSER (dialog),
+        gtk_entry_get_text (GTK_ENTRY (pview->filetext)));
 
-    filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
-    char* filenamefull=g_malloc(strlen(filename)+10);
-    if (strstr(pview->param->name,"uri")) sprintf(filenamefull,"file://%s",filename);
-    else sprintf(filenamefull,"%s",filename);
-    g_object_set (G_OBJECT (pview->element), pview->param->name,
-          filenamefull, NULL);
-    gtk_entry_set_text (GTK_ENTRY (pview->filetext), filenamefull);
-    g_free (filenamefull);
-    g_free (filename);
-  }
-  gtk_widget_destroy (dialog);
+  /*
+   * We do not use gtk_dialog_run(), so we do not interfer with
+   * watchers registered by the embedding application.
+   * gtk_dialog_run() can also cause problems when embedding the glib
+   * event loop.
+   */
+  gtk_window_set_modal (GTK_WINDOW (dialog), TRUE);
+  gtk_widget_show (GTK_WIDGET (dialog));
 
+  g_signal_connect (dialog, "response", G_CALLBACK (on_file_selected), pview);
 }
-
-
-
 
 static void
 on_adjustment_value_changed (GtkAdjustment * adjustment,
